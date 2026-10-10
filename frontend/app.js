@@ -279,10 +279,14 @@ function renderVehicles(s){
   for(const button of document.querySelectorAll('[data-filter]'))button.setAttribute('aria-pressed',String(button.dataset.filter===filter));
 }
 function disconnectedDisplay(){
+  $('randomAttack').disabled=true;
   for(const id of ['summaryConnected','summaryAttention','selectedHeight','selectedSpeed','selectedAge','selectedBattery','selectedEndurance','positionX','positionY','positionZ'])$(id).textContent='—';
   $('selectedBatteryMeter').hidden=true;$('selectedConnection').textContent='● 연결 끊김';$('selectedConnection').className='offline';$('selectedTask').textContent='현재 상태를 확인할 수 없습니다.';$('cameraLive').textContent='영상 연결 끊김';$('inspectVehicle').disabled=true;$('faultToggle').disabled=true;mapPickables.length=0;cameraPickables.length=0;lastState=null;
 }
 function renderMission(s){
+  const attackFull=(s.approval_queue||[]).length>=(s.auto_scenarios?.max_pending||4),shipReady=s.vehicles.some(v=>v.type==='SHIP'&&v.connected);
+  $('randomAttack').disabled=missionRequestPending||attackFull||!shipReady;
+  $('randomAttack').title=attackFull?'대기열이 가득 찼습니다. 기존 상황을 종료하세요.':!shipReady?'함선 연결을 기다리는 중입니다.':'9개 시나리오 중 하나를 무작위로 발생시킵니다.';
   const m=s.mission,key=queueReviewKey(m);
   $('situationSummary').textContent=m?`${priorityText(m)} · ${m.card.title} · 상세`:'선택 상황 상세';
   renderMissionReview(s);$('cancelMission').disabled=missionRequestPending||!m;
@@ -359,11 +363,12 @@ async function missionRequest(url,data={}){
   if(missionRequestPending)return;missionRequestPending=true;
   const buttons=[...document.querySelectorAll('.mission-console button')];buttons.forEach(b=>b.disabled=true);$('missionFeedback').textContent='처리 중…';
   try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),result=await r.json();if(!r.ok)throw Error(result.detail||'요청 실패');if(result.id!==undefined){reviewMissionId=result.id;}
-    const response=await fetch('/api/state');if(!response.ok)throw Error('상태 갱신 실패');queueView=null;lastState=reviewState(await response.json());missionRenderKey='';renderMission(lastState);renderVehicles(lastState);formationControls(lastState.formations);$('missionFeedback').textContent=url.endsWith('approve')?'✓ 출동 명령 전달 완료 · Gazebo 반영 중':url.endsWith('cancel')?'계획 종료 · 현재 대형 유지':url.endsWith('simulated-fault')?'기체 배정 상태 시연 갱신':'상황 생성 완료 · 대응안 3개를 검토하세요.';$('missionFeedback').dataset.state='success';event($('missionFeedback').textContent);return result;
+    const response=await fetch('/api/state');if(!response.ok)throw Error('상태 갱신 실패');queueView=null;lastState=reviewState(await response.json());missionRenderKey='';renderMission(lastState);renderVehicles(lastState);formationControls(lastState.formations);$('missionFeedback').textContent=url.endsWith('random-attack')?`공격 발생 · ${result.card.title} · 대응안을 선택하세요.`:url.endsWith('approve')?'✓ 출동 명령 전달 완료 · Gazebo 반영 중':url.endsWith('cancel')?'계획 종료 · 현재 대형 유지':url.endsWith('simulated-fault')?'기체 배정 상태 시연 갱신':'상황 생성 완료 · 대응안 3개를 검토하세요.';$('missionFeedback').dataset.state='success';event($('missionFeedback').textContent);return result;
   }catch(error){$('missionFeedback').textContent='실행 불가 · '+error.message;$('missionFeedback').dataset.state='error';event(error.message);}
   finally{missionRequestPending=false;if(lastState)renderMission(lastState);}
 }
 $('faultToggle').addEventListener('click',async()=>{const v=lastState?.vehicles.find(v=>v.id===selectedVehicle);if(!v)return;await missionRequest('/api/vehicles/'+v.id+'/simulated-fault',{unavailable:!v.fault});});
+$('randomAttack').addEventListener('click',()=>missionRequest('/api/mission/random-attack'));
 $('cancelMission').addEventListener('click',()=>missionRequest('/api/mission/cancel',{mission_id:lastState?.mission?.id}));
 $('assignmentPlan').addEventListener('change',()=>{const m=lastState?.mission;if(m&&!m.approved){selectedResponse={mission_id:m.id,option_id:$('assignmentPlan').value,plan_revision:m.plan_revision||0};renderHumanApproval(lastState);}if(lastState)renderVehicles(lastState);});
 $('vehicleFilter').addEventListener('change',()=>{if(lastState)renderVehicles(lastState);});

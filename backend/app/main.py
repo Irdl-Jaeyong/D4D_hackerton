@@ -34,6 +34,7 @@ mission_counter=0
 formation={'usv':'circle','uav':'hemisphere','revision':0}
 formation_status={}
 auto_generator=None
+scenario_generation_lock=asyncio.Lock()
 @asynccontextmanager
 async def console_lifespan(application):
     global auto_generator
@@ -54,14 +55,15 @@ async def console_lifespan(application):
 async def generate_random_scenarios():
     while True:
         await asyncio.sleep(1)
-        request=auto_generator.next_request(state(),time.monotonic())
-        if request:
-            try:
-                item=await start_scenario(ScenarioRequest(**request),preserve_camera=True)
-                item['auto_generated']=True
-                save_console()
-            except HTTPException as error:
-                logging.getLogger(__name__).warning('Automatic scenario skipped: %s',error.detail)
+        async with scenario_generation_lock:
+            request=auto_generator.next_request(state(),time.monotonic())
+            if request:
+                try:
+                    item=await start_scenario(ScenarioRequest(**request),preserve_camera=True)
+                    item['auto_generated']=True
+                    save_console()
+                except HTTPException as error:
+                    logging.getLogger(__name__).warning('Automatic scenario skipped: %s',error.detail)
 
 app = FastAPI(title='NAVIS-AI preparation MVP', lifespan=console_lifespan)
 latest = {}
@@ -312,6 +314,22 @@ async def start_scenario(data: ScenarioRequest,preserve_camera: bool=False):
                 await set_simulated_fault(v['id'],FaultRequest(unavailable=True,fault_type='communication'));item['affected_vehicles'].append(v['id']);interference_owner[v['id']]=item['id']
     snapshot=state();item['options']=pending_plans(item,snapshot['vehicles'])
     return item
+
+@app.post('/api/mission/random-attack')
+async def random_attack():
+    async with scenario_generation_lock:
+        if auto_generator is None:raise HTTPException(503,'시나리오 준비 중입니다.')
+        snapshot=state()
+        if not any(v['type']=='SHIP' and v['connected'] for v in snapshot['vehicles']):
+            raise HTTPException(409,'함선 연결 후 공격을 발생시킬 수 있습니다.')
+        if len(snapshot['approval_queue'])>=auto_generator.config['max_pending']:
+            raise HTTPException(409,'승인대기열이 가득 찼습니다. 기존 상황을 종료하세요.')
+        request=auto_generator.next_request(snapshot,time.monotonic(),manual=True)
+        if not request:raise HTTPException(409,'추가 가능한 공격이 없습니다. 기존 상황을 종료하거나 기체 상태를 확인하세요.')
+        item=await start_scenario(ScenarioRequest(**request))
+        item['manual_generated']=True
+        save_console()
+        return item
 
 @app.post('/api/mission/{mission_id}/refresh')
 async def refresh_plan(mission_id: int):
