@@ -41,7 +41,7 @@ class AutoScenarios(unittest.TestCase):
         config=json.loads((Path(__file__).resolve().parents[1]/'config/auto_scenarios.json').read_text())
         self.assertEqual(config['interval_seconds'],[120,120]);self.assertEqual(config['max_pending'],4)
         g=ScenarioGenerator(config,random.Random(1),now=0)
-        self.assertIsNone(g.next_request(self.state,119));self.assertIsNotNone(g.next_request(self.state,120))
-        self.assertIsNone(g.next_request(self.state,239))
+        self.assertIsNone(g.next_request(self.state,9));self.assertIsNotNone(g.next_request(self.state,10))
+        self.assertIsNone(g.next_request(self.state,129))
         self.state['approval_queue']=[{'scenario':'rescue'}]*4
-        self.assertIsNone(g.next_request(self.state,240))
+        self.assertIsNone(g.next_request(self.state,130))

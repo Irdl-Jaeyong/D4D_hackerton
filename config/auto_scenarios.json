@@ -1,6 +1,6 @@
 {
   "enabled": true,
-  "initial_delay_seconds": 120,
+  "initial_delay_seconds": 10,
   "interval_seconds": [
     120,
     120
