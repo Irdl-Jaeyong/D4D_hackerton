@@ -3,7 +3,8 @@
 No vehicle positions or controllers are modified. Runs inside the sim container.
 """
 import json,math,time,subprocess,urllib.request,os
-os.environ['IGN_PARTITION']='navis-d4d-koyul'
+os.environ.setdefault('IGN_PARTITION','navis-d4d')
+BACKEND_URL = os.environ.get('NAVIS_BACKEND_URL','http://127.0.0.1:18082').rstrip('/')
 STATES={'defending':'.17 .88 .6 1','waiting':'.29 .66 1 1','unavailable':'1 .42 .42 1'}
 
 def service(name,kind,request):
@@ -58,7 +59,7 @@ if __name__=='__main__':
  initialized=False;last_positions={};last_clock=None;failures=0
  while True:
   try:
-   with urllib.request.urlopen('http://127.0.0.1:8000/api/state',timeout=.8) as response:s=json.load(response)
+   with urllib.request.urlopen(BACKEND_URL+'/api/state',timeout=.8) as response:s=json.load(response)
    lead=next((v for v in s['vehicles'] if v['type']=='SHIP' and v['connected']),None)
    stamp=lead['telemetry']['sim_time'] if lead else None
    if stamp is not None and last_clock is not None and stamp<last_clock:initialized=False

@@ -3,9 +3,9 @@ set -euo pipefail
 set +u
 source /opt/ros/humble/setup.bash
 set -u
-export IGN_PARTITION=navis-d4d-koyul
+export IGN_PARTITION="${IGN_PARTITION:-navis-d4d}"
 export IGN_GAZEBO_RESOURCE_PATH=/project/ros_ws/src/navis_sim/models
-export ROS_DOMAIN_ID=44
+export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-45}"
 export ROS_LOCALHOST_ONLY=1
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export FASTRTPS_DEFAULT_PROFILES_FILE=/project/config/fastdds.xml

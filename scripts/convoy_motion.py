@@ -21,6 +21,8 @@ from typed_fault_motion import FaultMotion
 import subprocess
 from pathlib import Path
 
+BACKEND_URL = os.environ.get('NAVIS_BACKEND_URL','http://127.0.0.1:18082').rstrip('/')
+
 FLEET = json.loads((Path(__file__).resolve().parents[1]/'config/fleet.json').read_text())
 MOTION = FLEET['motion']
 CAMERA = FLEET['camera']
@@ -231,7 +233,7 @@ def main():
             if now-self.checked>.5:
                 self.checked=now
                 try:
-                    with urllib.request.urlopen('http://127.0.0.1:8000/api/formations',timeout=.2) as response:selection=json.load(response)
+                    with urllib.request.urlopen(BACKEND_URL+'/api/formations',timeout=.2) as response:selection=json.load(response)
                     for group in ('usv','uav'):
                         if selection[group]!=self.selection[group]:
                             self.planners[group].assignment=None;self.initial_error.pop(group,None)
@@ -303,12 +305,12 @@ def main():
             if now-self.checked<.05:
                 try:
                     data=json.dumps(self.formation_status).encode()
-                    req=urllib.request.Request('http://127.0.0.1:8000/api/internal/formations',data=data,headers={'Content-Type':'application/json','X-Bridge-Token':os.environ.get('NAVIS_BRIDGE_TOKEN','')})
+                    req=urllib.request.Request(BACKEND_URL+'/api/internal/formations',data=data,headers={'Content-Type':'application/json','X-Bridge-Token':os.environ.get('NAVIS_BRIDGE_TOKEN','')})
                     with urllib.request.urlopen(req,timeout=.2) as response:response.read()
-                    req=urllib.request.Request('http://127.0.0.1:8000/api/internal/faults',data=json.dumps({'tasks':self.fault_report}).encode(),headers={'Content-Type':'application/json','X-Bridge-Token':os.environ.get('NAVIS_BRIDGE_TOKEN','')})
+                    req=urllib.request.Request(BACKEND_URL+'/api/internal/faults',data=json.dumps({'tasks':self.fault_report}).encode(),headers={'Content-Type':'application/json','X-Bridge-Token':os.environ.get('NAVIS_BRIDGE_TOKEN','')})
                     with urllib.request.urlopen(req,timeout=.2) as response:response.read()
                     if self.execution_report:
-                        req=urllib.request.Request('http://127.0.0.1:8000/api/internal/execution',data=json.dumps(self.execution_report).encode(),headers={'Content-Type':'application/json','X-Bridge-Token':os.environ.get('NAVIS_BRIDGE_TOKEN','')})
+                        req=urllib.request.Request(BACKEND_URL+'/api/internal/execution',data=json.dumps(self.execution_report).encode(),headers={'Content-Type':'application/json','X-Bridge-Token':os.environ.get('NAVIS_BRIDGE_TOKEN','')})
                         with urllib.request.urlopen(req,timeout=.2) as response:response.read()
                 except (OSError,ValueError):pass
             try:

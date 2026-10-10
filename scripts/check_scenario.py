@@ -1,7 +1,8 @@
 """Observe one live traffic encounter and recovery using real fleet telemetry."""
+import os
 import json,math,time,urllib.request
 from pathlib import Path
-base='http://127.0.0.1:8000'
+base=os.environ.get('NAVIS_BACKEND_URL','http://127.0.0.1:18082').rstrip('/')
 rows=[];stable=0;previous=0
 for _ in range(90):
  state=json.load(urllib.request.urlopen(base+'/api/state',timeout=3))

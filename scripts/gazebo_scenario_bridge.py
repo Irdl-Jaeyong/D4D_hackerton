@@ -3,7 +3,8 @@
 import json,os,time,urllib.request,subprocess,re
 from gazebo_status_bridge import service
 from scenario_scene import model_sdf
-os.environ['IGN_PARTITION']='navis-d4d-koyul'
+os.environ.setdefault('IGN_PARTITION','navis-d4d')
+BACKEND_URL = os.environ.get('NAVIS_BACKEND_URL','http://127.0.0.1:18082').rstrip('/')
 
 class SceneBridge:
     def __init__(self):self.known={};self.last_clock=None
@@ -36,6 +37,6 @@ if __name__=='__main__':
     except subprocess.TimeoutExpired:pass
     while True:
         try:
-            with urllib.request.urlopen('http://127.0.0.1:8000/api/state',timeout=1) as response:bridge.sync(json.load(response))
+            with urllib.request.urlopen(BACKEND_URL+'/api/state',timeout=1) as response:bridge.sync(json.load(response))
         except Exception as e:print('Scenario scene retry:',type(e).__name__,flush=True)
         time.sleep(.25)

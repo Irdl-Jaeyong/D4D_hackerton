@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Live HTTP checks for a running preparation stack; no simulation mutations."""
+import os
 import json
 import urllib.error
 import urllib.request
 from pathlib import Path
-BASE = 'http://127.0.0.1:8000'
+BASE = os.environ.get('NAVIS_BACKEND_URL','http://127.0.0.1:18082').rstrip('/')
 def get(path):
     with urllib.request.urlopen(BASE+path,timeout=5) as r:return r.status,r.read()
 def post(path,payload,headers=None):

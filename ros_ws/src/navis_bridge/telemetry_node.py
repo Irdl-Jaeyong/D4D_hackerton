@@ -68,7 +68,7 @@ class Bridge(Node):
         if vehicle == self.camera_vehicle and now-self.camera_checked >= .5:
             self.camera_checked=now
             try:
-                with urllib.request.urlopen(os.environ.get('NAVIS_BACKEND_URL','http://127.0.0.1:8000')+'/api/camera/view',timeout=.2) as response:
+                with urllib.request.urlopen(os.environ.get('NAVIS_BACKEND_URL','http://127.0.0.1:18082')+'/api/camera/view',timeout=.2) as response:
                     self.camera_mode=json.load(response)['mode']
             except (OSError,ValueError,KeyError):pass
         img,image_at=self.images.get(self.camera_mode,(None,0))
@@ -79,7 +79,7 @@ class Bridge(Node):
                 if img.encoding == 'rgb8': array = cv2.cvtColor(array,cv2.COLOR_RGB2BGR)
                 ok, encoded = cv2.imencode('.jpg', array, [cv2.IMWRITE_JPEG_QUALITY,85])
                 if ok: payload['camera_jpeg'] = base64.b64encode(encoded).decode()
-        req = urllib.request.Request(os.environ.get('NAVIS_BACKEND_URL','http://127.0.0.1:8000')+'/api/internal/telemetry',data=json.dumps(payload).encode(),headers={'Content-Type':'application/json','X-Bridge-Token':os.environ['NAVIS_BRIDGE_TOKEN']})
+        req = urllib.request.Request(os.environ.get('NAVIS_BACKEND_URL','http://127.0.0.1:18082')+'/api/internal/telemetry',data=json.dumps(payload).encode(),headers={'Content-Type':'application/json','X-Bridge-Token':os.environ['NAVIS_BRIDGE_TOKEN']})
         try:
             with urllib.request.urlopen(req, timeout=1) as response: response.read()
             if 'camera_jpeg' in payload: self.sent_image_at=now
