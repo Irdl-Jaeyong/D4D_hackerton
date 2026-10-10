@@ -70,3 +70,7 @@ python3 scripts/check_prep.py
 ## 현재 6대 상태 연동
 
 UAV-01~04와 USV-01~02 총 6대를 해상 월드에 배치하고 실제 ROS odometry를 웹 상태 카드에 연결했다. 위치 x/y/z와 속도를 표시하며 배터리는 미구현이다. UAV는 갑판에 대기하고 있고 비행/항해 제어 및 AI 행동 실행은 아직 없다. 카메라는 USV-01만 제공한다.
+
+## 최신 기록 대시보드
+
+별도 작업 공간에서 개발한 웹 화면과 해당 API·테스트는 [record-explainer-v2](record-explainer-v2/README.md)에 포함되어 있습니다. 기존 Gazebo 상태 화면과 별도 앱입니다.
