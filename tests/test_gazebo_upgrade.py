@@ -4,7 +4,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'backend'))
 from app import main as api
 class UpgradeAPI(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        api.mission=None;api.latest.clear();api.simulated_faults.clear();api.fault_status.clear()
+        api.mission=None;api.missions.clear();api.latest.clear();api.simulated_faults.clear();api.fault_status.clear()
         if hasattr(api,'fault_kinds'):api.fault_kinds.clear();api.fault_last_known.clear()
         for name in ['SHIP-01','UAV-01','USV-01']:
             api.latest[name]={'x':10,'y':0,'z':60 if name.startswith('UAV') else 0,'yaw':0,'sim_time':10,'received_at':time.time()}
@@ -25,7 +25,7 @@ class UpgradeAPI(unittest.IsolatedAsyncioTestCase):
     async def test_propulsion_fault_is_automatic_and_red_without_replacing_mission(self):
         m=await api.start_scenario(api.ScenarioRequest(scenario='crossing'))
         await api.start_scenario(api.ScenarioRequest(scenario='fault',vehicle_id='UAV-01',fault_type='propulsion'))
-        self.assertEqual(api.mission['id'],m['id'])
+        self.assertIn(m['id'],api.missions);self.assertIsNone(api.mission)
         s=await api.get_formations();self.assertEqual(s['fault_modes']['UAV-01'],'propulsion')
         v=next(v for v in api.state()['vehicles'] if v['id']=='UAV-01')
         self.assertEqual(v['readiness']['operational_state'],'unavailable')

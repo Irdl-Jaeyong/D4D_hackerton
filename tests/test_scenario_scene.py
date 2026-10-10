@@ -22,6 +22,12 @@ class SceneTests(unittest.TestCase):
         missions=[{'id':i,'scenario':'crossing','scene_slot':i,'scene_origin':{'x':0,'y':0,'yaw':0,'sim_time':0},'risk':{}} for i in range(3)]
         positions=targets(missions,100)
         self.assertEqual(len({(t['x'],t['y']) for t in positions}),3)
+    def test_same_kind_markers_have_space_between_their_boundaries(self):
+        from scenario_scene import targets
+        import math
+        items=[{'id':i,'scenario':'debris','scene_slot':i,'scene_origin':{'x':0,'y':0,'yaw':0,'sim_time':0}} for i in range(2)]
+        a,b=targets(items,0)
+        self.assertGreaterEqual(math.hypot(a['x']-b['x'],a['y']-b['y']),40)
     def test_approved_situation_remains_visible(self):
         from scenario_scene import targets
         m={'id':4,'scenario':'rescue','scene_origin':{'x':0,'y':0,'yaw':0,'sim_time':0},'risk':{'priority':'P1'},'approved':{'id':'verify'}}

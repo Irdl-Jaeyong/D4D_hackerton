@@ -5,7 +5,7 @@ from app import main as api
 from fastapi import HTTPException
 class FaultAPI(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        api.latest.clear();api.simulated_faults.clear();api.fault_status.clear();api.charge_credit.clear();api.battery_origin.clear();api.mission=None
+        api.latest.clear();api.simulated_faults.clear();api.fault_status.clear();api.charge_credit.clear();api.battery_origin.clear();api.mission=None;api.missions.clear()
         self.token=api.TOKEN;api.TOKEN='test-only'
         for id in ['SHIP-01','UAV-01','UAV-02','USV-01']:
             api.latest[id]={'x':0,'y':0,'z':80 if id.startswith('UAV') else 0,'sim_time':0,'received_at':time.time()}

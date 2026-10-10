@@ -12,7 +12,7 @@ def targets(missions,sim_time):
         if not o:continue
         t=max(0,(sim_time if sim_time is not None else m.get('scene_last_time',o['sim_time']))-o['sim_time'])
         x,y=SCENARIOS[m['scenario']]['offset']
-        slot=m.get('scene_slot',0);x+=16*slot;y+=8*(slot%3)
+        slot=m.get('scene_slot',0);x+=40*slot;y+=8*(slot%3)
         yaw=o.get('yaw',0)
         if m['scenario']=='crossing':
             # Forward at convoy speed, approach laterally, then maintain safe offset.
