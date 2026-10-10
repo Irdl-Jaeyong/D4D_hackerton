@@ -1,0 +1,10 @@
+{
+  "weights": {"S": 10, "U": 6, "A": 4},
+  "thresholds": {"P1": 75, "P2": 45},
+  "p0_flags": {"collision_imminent": "충돌 임박 확인", "severe_control_loss": "심각한 제어 불능 확인"},
+  "scenarios": {
+    "crossing": {"S": 4, "U": 3, "A": 3, "reason": "접근 선박의 영향도 4 / 확인 긴급성 3 / 운용자 개입 3"},
+    "debris": {"S": 3, "U": 2, "A": 2, "reason": "항로 장애물의 영향도 3 / 확인 긴급성 2 / 운용자 개입 2"},
+    "rescue": {"S": 5, "U": 5, "A": 4, "reason": "구조 신고의 인명 영향도 5 / 긴급성 5 / 운용자 개입 4"}
+  }
+}
