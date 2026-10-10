@@ -26,3 +26,28 @@ class Observation(unittest.TestCase):
         self.assertEqual(goal['UAV-01'],(0,0,80))
         self.step(r,10,(0,0,80));self.assertTrue(r.cancelled);self.assertEqual(r.tasks['UAV-01']['stage'],'completed')
 if __name__=='__main__':unittest.main()
+
+class SurfaceResponse(unittest.TestCase):
+    def run_fixture(self):
+        return ObservationRun({'id':2,'card':{'offset':[100,50]},'approved':{'tasks':[{'vehicle':'UAV-01'},{'vehicle':'USV-02'}]}},0,0)
+    def test_usv_goes_to_standoff_then_returns_using_measured_odometry(self):
+        r=self.run_fixture();homes={'UAV-01':(0,0,80),'USV-02':(0,90,.7)};available={'UAV-01':True,'USV-02':True}
+        goals=r.step(0,0,homes,{'UAV-01':(0,(0,0,80)),'USV-02':(0,(0,90,.7))},available)
+        self.assertIn('USV-02',goals);self.assertEqual(goals['USV-02'],(100,75,.7))
+        obs={'UAV-01':(10,(100,50,60)),'USV-02':(10,(100,75,.7))}
+        r.step(10,0,homes,obs,available);self.assertEqual(r.tasks['USV-02']['stage'],'observing')
+        r.step(15,0,homes,{id:(15,p) for id,(_,p) in obs.items()},available)
+        self.assertEqual(r.tasks['USV-02']['stage'],'returning')
+        r.step(20,0,homes,{'UAV-01':(20,(0,0,80)),'USV-02':(20,(0,90,.7))},available)
+        self.assertEqual(r.report(20,{'UAV-01':(20,(0,0,80)),'USV-02':(20,(0,90,.7))},available)['status'],'completed')
+    def test_usv_fault_cannot_claim_mission_complete_and_cancel_uses_home(self):
+        r=self.run_fixture();homes={'UAV-01':(0,0,80),'USV-02':(0,90,.7)}
+        r.step(5,0,homes,{'USV-02':(5,(100,75,.7))},{'USV-02':False})
+        report=r.report(5,{'USV-02':(5,(100,75,.7))},{'USV-02':False})
+        self.assertTrue(report['tasks']['USV-02']['blocked']);self.assertEqual(report['status'],'running')
+        goals=r.step(6,0,homes,{'USV-02':(6,(100,75,.7))},{'USV-02':True},cancel=True)
+        self.assertEqual(goals['USV-02'],homes['USV-02'])
+    def test_moving_ship_target_updates_usv_standoff_and_uav_target(self):
+        r=self.run_fixture();homes={'UAV-01':(0,0,80),'USV-02':(0,90,.7)}
+        goals=r.step(1,0,homes,{'UAV-01':(1,(0,0,80)),'USV-02':(1,(0,90,.7))},{'UAV-01':True,'USV-02':True},target_world=[110,60])
+        self.assertEqual(goals['USV-02'],(110,85,.7));self.assertEqual(goals['UAV-01'],(110,60,60))

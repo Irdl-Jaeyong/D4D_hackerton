@@ -192,7 +192,7 @@ def main():
             self.planners={group:Transition([(initial[f'{kind}-{i+1:02}']['x'],initial[f'{kind}-{i+1:02}']['y'],initial[f'{kind}-{i+1:02}']['z']) for i in range(FLEET[key])],speed,accel) for group,kind,key,speed,accel in [('usv','USV','usvs',3,1),('uav','UAV','uavs',10,4)]}
             self.checked=0;self.planner_time=None;self.initial_error={};self.formation_status={}
             self.physical_history={}
-            self.uav_observations={};self.mission_run=None;self.execution_report=None;self.fault_runs={};self.fault_report={};self.typed_motion=FaultMotion()
+            self.vehicle_observations={};self.mission_run=None;self.execution_report=None;self.fault_runs={};self.fault_report={};self.typed_motion=FaultMotion()
             for i in range(FLEET['uavs']):
                 name=f'UAV-{i+1:02}'
                 self.create_subscription(Odometry,f'/navis/{name.replace("-","_")}/odometry',lambda msg,name=name:self.uav_odom(name,msg),qos_profile_sensor_data)
@@ -207,14 +207,16 @@ def main():
             if self.origin is None:return
             stamp=msg.header.stamp.sec+msg.header.stamp.nanosec/1e9-self.origin
             p=msg.pose.pose.position
-            if name not in self.uav_observations or stamp>self.uav_observations[name][0]:self.uav_observations[name]=(stamp,(p.x,p.y,p.z))
+            if name not in self.vehicle_observations or stamp>self.vehicle_observations[name][0]:self.vehicle_observations[name]=(stamp,(p.x,p.y,p.z))
         def physical_odom(self,name,msg):
             if self.origin is None:return
             t=msg.header.stamp.sec+msg.header.stamp.nanosec/1e9-self.origin
             p=msg.pose.pose.position;q=msg.pose.pose.orientation
             yaw=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
             history=self.physical_history.setdefault(name,deque(maxlen=400))
-            if not history or t>history[-1][0]:history.append((t,p.x,p.y,yaw))
+            if not history or t>history[-1][0]:
+                history.append((t,p.x,p.y,yaw))
+                self.vehicle_observations[name]=(t,(p.x,p.y,p.z))
         def clock(self,msg):
             stamp=msg.clock.sec+msg.clock.nanosec/1e9
             # A delayed clock packet must never move the convoy backwards.
@@ -237,24 +239,29 @@ def main():
                 except (OSError,ValueError,KeyError):pass
             dt=min(.25,max(0,t-(self.planner_time if self.planner_time is not None else t)))
             self.planner_time=t
-            reference=fleet_poses(t);points={}
+            reference=fleet_poses(t);points={};group_goals={};homes={}
             for group,planner in self.planners.items():
                 mode=self.selection[group]
                 if group=='uav' and mode=='hemisphere':
                     goals=[(reference[f'UAV-{i+1:02}']['x']-MOTION['ship_speed']*t,reference[f'UAV-{i+1:02}']['y'],reference[f'UAV-{i+1:02}']['z']) for i in range(FLEET['uavs'])]
                 else:goals=targets(group,mode,t)
-                if group=='uav':
-                    if planner.assignment is None:planner.select(goals)
-                    homes={f'UAV-{i+1:02}':goals[planner.assignment[i]] for i in range(FLEET['uavs'])}
-                    requested=self.selection.get('mission')
-                    if requested and requested.get('approved') and (self.mission_run is None or self.mission_run.id!=requested['id'] or self.mission_run.approved_at!=requested['approved'].get('approved_at')):
-                        self.mission_run=ObservationRun(requested,t,MOTION['ship_speed']*t)
-                    if self.mission_run:
-                        cancel=not requested or requested['id']!=self.mission_run.id or requested.get('cancel_requested',False)
-                        availability=self.selection.get('availability',{})
-                        overrides=self.mission_run.step(t,MOTION['ship_speed']*t,homes,self.uav_observations,availability,cancel,target_world=requested.get('target_world_current') if requested else None)
-                        for id,point in overrides.items():goals[planner.assignment[int(id.split('-')[1])-1]]=point
-                        self.execution_report=self.mission_run.report(t,self.uav_observations,availability)
+                if planner.assignment is None:planner.select(goals)
+                group_goals[group]=goals
+                kind='UAV' if group=='uav' else 'USV'
+                homes.update({f'{kind}-{i+1:02}':goals[planner.assignment[i]] for i in range(len(planner.points))})
+            requested=self.selection.get('mission')
+            if requested and requested.get('approved') and (self.mission_run is None or self.mission_run.id!=requested['id'] or self.mission_run.approved_at!=requested['approved'].get('approved_at')):
+                self.mission_run=ObservationRun(requested,t,MOTION['ship_speed']*t)
+            if self.mission_run:
+                cancel=not requested or requested['id']!=self.mission_run.id or requested.get('cancel_requested',False)
+                availability=self.selection.get('availability',{})
+                overrides=self.mission_run.step(t,MOTION['ship_speed']*t,homes,self.vehicle_observations,availability,cancel,target_world=requested.get('target_world_current') if requested else None)
+                for id,point in overrides.items():
+                    group='uav' if id.startswith('UAV') else 'usv';planner=self.planners[group]
+                    group_goals[group][planner.assignment[int(id.split('-')[1])-1]]=point
+                self.execution_report=self.mission_run.report(t,self.vehicle_observations,availability)
+            for group,planner in self.planners.items():
+                mode=self.selection[group];goals=group_goals[group]
                 error=planner.step(goals,dt,marine=group=='usv');points[group]=planner.points
                 self.initial_error[group]=max(self.initial_error.get(group,0),error,1)
                 # Dynamic patrols retain a small steady tracking error.

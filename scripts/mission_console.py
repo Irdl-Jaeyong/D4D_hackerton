@@ -39,12 +39,12 @@ def options(vehicles,formation,scenario,target_offset=None):
            ('prepare','항로 확인 준비','v','v','항로 확인과 복귀 여유 확보','함선 감속·우회는 자동 실행하지 않습니다.')]
     for key,title,usv,uav,benefit,cost in specs:
         tasks=[]
-        for candidates,task in [(drones,'접근 대상 추가 관측' if scenario=='crossing' else '신고 위치 관측'),(boats,'현장 확인·통신 계획')]:
+        for candidates,task in [(drones,'접근 대상 추가 관측' if scenario=='crossing' else '신고 위치 관측'),(boats,'현장 확인·통신 지원')]:
             if candidates and (candidates is drones or key=='verify'):
                 _,id,eta,battery=candidates[0]
                 tasks.append({'vehicle':id,'task':task,'eta_seconds':round(eta),'reason':f'배터리 {battery}% · 통신 정상 · 복귀 여유 조건 충족'})
         if key=='prepare' and len(drones)>1:
-            _,id,eta,battery=drones[1];tasks.append({'vehicle':id,'task':'대체 항로 관측 계획','eta_seconds':round(eta),'reason':f'배터리 {battery}% · 관측 기체와 중복 배정 없음'})
+            _,id,eta,battery=drones[1];tasks.append({'vehicle':id,'task':'대체 항로 관측','target_offset':[60,-40],'eta_seconds':round(eta),'reason':f'배터리 {battery}% · 관측 기체와 중복 배정 없음'})
         result.append({'id':key,'title':title,'formations':{'usv':usv,'uav':uav},'tasks':tasks,'benefit':benefit,'tradeoff':cost,
                        'available':bool(drones) and (key!='verify' or bool(boats)),
                        'validation':'연결·시뮬레이션 잔량·복귀 여유 조건 확인. ETA는 직선 거리 추정이며 경로 안전 검증 전입니다.'})

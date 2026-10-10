@@ -118,11 +118,11 @@ def state():
         if mission and mission.get('approved'):
             task=next((t for t in mission['approved']['tasks'] if t['vehicle']==v['id']),None)
             if task and not v.get("fault"):
-                v['readiness']['task']=task['task']+' · 계획만 등록'
+                v['readiness']['task']=task['task']+' · 출동 준비'
                 v['readiness']['available']=False
                 execution=mission.get('execution',{}).get('tasks',{}).get(v['id'])
                 if execution:
-                    labels={'outbound':'출동 중','observing':'관측 중','returning':'복귀 중','completed':'완료 · 대형 유지'}
+                    labels={'outbound':'출동 중','observing':'현장 확인 중','returning':'복귀 중','completed':'완료 · 대형 유지'}
                     v['readiness']['task']=task['task']+' · '+labels.get(execution['stage'],'확인 필요')
                     if execution.get('blocked'):v['readiness'].update(operational_state='unavailable',reason='임무 중 상태 확인 필요')
                     elif v['readiness']['operational_state']!='unavailable':
@@ -130,7 +130,7 @@ def state():
                         v['readiness']['reason']='실측 위치 기반 임무 진행'
                 if not execution and v['readiness']['operational_state']!='unavailable':
                     v['readiness']['operational_state']='waiting'
-                    v['readiness']['reason']='출동 미연결 · 승인 계획 대기'
+                    v['readiness']['reason']='Gazebo 출동 명령 전달 대기'
     lead=latest.get('SHIP-01');stamp=lead.get('sim_time') if lead and now-lead['received_at']<5 else None
     for item in missions.values():
         if item.get('source')=='synthetic' and item['scenario']!='fault' and lead and stamp is not None:
@@ -209,7 +209,7 @@ class ApprovalRequest(BaseModel):
     mission_id: int
     option_id: Literal['observe','verify','prepare']
     human_confirmed: bool = False
-    decision_source: Literal['captain_button','captain_text'] = 'captain_button'
+    decision_source: Literal['captain_button','captain_text','response_button'] = 'captain_button'
     operator_command: str = Field(default='',max_length=100)
     plan_revision: int = Field(default=0,ge=0)
 
@@ -231,7 +231,7 @@ async def start_scenario(data: ScenarioRequest):
     item={'id':mission_counter,'scenario':data.scenario,'card':card,'created_at':now,'planned_at':now,'plan_revision':0,
           'basis_revision':formation['revision'],'options':[],'approved':None,'source':'synthetic','scene_origin':origin,
           'scene_slot':1+max((m.get('scene_slot',0) for m in missions.values() if m['scenario']==data.scenario),default=-1),
-          'execution_scope':'승인 시 대형과 UAV 관측·복귀를 실행합니다. USV 확인 출동은 계획 등록입니다.'}
+          'execution_scope':'선택 시 대형 변경과 UAV·USV 출동·확인·복귀를 실행합니다.'}
     if data.scenario=='fault':item.update(vehicle_id=data.vehicle_id,fault_type=data.fault_type)
     missions[item['id']]=item
     snapshot=state();item['options']=pending_plans(item,snapshot['vehicles'])
@@ -300,7 +300,7 @@ async def cancel_plan(data: CancelRequest | None = None):
     if not item:raise HTTPException(404,'상황을 찾을 수 없습니다.')
     if item.get('approved') and item.get('execution',{}).get('status') not in ('completed','cancelled'):
         item['cancel_requested']=True
-        return {'ok':True,'message':'취소 요청 · 관측 UAV가 대형으로 복귀합니다.'}
+        return {'ok':True,'message':'취소 요청 · 출동한 UAV·USV가 대형으로 복귀합니다.'}
     missions.pop(id)
     if mission and mission['id']==id:mission=None
     return {'ok':True,'message':'선택한 상황 종료 · 나머지 상황과 현재 대형 유지'}
@@ -324,7 +324,7 @@ async def report_execution(data: ExecutionReport,x_bridge_token: str=Header(defa
     for id,task in mission['execution']['tasks'].items():
         current=latest.get(id)
         if current:
-            remaining=readiness({'id':id,'type':'UAV','connected':True,'telemetry':current},max(0,current['sim_time']-battery_origin.get(id,0)))['battery_percent']
+            remaining=readiness({'id':id,'type':id.split('-')[0],'connected':True,'telemetry':current},max(0,current['sim_time']-battery_origin.get(id,0)))['battery_percent']
             task['simulated_battery_used']=round(max(0,mission['energy_at_start'].get(id,remaining)-remaining),1)
     return {'ok':True}
 
@@ -391,7 +391,7 @@ async def risk_plan(risk_id: str):
     plans=options(snapshot['vehicles'],formation,'rescue',target_offset=offset)
     for plan,title in zip(plans,['현재 대형 유지 · 주변 관측','양측 종대 · 복귀 구역 확인','후방 V자 · 대체 기체 관측']):
         plan['title']=title
-        for task in plan['tasks']:task['task']='고장·위험 구역 주변 관측' if task['vehicle'].startswith('UAV') else '착함 구역 연락 지원 계획'
+        for task in plan['tasks']:task['task']='고장·위험 구역 주변 관측' if task['vehicle'].startswith('UAV') else '착함 구역 연락 지원'
     mission_counter+=1
     item={'id':mission_counter,'scenario':'rescue','card':{'title':risk['title'],'summary':risk['evidence'],'offset':offset,'unknown':'규칙 기반 시연 임계값입니다. 실제 고장 진단·접촉 충전 하드웨어는 연결되지 않았습니다.'},'risk_id':risk_id,'created_at':time.time(),'basis_revision':formation['revision'],'options':plans,'approved':None,'source':'telemetry_rules','planned_at':time.time(),'plan_revision':0}
     missions[item['id']]=item;state()
@@ -475,7 +475,7 @@ async def chat(data: Chat):
         offline_ids = [v['id'] for v in snapshot['vehicles'] if not v['connected']]
         system = ('당신은 NAVIS-AI 시뮬레이션 관제 보조입니다. 한국어로 짧고 명확하게 답하세요. '
                   '제공된 실제 상태만 사용하고 배터리, 위치, 연결상태를 추측하지 마세요. '
-                  '카메라는 함대 전체를 비스듬히 내려다보는 Gazebo 항공 관측 카메라입니다. 메인 함선은 직선 전진하고 USV와 드론은 선택된 함선 상대 대형을 유지합니다. USV는 추진력 기반, 드론은 위치 갱신 기반 시연입니다. 배터리는 시뮬레이션 추정값입니다. 상황과 대응안은 규칙 기반 시연이며 승인된 UAV 관측·복귀는 Gazebo에서 실행됩니다. USV 현장 출동은 계획 등록입니다. 위험도와 우선순위는 제공된 규칙 계산 결과만 설명하고 재평가하거나 수정하지 마세요. S/U/A는 시연 기준이며 측정값과 구분하세요. 보이는 것만 설명하고 불확실하면 명시하세요. '
+                  '카메라는 함대 전체를 비스듬히 내려다보는 Gazebo 항공 관측 카메라입니다. 메인 함선은 직선 전진하고 USV와 드론은 선택된 함선 상대 대형을 유지합니다. USV는 추진력 기반, 드론은 위치 갱신 기반 시연입니다. 배터리는 시뮬레이션 추정값입니다. 상황과 대응안은 규칙 기반 시연이며 승인된 UAV 관측·복귀는 Gazebo에서 실행됩니다. 배정된 USV도 추진력으로 현장 확인 후 복귀합니다. 위험도와 우선순위는 제공된 규칙 계산 결과만 설명하고 재평가하거나 수정하지 마세요. S/U/A는 시연 기준이며 측정값과 구분하세요. 보이는 것만 설명하고 불확실하면 명시하세요. '
                   '현재는 상태 조회와 이미지 설명만 가능하며 이동 명령 실행 기능은 없습니다. '
                   '명령을 실행했다고 주장하지 마세요. 상태가 없는 기체는 미연결입니다. '
                   '상태 요약에서 기체를 빠뜨리지 마세요. 연결 기체: '+', '.join(connected_ids)+
