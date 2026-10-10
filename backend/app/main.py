@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import asynccontextmanager
 import base64
 import hmac
 import json
@@ -22,7 +23,15 @@ mission=None
 mission_counter=0
 formation={'usv':'circle','uav':'hemisphere','revision':0}
 formation_status={}
-app = FastAPI(title='NAVIS-AI preparation MVP')
+@asynccontextmanager
+async def console_lifespan(application):
+    restore_console()
+    try:
+        yield
+    finally:
+        save_console()
+
+app = FastAPI(title='NAVIS-AI preparation MVP', lifespan=console_lifespan)
 latest = {}
 battery_origin = {}
 simulated_faults=set()
@@ -304,7 +313,5 @@ def save_console():
     CONSOLE_SNAPSHOT.parent.mkdir(exist_ok=True)
     data={'formation':formation,'mission':mission,'mission_counter':mission_counter,'faults':list(simulated_faults),'battery_origin':battery_origin}
     temp=CONSOLE_SNAPSHOT.with_suffix('.tmp');temp.write_text(json.dumps(data,ensure_ascii=False));temp.replace(CONSOLE_SNAPSHOT)
-app.add_event_handler('startup',restore_console)
-app.add_event_handler('shutdown',save_console)
 
 app.mount('/', StaticFiles(directory=ROOT/'frontend', html=True), name='frontend')
