@@ -18,4 +18,15 @@ class StatusBridge(unittest.TestCase):
         self.assertEqual(command.count('z:-200'),3)
     def test_no_position_does_not_invent_marker_location(self):
         self.assertEqual(poses(self.snapshot('unavailable',False),{}).count('z:-200'),4)
+    def test_parked_drone_indicator_attaches_to_body_not_eight_metres_above(self):
+        snapshot=self.snapshot('unavailable');v=snapshot['vehicles'][0];v.update(id='UAV-01',fault={'phase':'charging'},telemetry={'x':10,'y':20,'z':3.5})
+        command=poses(snapshot,{})
+        self.assertIn('name: "status_dot_UAV-01_unavailable" position {x:10 y:20 z:3.7}',command)
+        self.assertNotIn('z:11.5',command)
+        self.assertIn('name: "charge_pad_UAV-01" position {x:10 y:20 z:3.37}',command)
+    def test_inspection_hides_indicators_and_charging_pad_that_obscure_model(self):
+        snapshot=self.snapshot('unavailable');v=snapshot['vehicles'][0];v.update(id='UAV-01',fault={'phase':'charging'})
+        snapshot.update(camera_view='inspect',inspection_vehicle='UAV-01')
+        command=poses(snapshot,{})
+        self.assertEqual(command.count('z:-200'),5)
 if __name__=='__main__':unittest.main()

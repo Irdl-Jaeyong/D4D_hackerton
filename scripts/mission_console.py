@@ -18,10 +18,10 @@ def readiness(vehicle,elapsed_seconds=0):
             'task':'담당 위치 유지' if kind!='SHIP' else '함선 직진',
             'operational_state':'unavailable' if not vehicle['connected'] or kind!='SHIP' and not available else 'waiting' if kind=='UAV' else 'defending'}
 
-def options(vehicles,formation,scenario):
+def options(vehicles,formation,scenario,target_offset=None):
     leader=next((v for v in vehicles if v['type']=='SHIP' and v['connected']),None)
     if not leader:return []
-    offset=SCENARIOS[scenario]['offset'];target=(leader['telemetry']['x']+offset[0],leader['telemetry']['y']+offset[1])
+    offset=target_offset if target_offset is not None else SCENARIOS[scenario]['offset'];target=(leader['telemetry']['x']+offset[0],leader['telemetry']['y']+offset[1])
     def rank(kind):
         result=[]
         for v in vehicles:

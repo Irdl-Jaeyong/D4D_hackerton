@@ -41,7 +41,7 @@ class Bridge(Node):
         for vehicle in vehicles[group*13:(group+1)*13]:
             self.subscriptions_kept.append(self.create_subscription(Odometry, f'/navis/{vehicle.replace(chr(45),chr(95))}/odometry', lambda msg, vehicle=vehicle: self.on_odom(vehicle,msg), 10))
         if self.camera_vehicle in vehicles[group*13:(group+1)*13]:
-            for mode in ('wide','detail'):
+            for mode in ('wide','detail','inspect'):
                 self.subscriptions_kept.append(self.create_subscription(Image, '/navis/camera/'+mode, lambda msg, mode=mode: self.on_image(mode,msg), qos_profile_sensor_data))
         self.create_timer(0.2, self.send)
     def on_odom(self, vehicle, msg):
@@ -63,7 +63,7 @@ class Bridge(Node):
         m = self.odoms[vehicle]
         p, q = m.pose.pose.position, m.pose.pose.orientation
         v = m.twist.twist.linear
-        payload = {'vehicle_id':vehicle,'x':p.x,'y':p.y,'z':p.z,'yaw':math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),'speed':self.measured_speeds.get(vehicle,0), 'speed_source':'odometry_position_delta','sim_time':m.header.stamp.sec+m.header.stamp.nanosec/1e9}
+        payload = {'vehicle_id':vehicle,'x':p.x,'y':p.y,'z':p.z,'yaw':math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),'roll':math.atan2(2*(q.w*q.x+q.y*q.z),1-2*(q.x*q.x+q.y*q.y)),'pitch':math.asin(max(-1,min(1,2*(q.w*q.y-q.z*q.x)))),'speed':self.measured_speeds.get(vehicle,0), 'speed_source':'odometry_position_delta','sim_time':m.header.stamp.sec+m.header.stamp.nanosec/1e9}
         now = time.monotonic()
         if vehicle == self.camera_vehicle and now-self.camera_checked >= .5:
             self.camera_checked=now

@@ -16,6 +16,7 @@ import os
 import urllib.request
 from formation_motion import Transition,targets
 from mission_execution import ObservationRun
+from fault_motion import FaultReturn
 import subprocess
 from pathlib import Path
 
@@ -125,7 +126,7 @@ def pose_message(name,p):
 
 
 
-def poses(t, camera=None, history=None, formations=None):
+def poses(t, camera=None, history=None, formations=None, faults=None, inspection=None):
     fleet=fleet_poses(t,camera)
     fleet.pop('CIV-01',None)
     if formations:
@@ -134,6 +135,18 @@ def poses(t, camera=None, history=None, formations=None):
                 name=f'UAV-{i+1:02}' if group=='uav' else f'USV_target_{i+1:02}'
                 old=fleet.get(name,{'yaw':0,'pitch':0,'roll':0})
                 fleet[name]={**old,'x':MOTION['ship_speed']*t+p[0],'y':p[1],'z':p[2]}
+    for name,run in (faults or {}).items():
+        if name.startswith('UAV'):
+            fleet[name].update(x=MOTION['ship_speed']*t+run.point[0],y=run.point[1],z=run.point[2],roll=run.roll,pitch=run.pitch)
+            if run.phase=='charging':
+                # Parked aircraft follows the deck, including the hull sea response.
+                h,r,p=hull_response(t,MOTION['ship_speed']*t,0,0,True)
+                x,y,z=run.point;z-=2.4
+                sr,cr=math.sin(r),math.cos(r);sp,cp=math.sin(p),math.cos(p)
+                fleet[name].update(x=MOTION['ship_speed']*t+cp*x+sp*(sr*y+cr*z),y=cr*y-sr*z,z=2.4+h-sp*x+cp*(sr*y+cr*z),roll=r,pitch=p)
+        else:
+            marker=fleet.get('USV_target_'+name.split('-')[1])
+            if marker:marker.update(x=MOTION['ship_speed']*t-65,y=30 if int(name[-2:])%2 else -30,pitch=.8)
     for name,samples in (history or {}).items():
         for segment in range(20):
             stamp=t-(segment+.5)*.9
@@ -148,6 +161,14 @@ def poses(t, camera=None, history=None, formations=None):
             yaw=previous[3]+fraction*delta
             wake=fleet[f'wake_{name}_{segment:02}']
             wake.update(x=x-2.5*math.cos(yaw),y=y-2.5*math.sin(yaw),yaw=yaw,z=-.04 if stamp>=samples[0][0] else -2)
+    if inspection:
+        name=inspection['id'];target=fleet.get(name)
+        if name.startswith('USV') and history and history.get(name):
+            point=history[name][-1];target={'x':point[1],'y':point[2],'z':.7}
+        if target:
+            scale=15 if name.startswith('SHIP') else 1.5 if name.startswith('USV') else 1
+            dx,dy,dz=-6*scale,-8*scale,6*scale
+            fleet['inspection_camera']={'x':target['x']+dx,'y':target['y']+dy,'z':target['z']+dz,'yaw':math.atan2(-dy,-dx),'pitch':math.atan2(dz,math.hypot(dx,dy)),'roll':0}
     return ' '.join('pose {'+pose_message(name,p)+'}' for name,p in fleet.items() if name!='fleet_observer' and not name.startswith('USV-'))
 
 
@@ -168,7 +189,7 @@ def main():
             self.planners={group:Transition([(initial[f'{kind}-{i+1:02}']['x'],initial[f'{kind}-{i+1:02}']['y'],initial[f'{kind}-{i+1:02}']['z']) for i in range(FLEET[key])],speed,accel) for group,kind,key,speed,accel in [('usv','USV','usvs',3,1),('uav','UAV','uavs',10,4)]}
             self.checked=0;self.planner_time=None;self.initial_error={};self.formation_status={}
             self.physical_history={}
-            self.uav_observations={};self.mission_run=None;self.execution_report=None
+            self.uav_observations={};self.mission_run=None;self.execution_report=None;self.fault_runs={};self.fault_report={}
             for i in range(FLEET['uavs']):
                 name=f'UAV-{i+1:02}'
                 self.create_subscription(Odometry,f'/navis/{name.replace("-","_")}/odometry',lambda msg,name=name:self.uav_odom(name,msg),qos_profile_sensor_data)
@@ -242,17 +263,40 @@ def main():
                             error=max(error,math.hypot(history[-1][1]-MOTION['ship_speed']*t-goal[0],history[-1][2]-goal[1]))
                 tolerance=10 if mode=='hemisphere' else 8 if mode=='circle' else 3
                 self.formation_status[group]={'mode':mode,'moving':error>tolerance,'remaining_m':round(error,1),'progress':round(max(0,min(100,100*(1-error/self.initial_error[group]))))}
+            active=set(self.selection.get('faults',[]))
+            for id in list(self.fault_runs):
+                if id not in active:
+                    run=self.fault_runs.pop(id)
+                    if id.startswith('UAV'):
+                        i=int(id[-2:])-1;self.planners['uav'].points[i]=list(run.point);self.planners['uav'].velocity[i]=[0.,0.,0.]
+            self.fault_report={}
+            for id in active:
+                if id.startswith('UAV'):
+                    i=int(id[-2:])-1
+                    if id not in self.fault_runs:
+                        self.fault_runs[id]=FaultReturn(i+1,self.planners['uav'].points[i],t)
+                        if self.selection.get('fault_states',{}).get(id,{}).get('phase')=='charging':
+                            self.fault_runs[id].point=list(self.fault_runs[id].target);self.fault_runs[id].started=t-5
+                    run=self.fault_runs[id];run.step(t,dt)
+                    self.fault_report[id]={'phase':run.phase,'sim_time':t,'deck_slot':run.target}
+                else:
+                    self.fault_runs[id]=None
+                    history=self.physical_history.get(id)
+                    near=history and math.hypot(history[-1][1]-MOTION['ship_speed']*t+65,abs(history[-1][2])-30)<10
+                    self.fault_report[id]={'phase':'moored' if near else 'returning','sim_time':t}
             if now-self.checked<.05:
                 try:
                     data=json.dumps(self.formation_status).encode()
                     req=urllib.request.Request('http://127.0.0.1:8000/api/internal/formations',data=data,headers={'Content-Type':'application/json','X-Bridge-Token':os.environ.get('NAVIS_BRIDGE_TOKEN','')})
+                    with urllib.request.urlopen(req,timeout=.2) as response:response.read()
+                    req=urllib.request.Request('http://127.0.0.1:8000/api/internal/faults',data=json.dumps({'tasks':self.fault_report}).encode(),headers={'Content-Type':'application/json','X-Bridge-Token':os.environ.get('NAVIS_BRIDGE_TOKEN','')})
                     with urllib.request.urlopen(req,timeout=.2) as response:response.read()
                     if self.execution_report:
                         req=urllib.request.Request('http://127.0.0.1:8000/api/internal/execution',data=json.dumps(self.execution_report).encode(),headers={'Content-Type':'application/json','X-Bridge-Token':os.environ.get('NAVIS_BRIDGE_TOKEN','')})
                         with urllib.request.urlopen(req,timeout=.2) as response:response.read()
                 except (OSError,ValueError):pass
             try:
-                response=subprocess.run(['ign','service','-s','/world/navis_prep/set_pose_vector','--reqtype','ignition.msgs.Pose_V','--reptype','ignition.msgs.Boolean','--timeout','1200','--req',poses(t,history=self.physical_history,formations=points)],capture_output=True,text=True,timeout=1.5)
+                response=subprocess.run(['ign','service','-s','/world/navis_prep/set_pose_vector','--reqtype','ignition.msgs.Pose_V','--reptype','ignition.msgs.Boolean','--timeout','1200','--req',poses(t,history=self.physical_history,formations=points,faults=self.fault_runs,inspection={'id':self.selection.get('inspection_vehicle','UAV-01')})],capture_output=True,text=True,timeout=1.5)
                 if response.returncode or 'true' not in response.stdout:
                     self.failures+=1
                     if self.failures%10==1:self.get_logger().warning('Pose update failed: '+response.stderr[:160])

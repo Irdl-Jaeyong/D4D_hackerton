@@ -68,12 +68,22 @@ class PatrolGeometry(unittest.TestCase):
         self.assertLess(fleet['ocean']['z'],.7-.45*3/2)
         self.assertEqual(fleet['ocean']['x'],fleet['SHIP-01']['x'])
 
+    def test_inspection_camera_is_separate_and_looks_at_selected_aircraft(self):
+        import re
+        world=E.parse(ROOT/'ros_ws/src/navis_sim/worlds/prep.sdf')
+        self.assertIsNotNone(world.find(".//model[@name='inspection_camera']/link/sensor"))
+        command=convoy.poses(0,inspection={'id':'UAV-02'})
+        match=re.search(r'name:"inspection_camera" position \{x:([-0-9.]+) y:([-0-9.]+) z:([-0-9.]+)',command)
+        self.assertIsNotNone(match)
+        point=list(map(float,match.groups()));target=convoy.fleet_poses(0)['UAV-02']
+        self.assertAlmostEqual(math.dist(point,[target[k] for k in ('x','y','z')]),math.sqrt(136),places=4)
     def test_render_cameras_are_rigidly_attached_to_straight_flagship(self):
         world=E.parse(ROOT/'ros_ws/src/navis_sim/worlds/prep.sdf')
         sensors=world.findall(".//model[@name='SHIP-01']/link/sensor")
         self.assertEqual(len(sensors),2)
         self.assertIsNone(world.find(".//model[@name='fleet_observer']/link/sensor"))
-        for mode,view in convoy.FLEET['camera_views'].items():
+        for mode in ('wide','detail'):
+            view=convoy.FLEET['camera_views'][mode]
             sensor=next(s for s in sensors if s.get('name')=='fleet_camera_'+mode)
             local=list(map(float,sensor.find('pose').text.split()))
             self.assertEqual(local[:2],view['offset'][:2])

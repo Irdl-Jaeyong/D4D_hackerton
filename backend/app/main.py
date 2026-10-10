@@ -2,6 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager
 import base64
 import hmac
+import math
 import json
 import os
 import time
@@ -19,6 +20,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'scripts'))
 from formation_motion import CATALOG
 from mission_console import readiness, options, SCENARIOS
+from risk_monitor import assess
+from fault_motion import deck_slot
 mission=None
 mission_counter=0
 formation={'usv':'circle','uav':'hemisphere','revision':0}
@@ -35,6 +38,9 @@ app = FastAPI(title='NAVIS-AI preparation MVP', lifespan=console_lifespan)
 latest = {}
 battery_origin = {}
 simulated_faults=set()
+fault_status={}
+charge_credit={}
+risk_cache={"evaluated_at":0,"items":[]}
 camera = None
 lock = asyncio.Lock()
 chat_lock = asyncio.Lock()
@@ -45,10 +51,12 @@ FLEET = json.loads((ROOT/'config/fleet.json').read_text())
 IDS = [f'{kind}-{i:02}' for kind, key in [('SHIP','ships'),('UAV','uavs'),('USV','usvs')] for i in range(1, FLEET[key]+1)]
 CAMERA_VEHICLE = FLEET['camera_vehicle']
 camera_view = 'wide'
+inspection_vehicle='UAV-01'
 CAMERA_VIEWS = FLEET.get('camera_views', {'wide':FLEET['camera']})
 
 class CameraView(BaseModel):
-    mode: Literal['wide','detail']
+    mode: Literal['wide','detail','inspect']
+    vehicle_id: str | None = None
 
 class Telemetry(BaseModel):
     vehicle_id: str = 'USV-01'
@@ -56,6 +64,8 @@ class Telemetry(BaseModel):
     y: float = Field(allow_inf_nan=False)
     z: float = Field(default=0, allow_inf_nan=False)
     yaw: float = Field(allow_inf_nan=False)
+    roll: float = Field(default=0, allow_inf_nan=False)
+    pitch: float = Field(default=0, allow_inf_nan=False)
     speed: float = Field(ge=0, allow_inf_nan=False)
     sim_time: float = Field(ge=0, allow_inf_nan=False)
     speed_source: Literal['ros_twist','odometry_position_delta'] = 'ros_twist'
@@ -79,11 +89,21 @@ def state():
         vehicles.append({'id': id, 'type': id.split('-')[0], 'connected': age is not None and age < 5, 'age_seconds': age, 'source': 'gazebo_ros' if value else None, 'telemetry': value})
     for v in vehicles:
         v['readiness']=readiness(v,max(0,(v['telemetry'] or {}).get('sim_time',0)-battery_origin.get(v['id'],0)))
+        credit=charge_credit.get(v['id'],0)
+        if v['readiness']['battery_percent'] is not None and credit:
+            v['readiness']['battery_percent']=round(min(100,v['readiness']['battery_percent']+credit),1)
+            v['readiness']['endurance_minutes']=round(v['readiness']['battery_percent']/100*(35 if v['type']=='UAV' else 180),1)
+        if v['type']=='UAV' and v['connected'] and (v['readiness']['battery_percent']<35 or max(abs((v['telemetry'] or {}).get('roll',0)),abs((v['telemetry'] or {}).get('pitch',0)))>.22):
+            simulated_faults.add(v['id'])
         if v['id'] in simulated_faults:
-            v['readiness'].update(available=False,reason='수행불가 시연 주입',operational_state='unavailable')
+            v['fault']=fault_status.get(v['id'],{'phase':'pending'})
+            phase=v['fault']['phase']
+            v['readiness'].update(available=False,reason='수행불가 시연 주입',operational_state='waiting' if v['type']=='UAV' and v['connected'] and phase!='charging' else 'unavailable',task={'pending':'고장 명령 전달 대기','unstable':'비행 임무 중단 · 비상 복귀 준비','returning':'비상 복귀 중 · 새 임무 배정 불가','landing':'갑판 착함 중 · 새 임무 배정 불가','charging':'갑판 충전 · 정비 대기','moored':'함선 측면 동행 · 정비 대기'}.get(phase,phase))
+        if not v.get('fault') and max(abs((v['telemetry'] or {}).get('roll',0)),abs((v['telemetry'] or {}).get('pitch',0)))>.22:
+            v['readiness'].update(available=False,reason='자세 불안정 · 배정 보류',operational_state='unavailable')
         if mission and mission.get('approved'):
             task=next((t for t in mission['approved']['tasks'] if t['vehicle']==v['id']),None)
-            if task:
+            if task and not v.get("fault"):
                 v['readiness']['task']=task['task']+' · 계획만 등록'
                 v['readiness']['available']=False
                 execution=mission.get('execution',{}).get('tasks',{}).get(v['id'])
@@ -97,14 +117,14 @@ def state():
                 if not execution and v['readiness']['operational_state']!='unavailable':
                     v['readiness']['operational_state']='waiting'
                     v['readiness']['reason']='출동 미연결 · 승인 계획 대기'
-    return {'mission':mission,'scenario_catalog':SCENARIOS,'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'SHIP-01 stabilized overhead sensors', 'scene_mode': FLEET['motion']['uav_pattern'], 'camera_view':camera_view, 'formations': {**formation, 'catalog':CATALOG,'status':formation_status}, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion'], 'scenario': None}}
+    return {'mission':mission,'scenario_catalog':SCENARIOS,'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'selected vehicle inspection camera' if camera_view=='inspect' else 'SHIP-01 stabilized overhead sensors', 'scene_mode': FLEET['motion']['uav_pattern'], 'camera_view':camera_view,'inspection_vehicle':inspection_vehicle, 'formations': {**formation, 'catalog':CATALOG,'status':formation_status}, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion'], 'scenario': None}}
 
 class FormationRequest(BaseModel):
     group: Literal['usv','uav']
     mode: str
 @app.get('/api/formations')
 async def get_formations():
-    return {**formation,'catalog':CATALOG,'status':formation_status,'mission':mission,'availability':{v['id']:v['connected'] and v['id'] not in simulated_faults and (v['type']=='SHIP' or v['readiness']['battery_percent']>=35) for v in state()['vehicles']}}
+    return {**formation,'catalog':CATALOG,'status':formation_status,'mission':mission,'inspection_vehicle':inspection_vehicle,'faults':list(simulated_faults),'fault_states':fault_status,'availability':{v['id']:v['connected'] and v['id'] not in simulated_faults and (v['type']=='SHIP' or v['readiness']['battery_percent']>=35) for v in state()['vehicles']}}
 @app.post('/api/formations')
 async def set_formation(data: FormationRequest):
     if mission and mission.get('approved'):raise HTTPException(409,'승인된 대응안을 종료한 뒤 대형을 변경하세요.')
@@ -145,6 +165,7 @@ async def approve_plan(data: ApprovalRequest):
     if not data.human_confirmed:raise HTTPException(409,'운용자의 명시적 최종 승인이 필요합니다.')
     if not mission or mission['id']!=data.mission_id:raise HTTPException(409,'상황 카드가 변경되었습니다.')
     if mission.get('approved'):raise HTTPException(409,'이미 승인된 대응안입니다.')
+    if mission.get('risk_id') and not any(r['id']==mission['risk_id'] for r in assess(state()['vehicles'])):raise HTTPException(409,'위험이 해소되었습니다. 최신 상황을 다시 검토하세요.')
     if time.time()-mission['created_at']>60:raise HTTPException(409,'추천이 60초 이상 지났습니다. 최신 상태로 다시 계산하세요.')
     plan=next((p for p in mission['options'] if p['id']==data.option_id),None)
     if not plan or not plan['available']:raise HTTPException(409,'가용 기체가 부족합니다.')
@@ -205,8 +226,57 @@ class FaultRequest(BaseModel):
 async def set_simulated_fault(vehicle_id: str,data: FaultRequest):
     if vehicle_id not in IDS or vehicle_id.startswith('SHIP'):raise HTTPException(422,'지원 기체를 선택하세요.')
     if data.unavailable:simulated_faults.add(vehicle_id)
-    else:simulated_faults.discard(vehicle_id)
+    else:
+        if vehicle_id.startswith('UAV') and fault_status.get(vehicle_id,{}).get('phase')!='charging':raise HTTPException(409,'착함·충전 상태가 된 후 정비 해제하세요.')
+        simulated_faults.discard(vehicle_id);fault_status.pop(vehicle_id,None)
     return {'ok':True,'source':'simulated'}
+
+class FaultReport(BaseModel):
+    tasks: dict
+@app.post('/api/internal/faults')
+async def report_faults(data: FaultReport,x_bridge_token: str=Header(default='')):
+    if not TOKEN or not hmac.compare_digest(TOKEN,x_bridge_token):raise HTTPException(403,'Bridge token required')
+    for id,value in data.tasks.items():
+        if id not in simulated_faults:continue
+        old=fault_status.get(id,{})
+        if value.get('phase')=='charging':
+            measured=latest.get(id);lead=latest.get('SHIP-01');slot=deck_slot(int(id[-2:]))
+            on_deck=measured and lead and time.time()-measured['received_at']<5 and math.dist([measured[k] for k in ('x','y','z')],[lead['x']+slot[0],lead['y']+slot[1],slot[2]])<1.5
+            if not on_deck:value={**value,'phase':'landing'}
+        if value.get('phase')=='charging' and old.get('phase')=='charging':
+            dt=max(0,min(2,value.get('sim_time',0)-old.get('sim_time',0)))
+            charge_credit[id]=charge_credit.get(id,0)+dt*.2
+        fault_status[id]=value
+    return {'ok':True}
+
+@app.get('/api/risks')
+async def risks():
+    if time.time()-risk_cache['evaluated_at']>=10:
+        snapshot=state();items=assess(snapshot['vehicles'])
+        lead=next((v for v in snapshot['vehicles'] if v['id']=='SHIP-01' and v['connected']),None)
+        if items and lead:
+            p=items[0]['telemetry'] or lead['telemetry']
+            offset=[p['x']-lead['telemetry']['x'],p['y']-lead['telemetry']['y']]
+            items[0]['options']=options(snapshot['vehicles'],formation,'rescue',target_offset=offset)
+        risk_cache.update(evaluated_at=time.time(),items=items)
+    return {**risk_cache,'interval_seconds':10,'source':'telemetry_demo_thresholds'}
+
+@app.post('/api/risks/{risk_id}/plan')
+async def risk_plan(risk_id: str):
+    global mission,mission_counter
+    if mission and mission.get('approved') and mission.get('execution',{}).get('status') not in ('completed','cancelled'):raise HTTPException(409,'승인 임무를 종료한 뒤 새 대응안을 검토하세요.')
+    snapshot=state();risk=next((r for r in assess(snapshot['vehicles']) if r['id']==risk_id),None)
+    if not risk:raise HTTPException(409,'위험 상태가 해소되었습니다. 다시 평가하세요.')
+    lead=next((v for v in snapshot['vehicles'] if v['id']=='SHIP-01' and v['connected']),None)
+    if not lead:raise HTTPException(409,'함선 위치 확인이 필요합니다.')
+    p=risk['telemetry'] or lead['telemetry'];offset=[p['x']-lead['telemetry']['x'],p['y']-lead['telemetry']['y']]
+    plans=options(snapshot['vehicles'],formation,'rescue',target_offset=offset)
+    for plan,title in zip(plans,['현재 대형 유지 · 주변 관측','양측 종대 · 복귀 구역 확인','후방 V자 · 대체 기체 관측']):
+        plan['title']=title
+        for task in plan['tasks']:task['task']='고장·위험 구역 주변 관측' if task['vehicle'].startswith('UAV') else '착함 구역 연락 지원 계획'
+    mission_counter+=1
+    mission={'id':mission_counter,'scenario':'rescue','card':{'title':risk['title'],'summary':risk['evidence'],'offset':offset,'unknown':'규칙 기반 시연 임계값입니다. 실제 고장 진단·접촉 충전 하드웨어는 연결되지 않았습니다.'},'risk_id':risk_id,'created_at':time.time(),'basis_revision':formation['revision'],'options':plans,'approved':None,'source':'telemetry_rules'}
+    return mission
 
 @app.get('/api/health')
 async def health():
@@ -224,15 +294,21 @@ async def get_state():
 
 @app.get('/api/camera/view')
 async def get_camera_view():
-    return {'mode':camera_view, 'camera':CAMERA_VIEWS[camera_view]}
+    return {'mode':camera_view,'vehicle_id':inspection_vehicle, 'camera':CAMERA_VIEWS[camera_view]}
 
 @app.post('/api/camera/view')
 async def set_camera_view(data: CameraView):
-    global camera_view
+    global camera_view,inspection_vehicle,camera
     if data.mode not in CAMERA_VIEWS:
         raise HTTPException(422, 'Camera view unavailable')
+    if data.mode=='inspect':
+        if data.vehicle_id not in IDS:raise HTTPException(422,'근접 관측할 기체를 선택하세요.')
+        value=latest.get(data.vehicle_id)
+        if not value or time.time()-value['received_at']>=5:raise HTTPException(409,'기체의 최신 위치가 필요합니다.')
+        inspection_vehicle=data.vehicle_id
     camera_view = data.mode
-    return {'mode':camera_view, 'camera':CAMERA_VIEWS[camera_view]}
+    camera=None
+    return {'mode':camera_view,'vehicle_id':inspection_vehicle, 'camera':CAMERA_VIEWS[camera_view]}
 
 @app.post('/api/internal/telemetry')
 async def telemetry(data: Telemetry, x_bridge_token: str = Header(default='')):
@@ -307,11 +383,12 @@ def restore_console():
         formation.update(saved['formation']);mission=saved.get('mission');mission_counter=saved.get('mission_counter',0)
         simulated_faults.update(id for id in saved.get('faults',[]) if id in IDS)
         battery_origin.update(saved.get('battery_origin',{}))
+        fault_status.update(saved.get('fault_status',{}));charge_credit.update(saved.get('charge_credit',{}))
     except (OSError,ValueError,KeyError,TypeError):pass
 
 def save_console():
     CONSOLE_SNAPSHOT.parent.mkdir(exist_ok=True)
-    data={'formation':formation,'mission':mission,'mission_counter':mission_counter,'faults':list(simulated_faults),'battery_origin':battery_origin}
+    data={'formation':formation,'mission':mission,'mission_counter':mission_counter,'faults':list(simulated_faults),'battery_origin':battery_origin,'fault_status':fault_status,'charge_credit':charge_credit}
     temp=CONSOLE_SNAPSHOT.with_suffix('.tmp');temp.write_text(json.dumps(data,ensure_ascii=False));temp.replace(CONSOLE_SNAPSHOT)
 
 app.mount('/', StaticFiles(directory=ROOT/'frontend', html=True), name='frontend')

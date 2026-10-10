@@ -66,3 +66,10 @@ header .jcc-brand{display:block;min-width:0;flex:1}
 header .jcc-logo{display:block;width:min(660px,100%);height:auto;aspect-ratio:1380/130;object-fit:contain;object-position:left center}
 header #health{flex-shrink:0;max-width:240px}
 @media(max-width:760px){header{flex-wrap:wrap}header .jcc-brand{flex-basis:100%}header .jcc-logo{width:min(560px,100%)}header #health{margin:4px 0;max-width:none}}
+
+/* Current telemetry risks stay beside selected vehicle and approval. */
+.risk-panel{border:1px solid #365567;border-radius:10px;background:#0b202e}.risk-panel .title{padding:10px}#riskList,#riskResponses{padding:8px}.risk-item{display:block;width:100%;text-align:left;margin:4px 0;padding:9px;background:#173446;border:1px solid #526879;font-size:12px}.risk-item.critical{border-color:#ff8b77;background:#422b31}.risk-item small,.risk-response small{display:block;color:#b7c6d2;font-size:11px;margin-top:5px}.risk-response{padding:8px;border-top:1px solid #294657;font-size:12px}.risk-response button{padding:5px 8px;margin-top:5px;font-size:11px}.live-mission{margin-top:10px}.live-mission .mission-content{padding:0}.camera{overflow:hidden;touch-action:none;cursor:grab}.camera:active{cursor:grabbing}#camera,#cameraOverlay{transform-origin:center;pointer-events:none}.camera-tools{display:flex;align-items:center;gap:8px;padding:9px 12px;font-size:11px;color:#a2c3d6}.camera-tools button{padding:5px 8px;font-size:11px}.right-column{gap:12px}#riskRefresh{font-size:10px}#riskList{max-height:240px;overflow:auto}
+
+.live-mission{max-height:680px;overflow-y:auto}.right-column>.chat{height:420px}.risk-response button:disabled{opacity:.4}.risk-panel .title h2{font-size:14px}
+
+.camera-tools{flex-wrap:wrap}#cameraIdentity{padding:0 14px;margin:6px 0;font-size:12px;color:#84ece6}#inspectVehicle:disabled{opacity:.4}

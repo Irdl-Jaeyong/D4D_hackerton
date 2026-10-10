@@ -69,9 +69,14 @@ for i in range(cfg['ships']):
 for i in range(cfg['uavs']):
     id=f'UAV-{i+1:02}';p=initial[id]
     m,l=model(id,f'{p["x"]} {p["y"]} {p["z"]} 0 0 {p["yaw"]}');odom(m,id)
-    visual(l,'body','box','.65 .35 .22',color='.16 .19 .21 1')
+    visual(l,'body','box','.65 .35 .22',color='.72 .76 .8 1')
+    visual(l,'nose','box','.12 .28 .08','.34 0 -.02 0 0 0',color='.12 .15 .18 1')
+    for side in [-1,1]:
+        for x in [-.24,.24]:visual(l,f'leg_{side}_{x}','cylinder',('.025','.24'),f'{x} {side*.28} -.20 0 0 0',color='.38 .42 .46 1')
+        visual(l,f'skid_{side}','cylinder',('.025','.8'),f'0 {side*.28} -.32 0 {math.pi/2} 0',color='.25 .28 .3 1')
     for k,(a,b) in enumerate([(-.55,-.55),(-.55,.55),(.55,-.55),(.55,.55)]):
         visual(l,f'arm{k}','box','1.55 .08 .07',f'0 0 0 0 0 {math.pi/4 if a*b>0 else -math.pi/4}')
+        visual(l,f'motor{k}','cylinder',('.065','.12'),f'{a} {b} .07 0 0 0',color='.62 .66 .7 1')
         visual(l,f'rotor{k}','cylinder',('.32','.035'),f'{a} {b} .12 0 0 0','.1 .12 .14 1')
 for i in range(cfg['usvs']):
     id=f'USV-{i+1:02}';p=initial[id]
@@ -108,10 +113,13 @@ for name,p in initial.items():
 # orbit, ease toward a target, or receive independent per-frame pose commands.
 ship_link=w.find("model[@name='SHIP-01']/link")
 for mode,view in cfg['camera_views'].items():
-    s=E.SubElement(ship_link,'sensor',name=f'fleet_camera_{mode}',type='camera')
+    if mode=='inspect':
+        _,sensor_link=model('inspection_camera','0 0 30 0 0 0')
+    else:sensor_link=ship_link
+    s=E.SubElement(sensor_link,'sensor',name=f'fleet_camera_{mode}',type='camera')
     ox,oy,oz=view['offset']
-    el(s,'pose',f'{ox} {oy} {oz-2.4} 0 {view["pitch"]} {view["yaw"]}')
-    el(s,'always_on','true');el(s,'update_rate','5');el(s,'topic',f'/navis/camera/{mode}')
+    el(s,'pose','0 0 0 0 0 0' if mode=='inspect' else f'{ox} {oy} {oz-2.4} 0 {view["pitch"]} {view["yaw"]}')
+    el(s,'always_on','true');el(s,'update_rate','3' if mode=='inspect' else '5');el(s,'topic',f'/navis/camera/{mode}')
     c=E.SubElement(s,'camera');el(c,'horizontal_fov',view['horizontal_fov'])
     im=E.SubElement(c,'image');el(im,'width','1280');el(im,'height','720');el(im,'format','R8G8B8')
     clip=E.SubElement(c,'clip');el(clip,'near','.1');el(clip,'far','1500')

@@ -50,12 +50,14 @@ class MaritimeEscort : public gazebo::System, public gazebo::ISystemConfigure,
     const double t=lead.Pos().X()/speed,dt=std::chrono::duration<double>(info.dt).count();
     if(goalEntity==gazebo::kNullEntity)goalEntity=ecm.EntityByComponents(gazebo::components::Model(),gazebo::components::Name(goalName));
     if(goalEntity==gazebo::kNullEntity)return;
-    const auto target=gazebo::worldPose(goalEntity,ecm).Pos();
+    const auto targetPose=gazebo::worldPose(goalEntity,ecm);
+    const bool fault=std::abs(targetPose.Rot().Pitch())>.5;
+    const auto target=targetPose.Pos();
     const auto error=target-pose.Pos();
     math::Vector3d desired(speed+.3*error.X(),.3*error.Y(),0);
     // Repel from the flagship footprint while moving to a new formation.
     const double relativeX=pose.Pos().X()-lead.Pos().X();
-    if(std::abs(relativeX)<92 && std::abs(pose.Pos().Y())<32){
+    if(!fault && std::abs(relativeX)<92 && std::abs(pose.Pos().Y())<32){
       desired.Y((pose.Pos().Y()<0?-1:1)*std::max(1.2,.3*(32-std::abs(pose.Pos().Y()))));
     }
     const double distance=1000,cpa=1000;const bool avoidance=false;
@@ -90,8 +92,9 @@ class MaritimeEscort : public gazebo::System, public gazebo::ISystemConfigure,
       link.AddWorldForce(ecm,math::Vector3d(0,0,force),offset);
     }
     auto forward=pose.Rot().RotateVector(math::Vector3d(1,0,0));
-    link.AddWorldForce(ecm,forward*left,math::Vector3d(-1.8,.7,0));
-    link.AddWorldForce(ecm,forward*right,math::Vector3d(-1.8,-.7,0));
+    link.AddWorldForce(ecm,forward*left*(fault?.45:1),math::Vector3d(-1.8,.7,0));
+    link.AddWorldForce(ecm,forward*right*(fault?.45:1),math::Vector3d(-1.8,-.7,0));
+    if(fault && error.Length()>10)link.AddWorldWrench(ecm,math::Vector3d(0,0,0),math::Vector3d(180*std::sin(t*3),60*std::sin(t*2),0));
     math::Vector3d drag(-80*bodyV.X()-25*bodyV.X()*std::abs(bodyV.X()),
                        -200*bodyV.Y()-100*bodyV.Y()*std::abs(bodyV.Y()),0);
     link.AddWorldWrench(ecm,pose.Rot().RotateVector(drag),

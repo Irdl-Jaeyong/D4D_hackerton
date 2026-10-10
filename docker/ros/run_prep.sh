@@ -24,7 +24,7 @@ for ((attempt=0; attempt<30; attempt++)); do
   sleep 1
 done
 sleep 2
-topics=('/world/navis_prep/clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock' '/navis/camera/wide@sensor_msgs/msg/Image[ignition.msgs.Image' '/navis/camera/detail@sensor_msgs/msg/Image[ignition.msgs.Image')
+topics=('/world/navis_prep/clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock' '/navis/camera/wide@sensor_msgs/msg/Image[ignition.msgs.Image' '/navis/camera/detail@sensor_msgs/msg/Image[ignition.msgs.Image' '/navis/camera/inspect@sensor_msgs/msg/Image[ignition.msgs.Image')
 mapfile -t vehicles < <(python3 -c 'import json; f=json.load(open("/project/config/fleet.json")); print("\n".join(f"{kind}-{i:02}" for kind,key in [("SHIP","ships"),("UAV","uavs"),("USV","usvs")] for i in range(1,f[key]+1)))')
 for vehicle in "${vehicles[@]}"; do
   topics+=("/navis/${vehicle//-/_}/odometry@nav_msgs/msg/Odometry[ignition.msgs.Odometry")
