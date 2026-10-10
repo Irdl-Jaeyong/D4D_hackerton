@@ -39,7 +39,9 @@ async def console_lifespan(application):
     global auto_generator
     restore_console()
     auto_config=json.loads((ROOT/'config/auto_scenarios.json').read_text())
-    if auto_config.get('startup_mode')=='normal':reset_demo_session()
+    startup_mode=os.environ.get('NAVIS_STARTUP_MODE',auto_config.get('startup_mode'))
+    if startup_mode=='normal':reset_demo_session()
+    elif startup_mode=='resume':auto_config['initial_delay_seconds']=auto_config['interval_seconds'][0]
     auto_generator=ScenarioGenerator(auto_config,now=time.monotonic())
     auto_task=asyncio.create_task(generate_random_scenarios())
     try:
