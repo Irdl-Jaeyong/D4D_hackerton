@@ -13,8 +13,10 @@ function responseExecutionRequest(m,optionId) {
 }
 function reviewedMission(state, selectedId) {
   const active=state.active_mission || (state.mission?.approved ? state.mission : null);
-  if(active)return active;
   const queue=state.approval_queue || [];
+  const selected=queue.find(m=>m.id===selectedId);
+  if(selected)return selected;
+  if(active)return active;
   return queue.find(m=>m.id===selectedId) || queue[0] || state.mission || null;
 }
 if(typeof module!=='undefined')module.exports={queueReviewKey,responseExecutionRequest,reviewedMission};

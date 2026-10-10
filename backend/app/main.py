@@ -314,6 +314,7 @@ class ExecutionReport(BaseModel):
     cancelled: bool = False
 @app.post('/api/internal/execution')
 async def report_execution(data: ExecutionReport,x_bridge_token: str=Header(default='')):
+    global mission
     if not TOKEN or not hmac.compare_digest(TOKEN,x_bridge_token):raise HTTPException(403,'Bridge token required')
     if not mission or mission['id']!=data.mission_id or not mission.get('approved'):raise HTTPException(409,'Mission changed')
     previous=mission.get('execution',{})
@@ -326,6 +327,7 @@ async def report_execution(data: ExecutionReport,x_bridge_token: str=Header(defa
         if current:
             remaining=readiness({'id':id,'type':id.split('-')[0],'connected':True,'telemetry':current},max(0,current['sim_time']-battery_origin.get(id,0)))['battery_percent']
             task['simulated_battery_used']=round(max(0,mission['energy_at_start'].get(id,remaining)-remaining),1)
+    if data.status in ('completed','cancelled'):mission=None
     return {'ok':True}
 
 class FaultRequest(BaseModel):
@@ -502,7 +504,7 @@ def restore_console():
         formation.update(saved['formation']);mission=None
         cards=saved.get('missions') or ([saved['mission']] if saved.get('mission') else [])
         missions.clear();missions.update({m['id']:m for m in cards})
-        mission=next((m for m in cards if m.get('approved')),None)
+        mission=next((m for m in cards if m.get('approved') and m.get('execution',{}).get('status') not in ('completed','cancelled')),None)
         mission_counter=max(saved.get('mission_counter',0),max(missions,default=0))
         simulated_faults.update(id for id in saved.get('faults',[]) if id in IDS)
         battery_origin.update(saved.get('battery_origin',{}))

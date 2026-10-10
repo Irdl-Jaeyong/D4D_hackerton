@@ -73,4 +73,19 @@ class MissionAPI(unittest.IsolatedAsyncioTestCase):
         m=await self.scenario()
         await api.set_formation(api.FormationRequest(group='uav',mode='triangle'))
         with self.assertRaises(HTTPException):await self.approve(m['id'])
+    async def test_completed_execution_releases_lock_and_preserves_result(self):
+        m=await self.scenario();await self.approve(m['id'],option='observe')
+        api.TOKEN='test'
+        await api.report_execution(api.ExecutionReport(mission_id=m['id'],sim_time=20,elapsed_seconds=20,tasks={},status='completed'),x_bridge_token='test')
+        self.assertIsNone(api.state()['active_mission'])
+        self.assertEqual(api.missions[m['id']]['execution']['status'],'completed')
+        await api.set_formation(api.FormationRequest(group='uav',mode='hemisphere'))
+        import tempfile
+        old=api.CONSOLE_SNAPSHOT
+        try:
+            with tempfile.TemporaryDirectory() as folder:
+                api.CONSOLE_SNAPSHOT=Path(folder)/'snapshot.json';api.save_console();api.restore_console()
+                self.assertIsNone(api.state()['active_mission'])
+        finally:api.CONSOLE_SNAPSHOT=old;api.TOKEN=''
+
 if __name__=='__main__':unittest.main()
