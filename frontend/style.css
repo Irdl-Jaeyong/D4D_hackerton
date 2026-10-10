@@ -114,3 +114,5 @@
 .response-card{padding:9px;margin-top:7px}.response-card h3{font-size:12px;margin:0 0 4px}.response-card p{font-size:10px;line-height:1.4;margin:3px 0}.response-card details{margin-top:4px}.response-card button{padding:7px;margin-top:6px;font-size:11px}
 #missionStage{margin:7px 0;font-size:10px}.mission-console>.scope-note{font-size:9px;line-height:1.4;margin:6px 0}
 @media(max-width:760px){.right-column>.chat{height:190px;min-height:190px}}
+
+.queue-actions{display:flex;justify-content:flex-end;margin:0 0 7px}.queue-actions button{padding:5px 8px;font-size:10px;color:#a9bdc9;background:transparent}

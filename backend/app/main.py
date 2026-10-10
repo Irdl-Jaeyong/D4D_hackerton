@@ -1,8 +1,9 @@
 import asyncio
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 import base64
 import hmac
 import math
+import logging
 import json
 import os
 import time
@@ -20,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'scripts'))
 from formation_motion import CATALOG
 from mission_console import readiness, options, SCENARIOS
+from auto_scenarios import ScenarioGenerator
 from risk_monitor import assess
 from fault_motion import deck_slot
 from scenario_scene import targets as scene_targets
@@ -29,13 +31,31 @@ missions={}
 mission_counter=0
 formation={'usv':'circle','uav':'hemisphere','revision':0}
 formation_status={}
+auto_generator=None
 @asynccontextmanager
 async def console_lifespan(application):
+    global auto_generator
     restore_console()
+    auto_generator=ScenarioGenerator(json.loads((ROOT/'config/auto_scenarios.json').read_text()),now=time.monotonic())
+    auto_task=asyncio.create_task(generate_random_scenarios())
     try:
         yield
     finally:
+        auto_task.cancel()
+        with suppress(asyncio.CancelledError):await auto_task
         save_console()
+
+async def generate_random_scenarios():
+    while True:
+        await asyncio.sleep(1)
+        request=auto_generator.next_request(state(),time.monotonic())
+        if request:
+            try:
+                item=await start_scenario(ScenarioRequest(**request),preserve_camera=True)
+                item['auto_generated']=True
+                save_console()
+            except HTTPException as error:
+                logging.getLogger(__name__).warning('Automatic scenario skipped: %s',error.detail)
 
 app = FastAPI(title='NAVIS-AI preparation MVP', lifespan=console_lifespan)
 latest = {}
@@ -141,7 +161,7 @@ def state():
     for target in situations:missions[target['mission_id']]['target_world_current']=[target['x'],target['y']]
     reassess_missions(vehicles)
     queue=sorted((m for m in missions.values() if not m.get('approved')),key=sort_key)
-    return {'mission':mission or next(iter(queue),None),'active_mission':mission,'approval_queue':queue,'scenario_catalog':SCENARIOS,'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'selected vehicle inspection camera' if camera_view=='inspect' else 'SHIP-01 stabilized overhead sensors', 'scene_mode': FLEET['motion']['uav_pattern'], 'camera_view':camera_view,'inspection_vehicle':inspection_vehicle, 'formations': {**formation, 'catalog':CATALOG,'status':formation_status}, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion'], 'scenario': None,'sim_time':stamp,'situations':situations}}
+    return {'auto_scenarios':{'enabled':auto_generator.config['enabled'],'next_in_seconds':max(0,round(auto_generator.next_at-time.monotonic())),'max_pending':auto_generator.config['max_pending']} if auto_generator else None,'mission':mission or next(iter(queue),None),'active_mission':mission,'approval_queue':queue,'scenario_catalog':SCENARIOS,'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'selected vehicle inspection camera' if camera_view=='inspect' else 'SHIP-01 stabilized overhead sensors', 'scene_mode': FLEET['motion']['uav_pattern'], 'camera_view':camera_view,'inspection_vehicle':inspection_vehicle, 'formations': {**formation, 'catalog':CATALOG,'status':formation_status}, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion'], 'scenario': None,'sim_time':stamp,'situations':situations}}
 
 def fault_signals(vehicle_id):
     kind=fault_kinds.get(vehicle_id,'payload');criteria=FAULT_TYPES[kind]
@@ -214,12 +234,12 @@ class ApprovalRequest(BaseModel):
     plan_revision: int = Field(default=0,ge=0)
 
 @app.post('/api/mission/scenario')
-async def start_scenario(data: ScenarioRequest):
+async def start_scenario(data: ScenarioRequest,preserve_camera: bool=False):
     global mission_counter,camera_view,camera
     if data.scenario=='fault':
         if not data.vehicle_id:raise HTTPException(422,'고장 대상 기체를 선택하세요.')
         await set_simulated_fault(data.vehicle_id,FaultRequest(unavailable=True,fault_type=data.fault_type))
-    if camera_view!='wide':camera_view='wide';camera=None
+    if not preserve_camera and camera_view!='wide':camera_view='wide';camera=None
     mission_counter+=1
     lead=latest.get('SHIP-01');origin={k:lead.get(k,0) for k in ('x','y','yaw','sim_time')} if lead and time.time()-lead['received_at']<5 else None
     if data.scenario=='fault':

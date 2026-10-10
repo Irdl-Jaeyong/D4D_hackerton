@@ -109,7 +109,7 @@ if(key!==lastScenarioStage){event(['민간 배 접근: 충돌 예측 감시','�
 }catch{disconnectedDisplay();$('connected').textContent='백엔드 연결 끊김';document.querySelectorAll('.badge').forEach(b=>{b.className='badge';b.textContent='확인 불가';});$('fleetSummary').textContent='백엔드 연결 끊김 · 상태 확인 불가';document.querySelectorAll('#responseOptions button').forEach(b=>b.disabled=true);$('finalApprove').disabled=true;$('submitApprovalCommand').disabled=true;$('cards').replaceChildren();$('vehicleDetails').textContent='연결 끊김 · 마지막 상태를 사용할 수 없습니다.';$('assignmentSummary').textContent='연결 끊김 · 배정 결과 확인 불가';$('assignmentReasons').replaceChildren();$('assignmentPlan').disabled=true;$('map').getContext('2d').clearRect(0,0,$('map').width,$('map').height);$('camera').style.display='none';$('cameraEmpty').style.display='block';$('cameraEmpty').textContent='백엔드 연결 끊김';$('cameraOverlay').getContext('2d').clearRect(0,0,1280,720);}finally{setTimeout(poll,500);}}
 $('chatForm').addEventListener('submit',async e=>{e.preventDefault();const message=$('message').value.trim();if(!message)return;bubble(message,'user');$('message').value='';$('send').disabled=true;$('chatStatus').textContent='AI 분석 중 · 최초 요청은 로딩 시간이 걸릴 수 있습니다';try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,use_camera:$('useCamera').checked,history:history.slice(-8)})});const data=await r.json();if(!r.ok)throw Error(data.detail||'요청 실패');bubble(data.reply,'ai');history.push({role:'user',content:message},{role:'assistant',content:data.reply.slice(0,4000)});$('chatStatus').textContent=`${data.elapsed_seconds}초 · ${data.used_camera?'카메라 포함':'텍스트'} · 명령 실행 없음`;}catch(err){bubble(err.message,'ai error');$('chatStatus').textContent='요청 실패';}finally{$('send').disabled=false;}});
 
-let selectedVehicle=null,missionRenderKey='',selectedResponse=null,reviewMissionId=null,scenarioDraft=false,missionRequestPending=false,queueView=null,plansRefreshing=false,responseExecuting=false,lastPlanRefresh=0;
+let selectedVehicle=null,missionRenderKey='',selectedResponse=null,reviewMissionId=null,missionRequestPending=false,queueView=null,plansRefreshing=false,responseExecuting=false,lastPlanRefresh=0;
 function reviewState(s){
   queueView=queueSnapshot(queueView,s.approval_queue||[],Date.now());
   const ids=new Set(queueView.items.map(m=>m.id));
@@ -117,7 +117,7 @@ function reviewState(s){
   reviewMissionId=m?.id??null;return {...s,mission:m};
 }
 function selectSituation(id){
-  reviewMissionId=id;scenarioDraft=false;selectedResponse=null;missionRenderKey='';
+  reviewMissionId=id;selectedResponse=null;missionRenderKey='';
   if(lastState){lastState=reviewState(lastState);renderMission(lastState);renderVehicles(lastState);}
 }
 function priorityText(m){const index=queueView?.items.findIndex(item=>item.id===m.id)??-1;return index>=0?`${index+1}순위`:'실행 중';}
@@ -258,12 +258,11 @@ function disconnectedDisplay(){
 function renderMission(s){
   const m=s.mission,key=queueReviewKey(m);
   $('situationSummary').textContent=m?`${priorityText(m)} · ${m.card.title} · 상세`:'선택 상황 상세';
-  renderMissionReview(s);$('cancelMission').disabled=missionRequestPending||!m;$('startScenario').disabled=missionRequestPending||!!m?.approved;
+  renderMissionReview(s);$('cancelMission').disabled=missionRequestPending||!m;
   if(key!==missionRenderKey){
     missionRenderKey=key;$('situationCard').replaceChildren();$('responseOptions').replaceChildren();
     if(!m){$('situationCard').append(element('p','가상 상황을 선택해 대응안 3개를 확인하세요.','muted'));}
     else{
-      if(!scenarioDraft&&[...$('scenarioSelect').options].some(o=>o.value===m.scenario))$('scenarioSelect').value=m.scenario;
       $('situationCard').append(element('strong',m.card.title),element('p',m.card.summary),element('p',`함선 상대 위치 x ${m.card.offset[0]}m / y ${m.card.offset[1]}m · 관제 지도에 가상 표식 표시`,'muted'),element('p',m.card.unknown,'scope-note'));
       $('situationCard').append(element('p',`${priorityText(m)} · ${m.risk?.score==null?'평가 불가':m.risk.score+' / 100점'}`,'priority-badge queue-rank-'+((queueView?.items.findIndex(item=>item.id===m.id)??-1)+1)));
       if(!m.options.length)$('responseOptions').append(element('p','함선의 최신 위치가 없어 추천을 생성할 수 없습니다. 연결되면 자동 갱신됩니다.'));
@@ -330,15 +329,13 @@ async function executeResponse(m,optionId){
 async function missionRequest(url,data={}){
   if(missionRequestPending)return;missionRequestPending=true;
   const buttons=[...document.querySelectorAll('.mission-console button')];buttons.forEach(b=>b.disabled=true);$('missionFeedback').textContent='처리 중…';
-  try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),result=await r.json();if(!r.ok)throw Error(result.detail||'요청 실패');if(result.id!==undefined){reviewMissionId=result.id;scenarioDraft=false;}
+  try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),result=await r.json();if(!r.ok)throw Error(result.detail||'요청 실패');if(result.id!==undefined){reviewMissionId=result.id;}
     const response=await fetch('/api/state');if(!response.ok)throw Error('상태 갱신 실패');queueView=null;lastState=reviewState(await response.json());missionRenderKey='';renderMission(lastState);renderVehicles(lastState);formationControls(lastState.formations);$('missionFeedback').textContent=url.endsWith('approve')?'승인 완료 · 대형 적용 요청 / UAV·USV 출동 요청':url.endsWith('cancel')?'계획 종료 · 현재 대형 유지':url.endsWith('simulated-fault')?'기체 배정 상태 시연 갱신':'상황 생성 완료 · 대응안 3개를 검토하세요.';event($('missionFeedback').textContent);return result;
   }catch(error){$('missionFeedback').textContent=error.message;event(error.message);}
   finally{missionRequestPending=false;if(lastState)renderMission(lastState);}
 }
 $('faultToggle').addEventListener('click',async()=>{const v=lastState?.vehicles.find(v=>v.id===selectedVehicle);if(!v)return;await missionRequest('/api/vehicles/'+v.id+'/simulated-fault',{unavailable:!v.fault});});
-$('startScenario').addEventListener('click',()=>missionRequest('/api/mission/scenario',{scenario:$('scenarioSelect').value}));
 $('cancelMission').addEventListener('click',()=>missionRequest('/api/mission/cancel',{mission_id:lastState?.mission?.id}));
-$('scenarioSelect').addEventListener('change',()=>{scenarioDraft=true;});
 $('assignmentPlan').addEventListener('change',()=>{const m=lastState?.mission;if(m&&!m.approved){selectedResponse={mission_id:m.id,option_id:$('assignmentPlan').value,plan_revision:m.plan_revision||0};renderHumanApproval(lastState);}if(lastState)renderVehicles(lastState);});
 $('vehicleFilter').addEventListener('change',()=>{if(lastState)renderVehicles(lastState);});
 function chooseVehicle(event){const row=event.target.closest('[data-vehicle]');if(row){selectedVehicle=row.dataset.vehicle;if(lastState){renderVehicles(lastState);map(lastState);cameraOverlay(lastState);}}}

@@ -88,4 +88,12 @@ class MissionAPI(unittest.IsolatedAsyncioTestCase):
                 self.assertIsNone(api.state()['active_mission'])
         finally:api.CONSOLE_SNAPSHOT=old;api.TOKEN=''
 
+    async def test_automatic_creation_preserves_selected_camera(self):
+        mode,image=api.camera_view,api.camera
+        try:
+            api.camera_view='inspect';api.camera={'received_at':time.time(),'jpeg':b'image'}
+            await api.start_scenario(api.ScenarioRequest(scenario='crossing'),preserve_camera=True)
+            self.assertEqual(api.camera_view,'inspect');self.assertIsNotNone(api.camera)
+        finally:api.camera_view=mode;api.camera=image
+
 if __name__=='__main__':unittest.main()

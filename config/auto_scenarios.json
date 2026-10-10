@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "initial_delay_seconds": 5,
+  "interval_seconds": [20, 35],
+  "max_pending": 6,
+  "max_per_scenario": 2,
+  "max_faulted_vehicles": 6,
+  "scenarios": ["crossing", "debris", "rescue", "fault"],
+  "fault_types": ["payload", "propulsion", "communication"]
+}
