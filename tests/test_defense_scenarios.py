@@ -4,7 +4,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 from scenario_scene import targets,model_sdf
 from mission_console import options,readiness
 from mission_execution import ObservationRun
-from defense_scenarios import DEFENSE_SCENARIOS,defense_goal,formation_goals
+from defense_scenarios import DEFENSE_SCENARIOS,DEFENSE_RESPONSES,defense_goal,formation_goals
 
 def vehicle(id):
  v={'id':id,'type':id.split('-')[0],'connected':True,'telemetry':{'x':0,'y':0,'z':80 if id.startswith('UAV') else .7}}
@@ -33,7 +33,7 @@ class DefenseScenarios(unittest.TestCase):
    for p in plans:
     ids=[t['vehicle'] for t in p['tasks']];self.assertEqual(len(ids),len(set(ids)))
     self.assertTrue(any(id.startswith('UAV') for id in ids));self.assertTrue(any(id.startswith('USV') for id in ids))
-   self.assertEqual(plans[1]['formations'],DEFENSE_SCENARIOS[kind]['formations'])
+   self.assertEqual(plans[1]['formations'],DEFENSE_RESPONSES[kind][1]['formations'])
  def test_missing_live_ship_has_no_invented_recommendation(self):
   from mission_console import defense_options
   self.assertEqual(defense_options([vehicle('UAV-01')],{'usv':'circle','uav':'hemisphere'},'fast_approach'),[])

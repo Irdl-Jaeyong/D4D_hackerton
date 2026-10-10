@@ -1,6 +1,7 @@
 """Scripted, non-weapon contact approaches and persistent observation/screen positions."""
 import json,math
 from pathlib import Path
+DEFENSE_RESPONSES=json.loads((Path(__file__).resolve().parents[1]/'config/defense_responses.json').read_text())
 DEFENSE_SCENARIOS=json.loads((Path(__file__).resolve().parents[1]/'config/defense_scenarios.json').read_text())
 
 def contacts(m,sim_time):
@@ -25,12 +26,28 @@ def contacts(m,sim_time):
           'track_id':f"T{m['id']:03}-{i+1}",'scale':1.15 if m['scenario']=='patrol_contact' else 1.0})
     return out
 
-def defense_goal(kind,ship,contact,slot=0,contact_type='surface'):
+def defense_goal(kind,ship,contact,slot=0,contact_type='surface',goal_policy=None):
     dx,dy=contact[0]-ship[0],contact[1]-ship[1];distance=max(math.hypot(dx,dy),1);ux,uy=dx/distance,dy/distance
-    lateral=(-1 if slot%2 else 1)*(18+12*(slot//2))
+    lateral=(-1 if slot%2 else 1)*(18+(16 if goal_policy else 12)*(slot//2))
+    altitude=(135 if contact_type=='air' else 85)+18*slot
+    if goal_policy in ('protect','avoid'):
+        radius=(70 if kind=='USV' else 110) if goal_policy=='protect' else (105 if kind=='USV' else 130)
+        direction=-1 if goal_policy=='avoid' else 1
+        x,y=ship[0]+direction*ux*radius-uy*lateral,ship[1]+direction*uy*radius+ux*lateral
+        # Never place a near-ship USV goal inside the flagship safety footprint.
+        if kind=='USV' and abs(x-ship[0])<100 and abs(y-ship[1])<42:
+            y=ship[1]+math.copysign(45+16*(slot//2),y-ship[1] or lateral)
+        return x,y,.7 if kind=='USV' else altitude
     if kind=='USV':
-        radius=min(145,max(115,distance*(.72 if contact_type in ('floating','underwater') else .52)));return ship[0]+ux*radius-uy*lateral,ship[1]+uy*radius+ux*lateral,.7
-    return contact[0]-ux*35-uy*lateral,contact[1]-uy*35+ux*lateral,(135 if contact_type=='air' else 85)+18*slot
+        radius=min(145,max(115,distance*(.72 if contact_type in ('floating','underwater') else .52)))
+        if goal_policy=='standoff':radius=max(70,min(145,distance-110))
+        elif goal_policy=='investigate':radius=max(115,min(185,distance-80))
+        x,y=ship[0]+ux*radius-uy*lateral,ship[1]+uy*radius+ux*lateral
+        if abs(x-ship[0])<100 and abs(y-ship[1])<42:
+            y=ship[1]+math.copysign(45+16*(slot//2),y-ship[1] or lateral)
+        return x,y,.7
+    gap=75 if goal_policy=='standoff' else 35
+    return contact[0]-ux*gap-uy*lateral,contact[1]-uy*gap+ux*lateral,altitude
 
 def formation_goals(group,mode,points,scenario):
     if scenario not in DEFENSE_SCENARIOS:return points

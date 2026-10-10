@@ -1,6 +1,6 @@
 """Non-combat briefing plans; battery and endurance are simulated, not sensed."""
 import math
-from defense_scenarios import DEFENSE_SCENARIOS,defense_goal
+from defense_scenarios import DEFENSE_SCENARIOS,DEFENSE_RESPONSES,defense_goal
 SCENARIOS={
  'crossing':{'title':'접근 선박 확인','summary':'우현 전방의 가상 선박이 접근 중입니다. 의도와 충돌 여부는 미확인입니다.','offset':[110,-90],'unknown':'실제 센서 탐지·충돌 예측은 연결되지 않았습니다.'},
  'debris':{'title':'항로 장애물 확인','summary':'전방에 가상 부유물이 보고되었습니다. 위치 확인이 필요합니다.','offset':[140,30],'unknown':'장애물 형상과 안전 우회 경로는 미검증입니다.'},
@@ -59,14 +59,20 @@ def defense_options(vehicles,formation,scenario,target_offset=None,contacts=None
     if not leader:return []
     ship=leader['telemetry'];ship_xy=(ship['x'],ship['y'])
     contacts=contacts or [{'x':ship['x']+profile['initial_range_m']*math.cos(math.radians(a)),'y':ship['y']+profile['initial_range_m']*math.sin(math.radians(a)),'contact_type':profile.get('contact_types',['surface']*len(profile['bearing_degrees']))[i]} for i,a in enumerate(profile['bearing_degrees'])]
-    specs=[('observe','호위 유지 · 접촉 추적',{'usv':formation['usv'],'uav':formation['uav']},1),('verify','방향별 경계선 전개',profile['formations'],2),('prepare','전방위 경계 강화',{'usv':'circle','uav':'rings'},2)]
+    specs=DEFENSE_RESPONSES[scenario]
+    closest=min(range(len(contacts)),key=lambda i:math.hypot(contacts[i]['x']-ship['x'],contacts[i]['y']-ship['y']))
     out=[]
-    for key,title,modes,count in specs:
+    policy_labels={'track':'지속 관측·추적','screen':'접근 방향 외곽 경계','protect':'함선 근접 보호·관측','standoff':'접촉과 이격 유지·관측','investigate':'추정 유입·접촉 구역 확인','avoid':'교란 구역 반대편으로 이격'}
+    for spec in specs:
         tasks=[];used=set();complete=True
         for i,contact in enumerate(contacts):
+            domain=contact.get('contact_type','surface')
             for kind,role in [('UAV','track'),('USV','screen')]:
+                allocation=spec['allocation'][kind];policy=allocation['goal_policy']
+                count=spec.get('domain_allocation',{}).get(domain,{}).get(kind,allocation['count'])
+                if spec.get('focus')=='closest' and i==closest:count+=1
                 for slot in range(count):
-                    goal=defense_goal(kind,ship_xy,(contact['x'],contact['y']),slot,contact.get('contact_type','surface'));ranked=[]
+                    goal=defense_goal(kind,ship_xy,(contact['x'],contact['y']),slot,domain,policy);ranked=[]
                     for v in vehicles:
                         if v['type']!=kind or v['id'] in used or not v['readiness']['available']:continue
                         distance=math.hypot(v['telemetry']['x']-goal[0],v['telemetry']['y']-goal[1]);eta=distance/(10 if kind=='UAV' else 3);r=v['readiness']
@@ -74,7 +80,10 @@ def defense_options(vehicles,formation,scenario,target_offset=None,contacts=None
                         ranked.append((eta+(100-r['battery_percent'])*.8,v,eta))
                     if not ranked:complete=False;continue
                     _,v,eta=min(ranked,key=lambda item:(item[0],item[1]['id']));used.add(v['id'])
-                    domain=contact.get('contact_type','surface');description=('공중 접촉 관측·추적' if domain=='air' else '수면 징후 관측' if domain=='underwater' else '교란 구역 외곽 관측·중계' if domain=='interference' else '의심 부유물 관측' if domain=='floating' else '지속 관측·추적') if kind=='UAV' else ('수상 경계 유지' if domain=='air' else '수중 센서 가정 · 추정 구역 확인' if domain=='underwater' else '정상 통신 경로 유지' if domain=='interference' else '안전 거리 유지·물체 확인' if domain=='floating' else '함선 외곽 경계선 유지')
-                    tasks.append({'vehicle':v['id'],'role':role,'contact_index':i,'role_slot':slot,'task':f'접촉 {i+1} {description}','eta_seconds':round(eta),'reason':f"실측 위치·모의 배터리 {v['readiness']['battery_percent']}% · 중복 배정 제외 · 복귀 여유 확보"})
-        out.append({'id':key,'title':title,'formations':dict(modes),'tasks':tasks,'available':complete and bool(tasks),'benefit':'드론 관측과 USV 수상 경계를 분리해 지속 운용','tradeoff':'상황 종료 시까지 추적·경계 유지. 선박 차단 성공이나 의도는 자동 판정하지 않습니다.','validation':'실측 기체 위치·모의 잔량으로 배정. 위협 항로는 시나리오이며 실제 센서 탐지와 구분합니다.','persistent':True})
+                    description=policy_labels[policy]
+                    if domain=='underwater':description=('수면 징후 관측 · ' if kind=='UAV' else '수중 센서 가정 · ')+description
+                    elif domain=='air' and kind=='USV':description='수상 경계 · '+description
+                    elif domain=='interference':description='정상 통신 기체 · '+description
+                    tasks.append({'vehicle':v['id'],'role':role,'goal_policy':policy,'contact_index':i,'role_slot':slot,'task':f'접촉 {i+1} {description}','target_world':list(goal),'eta_seconds':round(eta),'reason':f"실측 위치·모의 배터리 {v['readiness']['battery_percent']}% · 중복 배정 제외 · 복귀 여유 확보"})
+        out.append({'id':spec['id'],'title':spec['title'],'formations':dict(spec['formations']),'tasks':tasks,'available':complete and bool(tasks),'benefit':spec['benefit'],'tradeoff':spec['tradeoff'],'execution_summary':spec['benefit'],'validation':'실측 기체 위치·모의 잔량으로 배정. 위협 항로는 시나리오이며 실제 센서 탐지와 구분합니다.','persistent':True})
     return out

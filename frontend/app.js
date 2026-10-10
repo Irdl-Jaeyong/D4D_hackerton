@@ -186,6 +186,7 @@ function assignmentText(v,context){
   return '이번 안 미선택 · '+v.readiness.task;
 }
 function renderAssignment(s){
+  for(const option of $('assignmentPlan').options){const plan=s.mission?.options.find(p=>p.id===option.value);option.textContent=plan?.title||({'observe':'대응안 1','verify':'대응안 2','prepare':'대응안 3'}[option.value]);}
   const c=assignmentContext(s),m=c.mission,p=c.plan;
   $('assignmentPlan').disabled=!m||!!m.approved;
   if(m?.approved)$('assignmentPlan').value=m.approved.id;
@@ -197,7 +198,7 @@ function renderAssignment(s){
     if(v&&(!v.connected||v.readiness.operational_state==='unavailable'))item.append(element('small','현재 상태 변경: '+v.readiness.reason+' · 다시 계산하세요.','offline'));
     $('assignmentReasons').append(item);
   }
-  $('assignmentReasons').append(element('p','기타 기체: 기존 담당 위치 유지. 선택 이유는 연결·시뮬레이션 잔량·직선 ETA 및 복귀 여유에 근거합니다.','muted'));
+  $('assignmentReasons').append(element('p','기타 기체: 선택한 호위 대형의 담당 위치 유지. 선택 이유는 연결·시뮬레이션 잔량·직선 ETA 및 복귀 여유에 근거합니다.','muted'));
 }
 
 function vehicleDetails(s){
@@ -299,7 +300,7 @@ function renderMission(s){
         const details=element('details'),summary=element('summary','배정 근거 · 예상 시간 · 검증');details.append(summary);
         for(const task of plan.tasks)details.append(element('small',`${task.vehicle}: ${task.reason} · 직선 이동 추정 ${task.eta_seconds}초`));
         details.append(element('p',plan.benefit),element('small',plan.tradeoff),element('small',plan.validation));card.append(details);
-        const current=s.formations;details.append(element('p',`승인 후: USV ${current.catalog.usv[current.usv]} → ${current.catalog.usv[plan.formations.usv]} / 드론 ${current.catalog.uav[current.uav]} → ${current.catalog.uav[plan.formations.uav]}`,'movement-summary'),element('small',plan.persistent?'드론은 접촉을 지속 추적하고 USV는 함선과 접촉 사이의 경계선을 유지합니다. 대형 버튼으로 직접 조정하거나 상황을 종료할 수 있습니다.':'현재와 같은 대형은 유지합니다. UAV·USV는 확인 후 복귀합니다.'));
+        const current=s.formations;details.append(element('p',`승인 후: USV ${current.catalog.usv[current.usv]} → ${current.catalog.usv[plan.formations.usv]} / 드론 ${current.catalog.uav[current.uav]} → ${current.catalog.uav[plan.formations.uav]}`,'movement-summary'),element('small',plan.persistent?`${plan.execution_summary||plan.benefit} 대형 버튼으로 직접 조정하거나 상황을 종료할 수 있습니다.`:'현재와 같은 대형은 유지합니다. UAV·USV는 확인 후 복귀합니다.'));
         const button=element('button',m.approved?(m.approved.id===plan.id?'실행된 대응안':'선택 종료'):'이 대응안 선택 · 즉시 실행');button.type='button';button.dataset.option=plan.id;button.disabled=missionRequestPending||!!m.approved;
         if(!plan.available)card.append(element('p','가용 기체 부족 · 검토는 가능하지만 승인할 수 없습니다.','response-availability'));
         button.addEventListener('click',()=>executeResponse(m,plan.id));card.append(button);$('responseOptions').append(card);
