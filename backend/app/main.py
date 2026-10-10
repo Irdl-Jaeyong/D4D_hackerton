@@ -5,6 +5,7 @@ import json
 import os
 import time
 from pathlib import Path
+from typing import Literal
 
 import httpx
 from fastapi import FastAPI, Header, HTTPException
@@ -21,7 +22,14 @@ chat_lock = asyncio.Lock()
 TOKEN = os.environ.get('NAVIS_BRIDGE_TOKEN', '')
 MODEL = os.environ.get('OLLAMA_MODEL', 'minicpm-v4.5:latest')
 OLLAMA = os.environ.get('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
-IDS = ['UAV-01', 'UAV-02', 'UAV-03', 'UAV-04', 'USV-01', 'USV-02']
+FLEET = json.loads((ROOT/'config/fleet.json').read_text())
+IDS = [f'{kind}-{i:02}' for kind, key in [('SHIP','ships'),('UAV','uavs'),('USV','usvs')] for i in range(1, FLEET[key]+1)]
+CAMERA_VEHICLE = FLEET['camera_vehicle']
+camera_view = 'wide'
+CAMERA_VIEWS = FLEET.get('camera_views', {'wide':FLEET['camera']})
+
+class CameraView(BaseModel):
+    mode: Literal['wide','detail']
 
 class Telemetry(BaseModel):
     vehicle_id: str = 'USV-01'
@@ -31,6 +39,7 @@ class Telemetry(BaseModel):
     yaw: float = Field(allow_inf_nan=False)
     speed: float = Field(ge=0, allow_inf_nan=False)
     sim_time: float = Field(ge=0, allow_inf_nan=False)
+    speed_source: Literal['ros_twist','odometry_position_delta'] = 'ros_twist'
     camera_jpeg: str | None = Field(default=None, max_length=2_000_000)
 
 class Turn(BaseModel):
@@ -48,8 +57,8 @@ def state():
     for id in IDS:
         value = latest.get(id)
         age = now - value['received_at'] if value else None
-        vehicles.append({'id': id, 'type': 'UAV' if id.startswith('UAV') else 'USV', 'connected': age is not None and age < 5, 'age_seconds': age, 'source': 'gazebo_ros' if value else None, 'telemetry': value})
-    return {'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL}
+        vehicles.append({'id': id, 'type': id.split('-')[0], 'connected': age is not None and age < 5, 'age_seconds': age, 'source': 'gazebo_ros' if value else None, 'telemetry': value})
+    return {'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'fleet_observer', 'scene_mode': 'hemisphere_figure_eight', 'camera_view':camera_view, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion']}}
 
 @app.get('/api/health')
 async def health():
@@ -65,6 +74,18 @@ async def health():
 async def get_state():
     return state()
 
+@app.get('/api/camera/view')
+async def get_camera_view():
+    return {'mode':camera_view, 'camera':CAMERA_VIEWS[camera_view]}
+
+@app.post('/api/camera/view')
+async def set_camera_view(data: CameraView):
+    global camera_view
+    if data.mode not in CAMERA_VIEWS:
+        raise HTTPException(422, 'Camera view unavailable')
+    camera_view = data.mode
+    return {'mode':camera_view, 'camera':CAMERA_VIEWS[camera_view]}
+
 @app.post('/api/internal/telemetry')
 async def telemetry(data: Telemetry, x_bridge_token: str = Header(default='')):
     global camera
@@ -73,8 +94,8 @@ async def telemetry(data: Telemetry, x_bridge_token: str = Header(default='')):
     if data.vehicle_id not in IDS:
         raise HTTPException(422, 'Unknown vehicle ID')
     raw = None
-    if data.camera_jpeg and data.vehicle_id != 'USV-01':
-        raise HTTPException(422, 'Only USV-01 camera is available')
+    if data.camera_jpeg and data.vehicle_id != CAMERA_VEHICLE:
+        raise HTTPException(422, 'Only the designated fleet camera carrier is accepted')
     if data.camera_jpeg:
         try:
             raw = base64.b64decode(data.camera_jpeg, validate=True)
@@ -110,7 +131,7 @@ async def chat(data: Chat):
         offline_ids = [v['id'] for v in snapshot['vehicles'] if not v['connected']]
         system = ('당신은 NAVIS-AI 시뮬레이션 관제 보조입니다. 한국어로 짧고 명확하게 답하세요. '
                   '제공된 실제 상태만 사용하고 배터리, 위치, 연결상태를 추측하지 마세요. '
-                  '카메라는 USV-01의 시뮬레이션 카메라입니다. 보이는 것만 설명하고 불확실하면 명시하세요. '
+                  '카메라는 함대 전체를 비스듬히 내려다보는 Gazebo 항공 관측 카메라입니다. 메인 함선은 직선 전진하며 호위 USV 10대는 함선 상대 경계를 연속 교대하고, 드론 40대는 함선 위 반구 대형을 유지하면서 작은 8자 순찰과 위치 교대를 수행합니다. 이는 Gazebo 위치 갱신 시연이며 실제 항해 및 비행 제어는 아닙니다. 보이는 것만 설명하고 불확실하면 명시하세요. '
                   '현재는 상태 조회와 이미지 설명만 가능하며 이동 명령 실행 기능은 없습니다. '
                   '명령을 실행했다고 주장하지 마세요. 상태가 없는 기체는 미연결입니다. '
                   '상태 요약에서 기체를 빠뜨리지 마세요. 연결 기체: '+', '.join(connected_ids)+

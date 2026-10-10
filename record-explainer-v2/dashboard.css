@@ -24,3 +24,89 @@
 #chat-panel>.section-heading,#chat-panel>p,#ask{flex-shrink:0}
 #history{flex:1 1 0;min-height:0;max-height:none;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;align-content:start}
 #question{height:72px;min-height:72px;resize:none;overflow-y:auto}
+
+
+.inline-name{width:100%;min-width:0;padding:3px 5px;border:1px solid #dce9f3;border-radius:0;background:#182330;color:#fff;font:inherit}
+.device>span:first-child{min-width:0;flex:1}
+
+.sidebar-recent{margin-top:24px;padding-top:20px;border-top:1px solid var(--line);min-width:0}
+.sidebar-recent .table-scroll{max-height:360px;overflow:auto}
+.sidebar-recent th,.sidebar-recent td{font-size:11px}
+
+.position-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.position-grid>div{padding:12px;border:1px solid var(--line);border-radius:6px;background:#001827}
+.position-grid span{display:block;color:var(--muted);font-size:12px}
+.position-grid strong{display:block;color:var(--cyan);font-size:23px;margin-top:6px}
+.coordinate-preview{position:relative;height:170px;margin-top:14px;border:1px solid var(--line);border-radius:6px;background-color:#001827;background-image:linear-gradient(#07507155 1px,transparent 1px),linear-gradient(90deg,#07507155 1px,transparent 1px);background-size:24px 24px}
+.coordinate-origin{position:absolute;left:48%;top:45%;color:var(--muted);font-size:22px}
+.coordinate-point{position:absolute;left:66%;top:65%;color:var(--cyan);font-size:22px}
+.coordinate-axis{position:absolute;bottom:8px;left:10px;color:var(--muted);font-size:11px}
+
+/* Keep the desktop conversation aligned with the center column's bottom. */
+@media(min-width:1151px){
+  .right-column{display:flex;flex-direction:column;align-self:stretch;min-height:0}
+  .right-column>.original-panel{flex:0 0 auto}
+  .right-column>#chat-panel{flex:1 1 0;height:0;min-height:440px}
+}
+
+.conversation-tools{display:flex;gap:8px;flex-shrink:0;margin:4px 0 8px}
+#conversation-list{flex:1;min-width:0;font-size:12px}
+#conversation-new{flex-shrink:0;font-size:12px}
+
+/* Compact chat composer. */
+#question{height:48px;min-height:48px;padding:10px 12px}
+#ask>#send{padding:6px;min-height:48px}
+#send svg{width:26px;height:26px}
+
+#conversation-title{flex-shrink:0;font-size:12px;color:var(--muted);padding:4px 0 8px;overflow-wrap:anywhere;cursor:text}
+
+#conversation-delete{flex-shrink:0;font-size:12px;color:#ffb6b6}
+.conversation-tools{flex-wrap:wrap}
+
+/* Taller reference grid, retaining the existing cell spacing. */
+.coordinate-preview{height:340px}
+
+/* Expanded scene image. */
+.scene-panel{padding:8px}
+.harbor-image{aspect-ratio:1.15}
+
+/* Equal space for the scene and reference position monitor. */
+.center-column{grid-template-rows:repeat(2,minmax(0,1fr))}
+.scene-panel,.position-preview{height:clamp(380px,48vh,560px);overflow:hidden}
+.scene-panel{display:flex}
+.scene-panel .harbor-image{height:100%;width:100%;aspect-ratio:auto;object-fit:cover}
+.position-preview{display:flex;flex-direction:column}
+.position-preview>.section-heading,.position-preview>.position-grid{flex-shrink:0}
+.position-preview>.coordinate-preview{flex:1;min-height:0;height:auto}
+@media(max-width:700px){.scene-panel,.position-preview{height:380px}}
+
+/* Stretch both center panels to the full desktop row, with equal heights. */
+@media(min-width:1151px){
+  .dashboard{align-items:stretch}
+  .center-column{align-self:stretch;min-height:760px;grid-template-rows:repeat(2,minmax(0,1fr))}
+  .center-column>.scene-panel,.center-column>.position-preview{height:auto;min-height:0}
+  .scene-panel .harbor-image{min-height:0}
+  .sidebar,.right-column{align-self:stretch}
+}
+
+/* Bound incoming image dimensions so they cannot change panel proportions. */
+.scene-panel{flex-direction:column;min-width:0}
+.scene-panel>.section-heading{flex:0 0 auto}
+.scene-panel .harbor-image{flex:1 1 0;min-height:0;height:0;object-fit:contain}
+.position-preview>.table-scroll{flex:1 1 0;min-height:0;overflow:auto}
+
+/* Live Gazebo: preserve sensor ratio and keep telemetry from stretching the row. */
+.dashboard .center-column{align-self:start;min-height:0;grid-template-rows:auto auto;align-content:start}
+.dashboard .center-column>.scene-panel{display:block;height:auto;min-height:0;padding:12px;overflow:hidden}
+.dashboard .scene-panel>.section-heading{margin-bottom:10px}
+.dashboard .scene-panel #gazebo-camera{display:block;width:100%;height:auto;min-height:0;max-height:none;aspect-ratio:16/9;object-fit:contain;background:#00101e}
+.dashboard .center-column>.position-preview{height:auto;min-height:0;max-height:none;overflow:hidden}
+.position-preview>.table-scroll{max-height:320px;min-height:0;overflow:auto}
+.position-preview thead{position:sticky;top:0;background:#032237;z-index:1}
+@media(min-width:1151px){
+  .dashboard .right-column{align-self:start}
+  .dashboard .right-column>#chat-panel{flex:none;height:clamp(440px,60vh,600px);min-height:0}
+}
+
+/* Give the live position table its own height instead of a zero flex basis. */
+.dashboard .position-preview>.table-scroll{flex:0 0 auto;height:320px;min-height:200px;max-height:320px;overflow:auto}

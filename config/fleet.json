@@ -1,0 +1,68 @@
+{
+  "ships": 1,
+  "uavs": 40,
+  "usvs": 10,
+  "camera_vehicle": "SHIP-01",
+  "motion": {
+    "ship_speed": 1.5,
+    "escort_angular_speed": 0.01,
+    "escort_radii": [
+      115,
+      75
+    ],
+    "uav_pattern": "hemisphere_figure_eight",
+    "deck_uavs": 0,
+    "hemisphere_radius": 130,
+    "hemisphere_center_height": 12,
+    "hemisphere_latitudes_deg": [
+      12,
+      26,
+      40,
+      54,
+      68
+    ],
+    "hemisphere_rotation_rate": 0.02,
+    "figure_eight_period": 38,
+    "figure_eight_longitude_amplitude": 0.12,
+    "figure_eight_latitude_amplitude": 0.04
+  },
+  "camera": {
+    "offset": [
+      -210,
+      -270,
+      340
+    ],
+    "pitch": 0.7823886869288589,
+    "yaw": 0.9097531579442097,
+    "horizontal_fov": 1.15
+  },
+  "vessel_models": {
+    "flagship": "NPS Arleigh Burke DDG-51 high detail",
+    "escort": "VRX WAM-V 16 ft",
+    "flagship_length_m": 153.781,
+    "flagship_beam_m": 20.435,
+    "asset_scale": 1
+  },
+  "camera_views": {
+    "wide": {
+      "offset": [
+        -210,
+        -270,
+        340
+      ],
+      "pitch": 0.7823886869288589,
+      "yaw": 0.9097531579442097,
+      "horizontal_fov": 1.15
+    },
+    "detail": {
+      "offset": [
+        -110,
+        -160,
+        110
+      ],
+      "pitch": 0.515444662011788,
+      "yaw": 0.9685089806599324,
+      "horizontal_fov": 1.15
+    }
+  }
+}

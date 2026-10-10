@@ -1,6 +1,7 @@
 'use strict';
 const State=globalThis.RecordUIState, byId=id=>document.getElementById(id);
 let records=[],selected=null,busy=false,refreshing=false;
+let syncConversationTarget=null;
 let playbackFrame=null,playing=false,playTimer=null;
 const pendingRead=new Set(), feedback=byId('feedback'), history=[], measurement=State.createMeasurement();
 
@@ -16,6 +17,47 @@ async function api(path,options) {
   } finally {clearTimeout(timer);}
 }
 function tell(text){feedback.textContent=text;}
+const groupNameKey='d4d.group-display-names.v1';
+let groupNames=Object.create(null);
+try{
+  const saved=JSON.parse(localStorage.getItem(groupNameKey)||'{}');
+  if(saved&&typeof saved==='object'&&!Array.isArray(saved))
+    for(const [key,value] of Object.entries(saved))if(typeof value==='string'&&value.trim()&&value.length<=40)groupNames[key]=value;
+}catch{}
+function groupLabel(name){return groupNames[name]||name.replace('장치','그룹');}
+const recordNameKey='d4d.record-display-names.v1';
+let recordNames=Object.create(null);
+try{
+  const saved=JSON.parse(localStorage.getItem(recordNameKey)||'{}');
+  if(saved&&typeof saved==='object'&&!Array.isArray(saved))
+    for(const [key,value] of Object.entries(saved))if(typeof value==='string'&&value.trim()&&value.length<=40)recordNames[key]=value;
+}catch{}
+function recordLabel(record){return recordNames[record.id]||record.id;}
+function editName(host,current,key,kind){
+  if(host.querySelector('input'))return;
+  const input=document.createElement('input');input.className='inline-name';input.type='text';input.maxLength=40;input.value=current;
+  input.setAttribute('aria-label',kind==='group'?'그룹 이름 변경':'기록 표시 이름 변경');
+  host.replaceChildren(input);
+  const stop=event=>event.stopPropagation();
+  for(const type of ['click','dblclick','pointerdown'])input.addEventListener(type,stop);
+  input.addEventListener('keydown',event=>{
+    event.stopPropagation();
+    if(event.isComposing||event.keyCode===229)return;
+    if(event.key==='Escape'){event.preventDefault();render();return;}
+    if(event.key!=='Enter')return;
+    event.preventDefault();const value=input.value.trim();
+    if(!value){input.setCustomValidity('이름을 입력하세요.');input.reportValidity();return;}
+    const names=kind==='group'?groupNames:recordNames,next={...names,[key]:value};
+    try{localStorage.setItem(kind==='group'?groupNameKey:recordNameKey,JSON.stringify(next));}
+    catch{tell('이름을 저장하지 못했습니다. 브라우저 저장소 설정을 확인하세요.');return;}
+    if(kind==='group')groupNames=next;else recordNames=next;
+    render();tell('이름을 변경했습니다.');
+  });
+  input.addEventListener('input',()=>input.setCustomValidity(''));
+  input.addEventListener('blur',()=>{if(input.isConnected)render();});
+  input.focus();input.select();
+}
+
 function render() {
   const locked=busy||refreshing||pendingRead.size>0||!!measurement.active;
   for(const id of ['play-start','play-next','play-reset','play-auto'])byId(id).disabled=locked;
@@ -37,14 +79,14 @@ function render() {
   for(const [name,items] of groups){
     const group=document.createElement('details');group.className='record-group';group.dataset.group=name;
     group.open=openGroups.get(name)??true;
-    const title=document.createElement('summary');title.textContent=`${name.replace('장치','그룹')} · ${items.length}건`;group.append(title);
+    const title=document.createElement('summary');title.textContent=`${groupLabel(name)} · ${items.length}건`;title.title='더블클릭으로 이름 변경';title.ondblclick=event=>{event.preventDefault();editName(title,groupLabel(name),name,'group');};group.append(title);
     for(const r of items){
       const b=document.createElement('button');b.type='button';b.className='device';b.dataset.focusKey=`card-${r.id}`;
       b.setAttribute('aria-pressed',String(selected===r.id));b.setAttribute('aria-controls','detail');
-      const label=document.createElement('span');label.textContent=r.id;
+      const label=document.createElement('span');label.textContent=recordLabel(r);label.title='더블클릭으로 이름 변경';
       const read=document.createElement('span');read.className='read-dot';read.textContent=r.read?'읽음':'표시 없음';
       b.append(label,read);b.title=`${r.device} · ${r.status} · ${r.time}`;
-      b.onclick=()=>{selected=r.id;render();};group.append(b);
+      b.onclick=event=>{if(event.target.closest('input'))return;selected=r.id;clearTimeout(b.selectTimer);b.selectTimer=setTimeout(()=>{if(!b.querySelector('input'))render();},500);};b.ondblclick=event=>{event.preventDefault();event.stopPropagation();clearTimeout(b.selectTimer);editName(label,recordLabel(r),r.id,'record');};group.append(b);
     }
     cards.append(group);
   }
@@ -53,16 +95,16 @@ function render() {
   for(const [index,r] of [...visible].sort((a,b)=>b.time.localeCompare(a.time)).entries()){
     const row=document.createElement('tr');if(r.id===selected)row.className='selected';
     const number=document.createElement('td');number.textContent=index+1;
-    const idCell=document.createElement('td'),button=document.createElement('button');button.type='button';button.className='table-record';button.textContent=r.id;button.onclick=()=>{selected=r.id;render();byId('detail').focus();};idCell.append(button);
-    const group=document.createElement('td');group.textContent=r.device.replace('장치 ','');
+    const idCell=document.createElement('td'),button=document.createElement('button');button.type='button';button.className='table-record';button.textContent=recordLabel(r);button.onclick=()=>{selected=r.id;render();byId('detail').focus();};idCell.append(button);
+    const group=document.createElement('td');group.textContent=groupNames[r.device]||r.device.replace('장치 ','');
     const time=document.createElement('td');time.textContent=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date(r.time));
     const read=document.createElement('td');read.textContent=r.read?'있음':'없음';if(r.read)read.className='read-yes';
     row.append(number,idCell,group,time,read);recent.append(row);
   }
   if(!visible.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=5;cell.textContent='표시할 기록이 없습니다.';row.append(cell);recent.append(row);}
   const area=byId('detail');area.replaceChildren();const record=records.find(r=>r.id===selected);
-  byId('target').textContent=record?`질문 대상: ${record.id}`:'질문 대상 없음';
-  byId('selected-title').textContent=record?`선택 기록 · ${record.id}`:'선택 기록 없음';
+  byId('target').textContent=record?`질문 대상: ${recordLabel(record)}`:'질문 대상 없음';
+  byId('selected-title').textContent=record?`선택 기록 · ${recordLabel(record)}`:'선택 기록 없음';
   byId('send').disabled=busy||!record;byId('send').setAttribute('aria-label',busy?'설명 생성 중':'질문 보내기');byId('send').setAttribute('aria-busy',String(busy));
   byId('assistance').disabled=busy||!!measurement.active;
   byId('summary-send').disabled=busy||refreshing||!records.length||!byId('assistance').checked;
@@ -80,6 +122,7 @@ function render() {
   if(focusKey){const target=[...document.querySelectorAll('[data-focus-key]')].find(el=>el.dataset.focusKey===focusKey&&!el.disabled);
     (target||cards.querySelector('[aria-pressed="true"]')||cards.querySelector('button')||byId('filter')).focus();}
   renderMeasurement();
+  if(syncConversationTarget)syncConversationTarget();
 }
 async function refreshRecords() {
   if(refreshing||pendingRead.size)return;refreshing=true;render();
@@ -105,6 +148,15 @@ async function explain(snapshot,{clearInput=false}={}) {
   appendText(box,snapshot.question,'user-message');
   const status=appendText(box,'응답 대기 중…','muted'),entry={snapshot,box,status,retry:null};history.push(entry);byId('history').append(box);render();byId('history').scrollTop=byId('history').scrollHeight;tell(`${snapshot.id}에 대한 설명을 생성 중입니다.`);
   try{
+    const liveQuestion = /(현재|실시간|지금|전체|기체|드론|uav|usv|함선|가제보|gazebo)/i.test(snapshot.question) && /(상태|브리핑|요약|위치|속도|연결)/.test(snapshot.question);
+    if (liveQuestion) {
+      const result = await api('/api/gazebo/briefing', {method:'POST'});
+      status.textContent='Gazebo · 실제 상태 브리핑'; status.className='message-meta';
+      appendText(box,result.answer,'assistant-message');
+      appendText(box,`출처: 실제 Gazebo ROS 텔레메트리 · 조회 시각: ${result.generated_at}\n수신 데이터를 코드로 집계한 요약입니다. LLM 판단이나 합성 기록 설명이 아닙니다.`,'muted');
+      tell('실제 Gazebo 상태로 브리핑했습니다.');
+      return;
+    }
     const result=await api('/api/explain',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({record_id:snapshot.id,question:snapshot.question})});
     if(!State.validEvidence(result,snapshot))throw Error('응답의 근거가 원래 질문 기록과 일치하지 않습니다. 설명을 표시하지 않습니다.');
     status.textContent=`AI · ${result.answerable?'기록 설명':'확인 불가'}`;status.className='message-meta';
@@ -185,13 +237,11 @@ render();refreshRecords();
 
 async function refreshSimulator() {
   try {
-    const data=await api('/api/simulator');
-    const labels={connected:'통계 수신 중',disconnected:'통계 수신 끊김 — 현재 값 없음',no_data:'통계 수신 없음 — 미실행/연결 문제 여부를 확인하세요'};
-    byId('sim-status').textContent=labels[data.state]||'진단 상태 확인 불가';
+    const data=await api('/api/gazebo/state');
+    const fresh=data.vehicles.filter(v=>v.connected && v.age_seconds<5);
+    byId('sim-status').textContent=fresh.length ? `현재 Gazebo ${fresh.length}/${data.vehicles.length}대 상태 수신 중` : '현재 Gazebo 상태 수신 없음';
     byId('sim-values').replaceChildren();
-    const value=data.current||data.last_received;
-    if(value)appendText(byId('sim-values'),`${data.current?'현재 수신 통계':'마지막 수신 통계 · 실시간 값 아님'}\n시뮬레이션 시각: ${value.sim_time_seconds}초\n반복 수: ${value.iterations}\n일시정지: ${value.paused}\n마지막 수신: ${data.last_received_at}\n수신 경과: ${data.age_seconds}초`,'muted');
-    appendText(byId('sim-values'),`월드: ${data.world} · 확인 시각: ${data.checked_at}`,'muted');
+    appendText(byId('sim-values'),'출처: 클론한 브랜치 · ROS 기체 텔레메트리','muted');
   } catch(e) {
     byId('sim-status').textContent='진단 API 확인 실패 — 현재 값 표시 중단';
     byId('sim-values').replaceChildren();
@@ -199,3 +249,93 @@ async function refreshSimulator() {
   } finally {setTimeout(refreshSimulator,2000);}
 }
 refreshSimulator();
+
+
+// Conversation archive is local to this browser and origin.
+(()=>{
+  const key='d4d.conversations.v1',area=byId('history'),selector=byId('conversation-list');
+  let threads=[],active=null,restoring=false,target=null;
+  let activeByRecord=Object.create(null);
+  const notice=text=>{byId('conversation-status').hidden=!text;byId('conversation-status').textContent=text;};
+  const makeId=()=>`${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  try{
+    const data=JSON.parse(localStorage.getItem(key)||'null');
+    if(data&&Array.isArray(data.threads)){
+      threads=data.threads.filter(t=>t&&typeof t.id==='string'&&typeof t.title==='string'&&Array.isArray(t.messages));
+      threads=threads.flatMap(thread=>{
+        if(typeof thread.recordId==='string')return [thread];
+        const groups=new Map();
+        for(const message of thread.messages){const meta=(message.parts||[]).find(p=>typeof p.text==='string'&&p.text.startsWith('사용자 · '));if(!meta)continue;const id=meta.text.slice('사용자 · '.length);if(!groups.has(id))groups.set(id,[]);groups.get(id).push(message);}
+        return [...groups].map(([recordId,messages])=>({id:makeId(),recordId,title:thread.title,messages}));
+      });
+      if(data.activeByRecord&&typeof data.activeByRecord==='object')activeByRecord=Object.assign(Object.create(null),data.activeByRecord);
+    }
+  }catch{notice('저장된 대화를 읽지 못했습니다.');}
+  function persist(){try{localStorage.setItem(key,JSON.stringify({activeByRecord,threads}));notice('');}catch{notice('대화 이력을 저장하지 못했습니다. 브라우저 저장 공간을 확인하세요.');}}
+  function options(){selector.replaceChildren();for(const thread of threads.filter(t=>t.recordId===target)){const option=document.createElement('option');option.value=thread.id;option.textContent=thread.title;selector.append(option);}selector.value=active||'';selector.disabled=busy||!target;byId('conversation-new').disabled=busy||!target;byId('conversation-delete').disabled=busy||!active;const title=byId('conversation-title');if(!title.querySelector('input'))title.textContent=threads.find(t=>t.id===active)?.title||'';}
+  function restore(){
+    restoring=true;area.replaceChildren();history.length=0;
+    const thread=threads.find(t=>t.id===active);
+    for(const message of thread?.messages||[]){
+      const article=document.createElement('article');article.className='exchange';
+      for(const part of message.parts||[]){
+        if(typeof part.text!=='string')continue;
+        if(part.tag==='p')appendText(article,part.text,['message-meta','user-meta','user-message','assistant-message','muted','error'].filter(c=>(part.cls||'').split(' ').includes(c)).join(' '));
+        else if(part.tag==='button'&&part.text.startsWith('원본 ')){
+          const button=document.createElement('button');button.type='button';button.className='evidence-link';button.textContent=part.text;
+          button.onclick=()=>{const id=part.text.slice(3).replace(/ 확인$/,'');if(!records.some(r=>r.id===id)){tell('현재 목록에 해당 원본 기록이 없습니다.');return;}byId('filter').value='all';byId('search').value='';selected=id;render();byId('detail').focus();};article.append(button);
+        }
+      }
+      area.append(article);
+    }
+    if(!area.children.length){const p=appendText(area,target?'이 항목의 대화를 시작하세요.':'왼쪽에서 기록을 선택하고 질문하세요.','chat-empty');p.id='chat-empty';}
+    area.scrollTop=area.scrollHeight;observer.takeRecords();restoring=false;options();
+  }
+  function capture(){
+    if(restoring)return;
+    const thread=threads.find(t=>t.id===active);if(!thread)return;
+    thread.messages=[...area.querySelectorAll('article.exchange')].map(article=>({parts:[...article.children].filter(el=>el.tagName==='P'||el.tagName==='BUTTON').map(el=>({tag:el.tagName.toLowerCase(),text:el.textContent,cls:el.className}))}));
+    const question=area.querySelector('.user-message')?.textContent;
+    if(question&&!thread.customTitle)thread.title=question.slice(0,40);persist();options();
+    selector.disabled=busy||!target;byId('conversation-new').disabled=busy||!target;byId('conversation-delete').disabled=busy||!active;
+  }
+  const observer=new MutationObserver(capture);observer.observe(area,{childList:true,subtree:true,characterData:true});
+  selector.onchange=()=>{if(busy){selector.value=active;return;}const next=selector.value;capture();active=next;activeByRecord[target]=active;restore();persist();};
+  byId('conversation-new').onclick=()=>{if(busy||!target)return;capture();active=makeId();threads.unshift({id:active,recordId:target,title:'새 대화',messages:[]});activeByRecord[target]=active;restore();persist();};
+  byId('conversation-delete').onclick=()=>{
+    const thread=threads.find(t=>t.id===active);
+    if(busy||!thread)return;
+    if(!window.confirm(`“${thread.title}” 대화를 삭제할까요? 삭제한 이력은 복구할 수 없습니다.`))return;
+    threads=threads.filter(t=>t.id!==active);
+    active=threads.find(t=>t.recordId===target)?.id||null;
+    if(!active){active=makeId();threads.unshift({id:active,recordId:target,title:'새 대화',messages:[]});}
+    activeByRecord[target]=active;restore();persist();
+  };
+  function renameConversation(){
+    const thread=threads.find(t=>t.id===active),host=byId('conversation-title');
+    if(busy||!thread||host.querySelector('input'))return;
+    const input=document.createElement('input');input.className='inline-name';input.value=thread.title;input.maxLength=80;input.setAttribute('aria-label','대화 제목 변경');host.replaceChildren(input);
+    const cancel=()=>{host.textContent=thread.title;};
+    input.onkeydown=event=>{
+      event.stopPropagation();if(event.isComposing||event.keyCode===229)return;
+      if(event.key==='Escape'){event.preventDefault();cancel();return;}
+      if(event.key!=='Enter')return;
+      event.preventDefault();const value=input.value.trim();if(!value){input.setCustomValidity('제목을 입력하세요.');input.reportValidity();return;}
+      thread.title=value;thread.customTitle=true;cancel();persist();options();
+    };
+    input.oninput=()=>input.setCustomValidity('');input.onblur=()=>{if(input.isConnected)cancel();};input.focus();input.select();
+  }
+  byId('conversation-title').ondblclick=renameConversation;
+  byId('conversation-title').onkeydown=event=>{if(event.key==='F2'){event.preventDefault();renameConversation();}};
+  selector.ondblclick=renameConversation;
+  syncConversationTarget=()=>{
+    if(busy){selector.disabled=true;byId('conversation-new').disabled=true;byId('conversation-delete').disabled=true;return;}
+    if(target===selected){options();return;}
+    capture();target=selected;
+    active=threads.find(t=>t.recordId===target&&t.id===activeByRecord[target])?.id||threads.find(t=>t.recordId===target)?.id||null;
+    if(target&&!active){active=makeId();threads.unshift({id:active,recordId:target,title:'새 대화',messages:[]});}
+    if(target)activeByRecord[target]=active;
+    restore();persist();
+  };
+  syncConversationTarget();
+})();
