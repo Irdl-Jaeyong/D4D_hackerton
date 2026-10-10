@@ -1,11 +1,13 @@
 """Regressions for disappearing vessels and the hemispherical patrol envelope."""
 import importlib.util
 import itertools
+import sys
 import math
 import unittest
 from pathlib import Path
 import xml.etree.ElementTree as E
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'scripts'))
 spec=importlib.util.spec_from_file_location('convoy',ROOT/'scripts/convoy_motion.py')
 convoy=importlib.util.module_from_spec(spec);spec.loader.exec_module(convoy)
 
@@ -83,6 +85,48 @@ class PatrolGeometry(unittest.TestCase):
             self.assertEqual((ship['y'],ship['yaw'],ship['pitch']),(0,0,0))
             self.assertAlmostEqual(ship['x'],convoy.MOTION['ship_speed']*t)
             self.assertEqual(project(ship,fleet['fleet_observer']),project(initial['SHIP-01'],initial['fleet_observer']))
+
+    def test_wakes_follow_past_stern_and_hull_motion_leaves_camera_level(self):
+        for t in [30,100,600]:
+            fleet=convoy.fleet_poses(t)
+            self.assertEqual(fleet['SHIP-01']['roll'],0)
+            self.assertLess(abs(fleet['SHIP-01_hull']['roll']),.011)
+            for index in range(10):
+                for segment in [0,9,19]:
+                    age=(segment+.5)*.9
+                    x,y,yaw=convoy.vessel_pose(t-age,index)
+                    wake=fleet[f'wake_USV-{index+1:02}_{segment:02}']
+                    self.assertAlmostEqual(wake['x'],x-2.5*math.cos(yaw))
+                    self.assertAlmostEqual(wake['y'],y-2.5*math.sin(yaw))
+                hull=fleet[f'USV-{index+1:02}']
+                self.assertLess(abs(hull['z']-.7),.156)
+                x,y,yaw=convoy.vessel_pose(t,index)
+                a,b,next_yaw=convoy.vessel_pose(t+.01,index)
+                self.assertLess(abs(math.atan2(math.sin(next_yaw-yaw),math.cos(next_yaw-yaw)))/.01,.05)
+
+    def test_physics_usv_is_dynamic_and_never_receives_pose_commands(self):
+        world=E.parse(ROOT/'ros_ws/src/navis_sim/worlds/prep.sdf')
+        boat=world.find(".//model[@name='USV-01']")
+        self.assertEqual(boat.find('static').text,'false')
+        self.assertEqual(float(boat.find('link/inertial/mass').text),250)
+        self.assertEqual(len(boat.findall('link/collision')),2)
+        plugin=boat.find("plugin[@name='navis::MaritimeEscort']")
+        self.assertIsNotNone(plugin.find('wavefield/wave'))
+        for i in range(10):
+            self.assertNotIn(f'name:"USV-{i+1:02}"',convoy.poses(60))
+            boat=world.find(f".//model[@name='USV-{i+1:02}']")
+            self.assertEqual(boat.find('static').text,'false')
+        command=convoy.poses(30,history={'USV-01':[(0,0,0,0),(30,30,0,0)]})
+        self.assertIn('name:"wake_USV-01_00" position {x:27.05000 y:0.00000',command)
+
+    def test_civilian_crosses_escort_area_without_crossing_flagship_hull(self):
+        for t in [0,20,40,60,110,179,180]:
+            fleet=convoy.fleet_poses(t);civil=fleet['CIV-01'];ship=fleet['SHIP-01']
+            self.assertAlmostEqual(civil['x']-ship['x'],105)
+            self.assertAlmostEqual(civil['y'],120-3*(t%180))
+            self.assertGreater(civil['x']-ship['x'],80+4)
+        self.assertGreater(convoy.fleet_poses(0)['CIV-01']['y'],75)
+        self.assertLess(convoy.fleet_poses(70)['CIV-01']['y'],-75)
 
     def test_figure_eight_has_a_crossing_and_continuous_tangent(self):
         a=convoy.figure_eight(math.pi/2);b=convoy.figure_eight(3*math.pi/2)

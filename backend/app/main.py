@@ -4,6 +4,7 @@ import hmac
 import json
 import os
 import time
+import sys
 from pathlib import Path
 from typing import Literal
 
@@ -14,6 +15,10 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0,str(ROOT/'scripts'))
+from formation_motion import CATALOG
+formation={'usv':'circle','uav':'hemisphere','revision':0}
+formation_status={}
 app = FastAPI(title='NAVIS-AI preparation MVP')
 latest = {}
 camera = None
@@ -58,7 +63,26 @@ def state():
         value = latest.get(id)
         age = now - value['received_at'] if value else None
         vehicles.append({'id': id, 'type': id.split('-')[0], 'connected': age is not None and age < 5, 'age_seconds': age, 'source': 'gazebo_ros' if value else None, 'telemetry': value})
-    return {'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'fleet_observer', 'scene_mode': 'hemisphere_figure_eight', 'camera_view':camera_view, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion']}}
+    return {'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'SHIP-01 stabilized overhead sensors', 'scene_mode': 'hemisphere_figure_eight', 'camera_view':camera_view, 'formations': {**formation, 'catalog':CATALOG,'status':formation_status}, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion'], 'scenario': None}}
+
+class FormationRequest(BaseModel):
+    group: Literal['usv','uav']
+    mode: str
+@app.get('/api/formations')
+async def get_formations():
+    return {**formation,'catalog':CATALOG,'status':formation_status}
+@app.post('/api/formations')
+async def set_formation(data: FormationRequest):
+    if data.mode not in CATALOG[data.group]:raise HTTPException(422,'Unknown formation')
+    if formation[data.group]!=data.mode:
+        formation[data.group]=data.mode;formation['revision']+=1
+    return await get_formations()
+@app.post('/api/internal/formations')
+async def report_formations(data: dict,x_bridge_token: str=Header(default='')):
+    global formation_status
+    if not TOKEN or not hmac.compare_digest(TOKEN,x_bridge_token):raise HTTPException(403,'Bridge token required')
+    formation_status=data
+    return {'ok':True}
 
 @app.get('/api/health')
 async def health():

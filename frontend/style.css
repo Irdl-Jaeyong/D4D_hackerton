@@ -5,3 +5,9 @@
 #cameraOverlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.cameraGuide{display:block;padding:12px 18px;font-size:12px;color:#adc7d7}
 
 .cameraView{display:flex;align-items:center;gap:12px;padding:12px 18px 0;font-size:13px;color:#adc7d7}.cameraView select{background:#122d42;color:#e3f2ff;border:1px solid #2b5872;border-radius:6px;padding:7px 12px}
+
+.formation-panel{padding:8px 10px;background:#091c29;border:1px solid #22485b;border-radius:12px;margin:6px 0}.formation-panel h3{font-size:12px;margin:5px 0}.formation-options{display:flex;flex-wrap:wrap;gap:5px}.formation-options button{background:#102b3c;border:1px solid #35556b;color:#dcebf7;padding:5px 7px;font-size:11px;border-radius:6px;cursor:pointer}.formation-options button[aria-pressed="true"]{background:#144e56;border-color:#55e7ef;box-shadow:0 0 0 1px #55e7ef}.formation-options button:disabled{opacity:.6}.formation-options button:focus-visible{outline:2px solid #fff;outline-offset:3px}
+
+.formation-options button{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:68px;min-height:52px}.formation-options svg{width:40px;height:24px;color:#76becf}.formation-options button[aria-pressed="true"] svg{color:#78fff2}
+
+.formation-panel .note{padding:0;margin:5px 0;font-size:10px;line-height:1.4}

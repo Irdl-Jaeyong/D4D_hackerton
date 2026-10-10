@@ -4,11 +4,17 @@
 The Bernoulli figure-eight curve is independently implemented from the
 mathematical pattern documented by ModalAI's VOXL flight example. It is
 mapped to spherical coordinates to preserve a hemispherical formation.
-This does not run PX4, ArduPilot, hydrodynamics, or a flight controller.
+All USVs are excluded from pose commands and uses a Gazebo force-based plugin.
+The flagship and drones use scripted trajectories; no flight controller runs.
 """
 import json
+from collections import deque
 import math
 import signal
+import time
+import os
+import urllib.request
+from formation_motion import Transition,targets
 import subprocess
 from pathlib import Path
 
@@ -26,24 +32,45 @@ def figure_eight(angle):
             -s*(3-s*s)/(d*d), scale*(1-3*s*s)/(d*d))
 
 
+def vessel_pose(t, index=None):
+    """Analytic smooth course with bounded speed and yaw rate."""
+    forward=MOTION['ship_speed']*t
+    if index is None:return forward,0,0
+    rx,ry=MOTION['escort_radii'];omega=MOTION['escort_angular_speed']
+    a=2*math.pi*index/FLEET['usvs']+omega*t
+    return (forward+rx*math.cos(a),ry*math.sin(a),
+            math.atan2(ry*omega*math.cos(a),MOTION['ship_speed']-rx*omega*math.sin(a)))
+
+
+def hull_response(t,x,y,yaw,large=False):
+    """Bounded visual sea response, not a buoyancy/force solver."""
+    # Spatial phases make nearby vessels respond to the same travelling swell.
+    a=.10*math.cos(.065*x+.048*y-1.14*t)
+    b=.055*math.cos(.042*x-.038*y-.92*t)
+    attenuation=.3 if large else 1
+    heave=attenuation*(a+b)
+    roll=attenuation*.035*math.sin(.065*x+.048*y-1.14*t-yaw)
+    pitch=attenuation*.022*math.sin(.042*x-.038*y-.92*t+yaw)
+    return heave,roll,pitch
+
+
 def fleet_poses(t, camera=None):
     """Pure trajectory function, with continuous positions and headings."""
     camera=CAMERA if camera is None else camera
     forward=MOTION['ship_speed']*t
     result={}
-    def add(name,x,y,z,yaw=0,pitch=0):
-        result[name]={'x':x,'y':y,'z':z,'yaw':yaw,'pitch':pitch}
+    def add(name,x,y,z,yaw=0,pitch=0,roll=0):
+        result[name]={'x':x,'y':y,'z':z,'yaw':yaw,'pitch':pitch,'roll':roll}
     for i in range(FLEET['ships']):
         add(f'SHIP-{i+1:02}',forward+i*90,0,2.4)
-    # Leader-relative perimeter offsets. Continuous handover, with forward
-    # velocity at all points, instead of abrupt stop-and-go sector changes.
-    rx,ry=MOTION['escort_radii'];omega=MOTION['escort_angular_speed']
+    # The level flagship frame carries the stabilized overhead sensors. Hull
+    # visuals move separately so sea response cannot shake those sensors.
+    h,r,p=hull_response(t,forward,0,0,True)
+    add('SHIP-01_hull',forward,0,2.4+h,0,p,r)
     for i in range(FLEET['usvs']):
-        a=2*math.pi*i/FLEET['usvs']+omega*t
-        x=forward+rx*math.cos(a);y=ry*math.sin(a)
-        dx=MOTION['ship_speed']-rx*math.sin(a)*omega
-        dy=ry*math.cos(a)*omega
-        add(f'USV-{i+1:02}',x,y,.7,math.atan2(dy,dx))
+        x,y,yaw=vessel_pose(t,i)
+        h,r,p=hull_response(t,x,y,yaw)
+        add(f'USV-{i+1:02}',x,y,.7+h,yaw,p,r)
     # Five latitude rings cover the upper sphere. A small figure eight in
     # longitude / latitude remains on that sphere, including at the crossing.
     latitudes=MOTION['hemisphere_latitudes_deg']
@@ -69,9 +96,19 @@ def fleet_poses(t, camera=None):
         dx=MOTION['ship_speed']+radius*(-sl*dlat*cp-cl*sp*dlon)
         dy=radius*(-sl*dlat*sp+cl*cp*dlon)
         add(f'UAV-{i+1:02}',x,y,z,math.atan2(dy,dx))
-    for name,p in list(result.items()):
-        if name.startswith(('SHIP-','USV-')):
-            add('wake_'+name,p['x'],p['y'],-.06,p['yaw'])
+    # Each foam patch stays at an earlier stern location, not at the current
+    # vessel heading. Sampling history makes curved turns leave curved wakes.
+    for index in [None,*range(FLEET['usvs'])]:
+        name='SHIP-01' if index is None else f'USV-{index+1:02}'
+        for segment in range(20):
+            age=(segment+.5)*(1.5 if index is None else .9)
+            x,y,yaw=vessel_pose(max(0,t-age),index)
+            aft=77 if index is None else 2.5
+            add(f'wake_{name}_{segment:02}',x-aft*math.cos(yaw),y-aft*math.sin(yaw),-.04 if t>=age else -2,yaw)
+    # Civilian traffic crosses ahead of the flagship's bow, outside its hull.
+    # It enters, passes, then leaves the escort area in a 180-second demo cycle.
+    crossing=t%180
+    add('CIV-01',forward+105,120-3*crossing,.7,math.atan2(-3,MOTION['ship_speed']))
     ox,oy,oz=camera['offset']
     add('fleet_observer',forward+ox,oy,oz,camera['yaw'],camera['pitch'])
     # Recenter the purely visual, flat ocean so the demo never leaves it.
@@ -82,11 +119,35 @@ def fleet_poses(t, camera=None):
 def pose_message(name,p):
     cy,sy=math.cos(p['yaw']/2),math.sin(p['yaw']/2)
     cp,sp=math.cos(p['pitch']/2),math.sin(p['pitch']/2)
-    return f'name:"{name}" position {{x:{p["x"]:.5f} y:{p["y"]:.5f} z:{p["z"]:.5f}}} orientation {{w:{cy*cp:.7f} x:{-sy*sp:.7f} y:{cy*sp:.7f} z:{sy*cp:.7f}}}'
+    cr,sr=math.cos(p.get('roll',0)/2),math.sin(p.get('roll',0)/2)
+    return f'name:"{name}" position {{x:{p["x"]:.5f} y:{p["y"]:.5f} z:{p["z"]:.5f}}} orientation {{w:{cr*cp*cy+sr*sp*sy:.7f} x:{sr*cp*cy-cr*sp*sy:.7f} y:{cr*sp*cy+sr*cp*sy:.7f} z:{cr*cp*sy-sr*sp*cy:.7f}}}'
 
 
-def poses(t, camera=None):
-    return ' '.join('pose {'+pose_message(name,p)+'}' for name,p in fleet_poses(t,camera).items() if name!='fleet_observer')
+
+def poses(t, camera=None, history=None, formations=None):
+    fleet=fleet_poses(t,camera)
+    fleet.pop('CIV-01',None)
+    if formations:
+        for group,points in formations.items():
+            for i,p in enumerate(points):
+                name=f'UAV-{i+1:02}' if group=='uav' else f'USV_target_{i+1:02}'
+                old=fleet.get(name,{'yaw':0,'pitch':0,'roll':0})
+                fleet[name]={**old,'x':MOTION['ship_speed']*t+p[0],'y':p[1],'z':p[2]}
+    for name,samples in (history or {}).items():
+        for segment in range(20):
+            stamp=t-(segment+.5)*.9
+            previous=samples[0];following=samples[-1]
+            for sample in samples:
+                if sample[0]<=stamp:previous=sample
+                if sample[0]>=stamp:following=sample;break
+            fraction=max(0,min(1,(stamp-previous[0])/max(1e-9,following[0]-previous[0])))
+            x=previous[1]+fraction*(following[1]-previous[1])
+            y=previous[2]+fraction*(following[2]-previous[2])
+            delta=math.atan2(math.sin(following[3]-previous[3]),math.cos(following[3]-previous[3]))
+            yaw=previous[3]+fraction*delta
+            wake=fleet[f'wake_{name}_{segment:02}']
+            wake.update(x=x-2.5*math.cos(yaw),y=y-2.5*math.sin(yaw),yaw=yaw,z=-.04 if stamp>=samples[0][0] else -2)
+    return ' '.join('pose {'+pose_message(name,p)+'}' for name,p in fleet.items() if name!='fleet_observer' and not name.startswith('USV-'))
 
 
 def main():
@@ -95,14 +156,31 @@ def main():
     from rclpy.executors import ExternalShutdownException
     from rclpy.qos import qos_profile_sensor_data
     from rosgraph_msgs.msg import Clock
+    from nav_msgs.msg import Odometry
     class Convoy(Node):
         def __init__(self):
             super().__init__('navis_convoy')
             self.origin=None;self.elapsed=None;self.last_sent=None;self.failures=0
             self.clock_stamp=None
+            self.selection={'usv':'circle','uav':'hemisphere','revision':0}
+            initial=fleet_poses(0)
+            self.planners={group:Transition([(initial[f'{kind}-{i+1:02}']['x'],initial[f'{kind}-{i+1:02}']['y'],initial[f'{kind}-{i+1:02}']['z']) for i in range(FLEET[key])],speed,accel) for group,kind,key,speed,accel in [('usv','USV','usvs',3,1),('uav','UAV','uavs',10,4)]}
+            self.checked=0;self.planner_time=None;self.initial_error={};self.formation_status={}
+            self.physical_history={}
+            self.odom_subscriptions=[]
+            for i in range(FLEET['usvs']):
+                name=f'USV-{i+1:02}'
+                self.odom_subscriptions.append(self.create_subscription(Odometry,f'/navis/{name.replace("-","_")}/odometry',lambda msg,name=name:self.physical_odom(name,msg),qos_profile_sensor_data))
             self.clock_subscription=self.create_subscription(Clock,'/world/navis_prep/clock',self.clock,qos_profile_sensor_data)
             self.timer=self.create_timer(.1,self.update)
-            self.get_logger().info('Simulation-time convoy: straight leader, continuous USV handover, 40 UAV hemispherical figure-eight patrols')
+            self.get_logger().info('Simulation-time convoy: straight leader, assigned escort stations, UAV leader-relative station keeping')
+        def physical_odom(self,name,msg):
+            if self.origin is None:return
+            t=msg.header.stamp.sec+msg.header.stamp.nanosec/1e9-self.origin
+            p=msg.pose.pose.position;q=msg.pose.pose.orientation
+            yaw=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
+            history=self.physical_history.setdefault(name,deque(maxlen=400))
+            if not history or t>history[-1][0]:history.append((t,p.x,p.y,yaw))
         def clock(self,msg):
             stamp=msg.clock.sec+msg.clock.nanosec/1e9
             # A delayed clock packet must never move the convoy backwards.
@@ -113,8 +191,43 @@ def main():
         def update(self):
             if self.elapsed is None or self.elapsed==self.last_sent:return
             t=self.elapsed
+            now=time.monotonic()
+            if now-self.checked>.5:
+                self.checked=now
+                try:
+                    with urllib.request.urlopen('http://127.0.0.1:8000/api/formations',timeout=.2) as response:selection=json.load(response)
+                    for group in ('usv','uav'):
+                        if selection[group]!=self.selection[group]:
+                            self.planners[group].assignment=None;self.initial_error.pop(group,None)
+                    self.selection=selection
+                except (OSError,ValueError,KeyError):pass
+            dt=min(.25,max(0,t-(self.planner_time if self.planner_time is not None else t)))
+            self.planner_time=t
+            reference=fleet_poses(t);points={}
+            for group,planner in self.planners.items():
+                mode=self.selection[group]
+                if group=='uav' and mode=='hemisphere':
+                    goals=[(reference[f'UAV-{i+1:02}']['x']-MOTION['ship_speed']*t,reference[f'UAV-{i+1:02}']['y'],reference[f'UAV-{i+1:02}']['z']) for i in range(FLEET['uavs'])]
+                else:goals=targets(group,mode,t)
+                error=planner.step(goals,dt,marine=group=='usv');points[group]=planner.points
+                self.initial_error[group]=max(self.initial_error.get(group,0),error,1)
+                # Dynamic patrols retain a small steady tracking error.
+                if group=='usv':
+                    for i in range(FLEET['usvs']):
+                        history=self.physical_history.get(f'USV-{i+1:02}')
+                        if history:
+                            goal=goals[planner.assignment[i]]
+                            error=max(error,math.hypot(history[-1][1]-MOTION['ship_speed']*t-goal[0],history[-1][2]-goal[1]))
+                tolerance=10 if mode=='hemisphere' else 8 if mode=='circle' else 3
+                self.formation_status[group]={'mode':mode,'moving':error>tolerance,'remaining_m':round(error,1),'progress':round(max(0,min(100,100*(1-error/self.initial_error[group]))))}
+            if now-self.checked<.05:
+                try:
+                    data=json.dumps(self.formation_status).encode()
+                    req=urllib.request.Request('http://127.0.0.1:8000/api/internal/formations',data=data,headers={'Content-Type':'application/json','X-Bridge-Token':os.environ.get('NAVIS_BRIDGE_TOKEN','')})
+                    with urllib.request.urlopen(req,timeout=.2) as response:response.read()
+                except (OSError,ValueError):pass
             try:
-                response=subprocess.run(['ign','service','-s','/world/navis_prep/set_pose_vector','--reqtype','ignition.msgs.Pose_V','--reptype','ignition.msgs.Boolean','--timeout','1200','--req',poses(t)],capture_output=True,text=True,timeout=1.5)
+                response=subprocess.run(['ign','service','-s','/world/navis_prep/set_pose_vector','--reqtype','ignition.msgs.Pose_V','--reptype','ignition.msgs.Boolean','--timeout','1200','--req',poses(t,history=self.physical_history,formations=points)],capture_output=True,text=True,timeout=1.5)
                 if response.returncode or 'true' not in response.stdout:
                     self.failures+=1
                     if self.failures%10==1:self.get_logger().warning('Pose update failed: '+response.stderr[:160])
