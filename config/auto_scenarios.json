@@ -2,8 +2,8 @@
   "enabled": true,
   "initial_delay_seconds": 10,
   "interval_seconds": [
-    300,
-    300
+    120,
+    120
   ],
   "max_pending": 4,
   "max_per_scenario": 1,
