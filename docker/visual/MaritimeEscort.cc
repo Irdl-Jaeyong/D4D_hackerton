@@ -26,6 +26,7 @@ class MaritimeEscort : public gazebo::System, public gazebo::ISystemConfigure,
   transport::Node::Publisher diagnostics;
   std::atomic<bool> propulsionFault{false};
   double left=0,right=0,lastReport=-1;
+  double formationScale=1;
   double phase=0,speed=1.5,omega=.007,rx=115,ry=75;
   static double clip(double x,double limit){return std::clamp(x,-limit,limit);}
   vrx::Wavefield wavefield;
@@ -41,6 +42,7 @@ class MaritimeEscort : public gazebo::System, public gazebo::ISystemConfigure,
     wavefield.Load(sdf);
     goalName=sdf->Get<std::string>("target_model");
     phase=sdf->Get<double>("phase");
+    formationScale=std::clamp(sdf->Get<double>("formation_speed_multiplier",1.0).first,1.0,5.0);
     speed=sdf->Get<double>("leader_speed");omega=sdf->Get<double>("angular_speed");
     rx=sdf->Get<double>("radius_x");ry=sdf->Get<double>("radius_y");
     diagnostics=node.Advertise<msgs::Double_V>(sdf->Get<std::string>("diagnostics_topic"));
@@ -61,7 +63,9 @@ class MaritimeEscort : public gazebo::System, public gazebo::ISystemConfigure,
     const bool fault=std::abs(targetPose.Rot().Pitch())>.5;
     const auto target=targetPose.Pos();
     const auto error=target-pose.Pos();
-    math::Vector3d desired(speed+.3*error.X(),.3*error.Y(),0);
+    // Demo-only faster reconfiguration; fault recovery retains normal limits.
+    const double scale=fault?1.0:formationScale;
+    math::Vector3d desired(speed+.3*scale*error.X(),.3*scale*error.Y(),0);
     // Repel from the flagship footprint while moving to a new formation.
     const double relativeX=pose.Pos().X()-lead.Pos().X();
     if(!fault && std::abs(relativeX)<92 && std::abs(pose.Pos().Y())<32){
@@ -77,17 +81,17 @@ class MaritimeEscort : public gazebo::System, public gazebo::ISystemConfigure,
       double separation=delta.Length();
       if(separation>.1 && separation<18)desired+=delta.Normalized()*((18-separation)*.2);
     }
-    if(desired.Length()>5.5)desired=desired.Normalized()*5.5;
+    if(desired.Length()>5.5*scale)desired=desired.Normalized()*(5.5*scale);
     const double yaw=pose.Rot().Yaw();
     const double heading=std::atan2(desired.Y(),desired.X());
     const double yawError=std::atan2(std::sin(heading-yaw),std::cos(heading-yaw));
     const auto bodyV=pose.Rot().RotateVectorReverse(*velocity);
     const double wantedSpeed=desired.Length()*std::max(0.0,std::cos(yawError));
-    const double surge=250*(wantedSpeed-bodyV.X())+80*wantedSpeed+25*wantedSpeed*wantedSpeed;
-    const double moment=clip(500*yawError-300*angular->Z(),500);
-    const double response=1-std::exp(-dt/.5);
-    left+=(clip(surge/2-moment/1.4,750)-left)*response;
-    right+=(clip(surge/2+moment/1.4,750)-right)*response;
+    const double surge=250*scale*(wantedSpeed-bodyV.X())+80*wantedSpeed+25*wantedSpeed*wantedSpeed;
+    const double moment=clip(500*scale*scale*yawError-300*scale*angular->Z(),500*scale*scale);
+    const double response=1-std::exp(-dt*scale/.5);
+    left+=(clip(surge/2-moment/1.4,750*scale*scale)-left)*response;
+    right+=(clip(surge/2+moment/1.4,750*scale*scale)-right)*response;
     if(propulsionFault.load()){left=0;right=0;}
     // Four waterplane samples: displaced-volume stiffness and positive-only
     // buoyancy, with vertical damping at each point. Equilibrium draft is .95m.

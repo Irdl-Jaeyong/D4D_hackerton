@@ -1,0 +1,7 @@
+{
+  "candidate_count": 80,
+  "weight_training_performed": false,
+  "review_required": true,
+  "excluded": "기체 배정·전술 기동·검증되지 않은 수치·중복 원문은 학습 입력에서 제외",
+  "runtime": "검색된 참고 사실과 소수의 대화 형식 예시를 LLM에 전달"
+}

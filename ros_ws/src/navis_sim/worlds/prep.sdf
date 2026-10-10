@@ -14095,6 +14095,7 @@
         <target_model>USV_target_01</target_model>
         <phase>0.0</phase>
         <leader_speed>1.5</leader_speed>
+        <formation_speed_multiplier>5</formation_speed_multiplier>
         <angular_speed>0</angular_speed>
         <radius_x>115</radius_x>
         <radius_y>75</radius_y>
@@ -14180,6 +14181,7 @@
         <target_model>USV_target_02</target_model>
         <phase>0.6283185307179586</phase>
         <leader_speed>1.5</leader_speed>
+        <formation_speed_multiplier>5</formation_speed_multiplier>
         <angular_speed>0</angular_speed>
         <radius_x>115</radius_x>
         <radius_y>75</radius_y>
@@ -14265,6 +14267,7 @@
         <target_model>USV_target_03</target_model>
         <phase>1.2566370614359172</phase>
         <leader_speed>1.5</leader_speed>
+        <formation_speed_multiplier>5</formation_speed_multiplier>
         <angular_speed>0</angular_speed>
         <radius_x>115</radius_x>
         <radius_y>75</radius_y>
@@ -14350,6 +14353,7 @@
         <target_model>USV_target_04</target_model>
         <phase>1.8849555921538759</phase>
         <leader_speed>1.5</leader_speed>
+        <formation_speed_multiplier>5</formation_speed_multiplier>
         <angular_speed>0</angular_speed>
         <radius_x>115</radius_x>
         <radius_y>75</radius_y>
@@ -14435,6 +14439,7 @@
         <target_model>USV_target_05</target_model>
         <phase>2.5132741228718345</phase>
         <leader_speed>1.5</leader_speed>
+        <formation_speed_multiplier>5</formation_speed_multiplier>
         <angular_speed>0</angular_speed>
         <radius_x>115</radius_x>
         <radius_y>75</radius_y>
@@ -14520,6 +14525,7 @@
         <target_model>USV_target_06</target_model>
         <phase>3.141592653589793</phase>
         <leader_speed>1.5</leader_speed>
+        <formation_speed_multiplier>5</formation_speed_multiplier>
         <angular_speed>0</angular_speed>
         <radius_x>115</radius_x>
         <radius_y>75</radius_y>
@@ -14605,6 +14611,7 @@
         <target_model>USV_target_07</target_model>
         <phase>3.7699111843077517</phase>
         <leader_speed>1.5</leader_speed>
+        <formation_speed_multiplier>5</formation_speed_multiplier>
         <angular_speed>0</angular_speed>
         <radius_x>115</radius_x>
         <radius_y>75</radius_y>
@@ -14690,6 +14697,7 @@
         <target_model>USV_target_08</target_model>
         <phase>4.39822971502571</phase>
         <leader_speed>1.5</leader_speed>
+        <formation_speed_multiplier>5</formation_speed_multiplier>
         <angular_speed>0</angular_speed>
         <radius_x>115</radius_x>
         <radius_y>75</radius_y>
@@ -14775,6 +14783,7 @@
         <target_model>USV_target_09</target_model>
         <phase>5.026548245743669</phase>
         <leader_speed>1.5</leader_speed>
+        <formation_speed_multiplier>5</formation_speed_multiplier>
         <angular_speed>0</angular_speed>
         <radius_x>115</radius_x>
         <radius_y>75</radius_y>
@@ -14860,6 +14869,7 @@
         <target_model>USV_target_10</target_model>
         <phase>5.654866776461628</phase>
         <leader_speed>1.5</leader_speed>
+        <formation_speed_multiplier>5</formation_speed_multiplier>
         <angular_speed>0</angular_speed>
         <radius_x>115</radius_x>
         <radius_y>75</radius_y>

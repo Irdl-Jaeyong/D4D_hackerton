@@ -1,0 +1,89 @@
+{
+  "training_examples": 60,
+  "test_examples": 20,
+  "correct": 12,
+  "accuracy": 0.6,
+  "errors": [
+    {
+      "text": "지금 뭐 하는 거야",
+      "expected": "status",
+      "prediction": {
+        "intent": "reason",
+        "score": 0.499,
+        "margin": 0.045,
+        "classifier": "trained_ngram_prototypes"
+      }
+    },
+    {
+      "text": "지금 상태가 어때",
+      "expected": "status",
+      "prediction": {
+        "intent": "reason",
+        "score": 0.37,
+        "margin": 0.129,
+        "classifier": "trained_ngram_prototypes"
+      }
+    },
+    {
+      "text": "진행 중인 작업 설명해",
+      "expected": "status",
+      "prediction": {
+        "intent": "reason",
+        "score": 0.451,
+        "margin": 0.103,
+        "classifier": "trained_ngram_prototypes"
+      }
+    },
+    {
+      "text": "어째서 대기하고 있어",
+      "expected": "reason",
+      "prediction": {
+        "intent": "status",
+        "score": 0.569,
+        "margin": 0.371,
+        "classifier": "trained_ngram_prototypes"
+      }
+    },
+    {
+      "text": "왜 임무를 못해",
+      "expected": "reason",
+      "prediction": {
+        "intent": "status",
+        "score": 0.309,
+        "margin": 0.077,
+        "classifier": "trained_ngram_prototypes"
+      }
+    },
+    {
+      "text": "지금 위험 요소를 알려줘",
+      "expected": "risk",
+      "prediction": {
+        "intent": "response",
+        "score": 0.361,
+        "margin": 0.037,
+        "classifier": "trained_ngram_prototypes"
+      }
+    },
+    {
+      "text": "다시 사용할 조건이 뭐야",
+      "expected": "resume",
+      "prediction": {
+        "intent": "reason",
+        "score": 0.275,
+        "margin": 0.04,
+        "classifier": "trained_ngram_prototypes"
+      }
+    },
+    {
+      "text": "재투입 조건 설명해줘",
+      "expected": "resume",
+      "prediction": {
+        "intent": "reason",
+        "score": 0.487,
+        "margin": 0.106,
+        "classifier": "trained_ngram_prototypes"
+      }
+    }
+  ],
+  "limitations": "소규모 합성 문장 평가. 실제 운용 정확도나 LLM 가중치 학습을 의미하지 않음."
+}

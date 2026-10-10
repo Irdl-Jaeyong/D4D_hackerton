@@ -24,7 +24,9 @@ def crosses_hull(p,goal):
     return low<high and high>0 and low<1
 
 class Transition:
-    def __init__(self,points,speed,acceleration):
+    def __init__(self,points,speed,acceleration,time_scale=1):
+        if not math.isfinite(time_scale) or time_scale<=0:raise ValueError("Positive finite transition scale required")
+        self.time_scale=time_scale
         self.points=[list(p) for p in points];self.velocity=[[0.,0.,0.] for p in points];self.speed=speed;self.acceleration=acceleration;self.assignment=None;self.sides=[]
     def select(self,goals):
         # Closest-pair assignment avoids making distant vehicles exchange slots.
@@ -34,6 +36,12 @@ class Transition:
         self.assignment=[mapping[i] for i in range(len(self.points))]
         self.sides=[-1 if p[1]<-.1 or abs(p[1])<=.1 and goals[self.assignment[i]][1]<0 else 1 for i,p in enumerate(self.points)]
     def step(self,goals,dt,marine=False):
+        if self.time_scale==1:return self._step(goals,dt,marine)
+        duration=max(0,dt)*self.time_scale
+        steps=max(1,math.ceil(duration/.05))
+        for _ in range(steps):error=self._step(goals,duration/steps,marine)
+        return error
+    def _step(self,goals,dt,marine=False):
         if self.assignment is None:self.select(goals)
         snapshot=[p[:] for p in self.points]
         for i,p in enumerate(snapshot):

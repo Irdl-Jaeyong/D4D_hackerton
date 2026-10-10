@@ -24,7 +24,8 @@
     "hemisphere_rotation_rate": 0,
     "figure_eight_period": 38,
     "figure_eight_longitude_amplitude": 0,
-    "figure_eight_latitude_amplitude": 0
+    "figure_eight_latitude_amplitude": 0,
+    "formation_transition_multiplier": 5
   },
   "camera": {
     "offset": [

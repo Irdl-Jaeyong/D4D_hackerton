@@ -19,6 +19,10 @@ from pydantic import BaseModel, Field
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'scripts'))
 from formation_motion import CATALOG
+from safety_chat import answer as safety_answer
+from vehicle_briefing import brief as vehicle_brief
+from llm_dialogue import generate as llm_generate
+from chat_ui_actions import actions as chat_actions
 from mission_console import readiness, options, SCENARIOS
 from risk_monitor import assess
 from fault_motion import deck_slot
@@ -51,7 +55,7 @@ camera = None
 lock = asyncio.Lock()
 chat_lock = asyncio.Lock()
 TOKEN = os.environ.get('NAVIS_BRIDGE_TOKEN', '')
-MODEL = os.environ.get('OLLAMA_MODEL', 'minicpm-v4.5:latest')
+MODEL = os.environ.get('OLLAMA_MODEL', 'qwen3:4b')
 OLLAMA = os.environ.get('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
 FLEET = json.loads((ROOT/'config/fleet.json').read_text())
 IDS = [f'{kind}-{i:02}' for kind, key in [('SHIP','ships'),('UAV','uavs'),('USV','usvs')] for i in range(1, FLEET[key]+1)]
@@ -82,6 +86,7 @@ class Turn(BaseModel):
     content: str = Field(max_length=4000)
 
 class Chat(BaseModel):
+    clarification_context: str | None = Field(default=None, max_length=6000)
     message: str = Field(min_length=1, max_length=2000)
     use_camera: bool = False
     history: list[Turn] = Field(default_factory=list, max_length=8)
@@ -131,6 +136,7 @@ def state():
                 if not execution and v['readiness']['operational_state']!='unavailable':
                     v['readiness']['operational_state']='waiting'
                     v['readiness']['reason']='Gazebo 출동 명령 전달 대기'
+    for v in vehicles:v['status_briefing']=vehicle_brief(v)
     lead=latest.get('SHIP-01');stamp=lead.get('sim_time') if lead and now-lead['received_at']<5 else None
     for item in missions.values():
         if item.get('source')=='synthetic' and item['scenario']!='fault' and lead and stamp is not None:
@@ -464,35 +470,19 @@ async def get_camera():
 
 @app.post('/api/chat')
 async def chat(data: Chat):
-    if chat_lock.locked():
-        raise HTTPException(429, 'AI is processing another request')
+    if chat_lock.locked():raise HTTPException(429,'다른 대화를 처리 중입니다. 잠시 후 다시 시도하세요.')
     async with chat_lock:
-        snapshot = state()
-        msg = {'role': 'user', 'content': data.message}
-        if data.use_camera:
-            if not snapshot['camera_available']:
-                raise HTTPException(409, 'No fresh camera image; start the simulation')
-            msg['images'] = [base64.b64encode(camera['jpeg']).decode()]
-        connected_ids = [v['id'] for v in snapshot['vehicles'] if v['connected']]
-        offline_ids = [v['id'] for v in snapshot['vehicles'] if not v['connected']]
-        system = ('당신은 NAVIS-AI 시뮬레이션 관제 보조입니다. 한국어로 짧고 명확하게 답하세요. '
-                  '제공된 실제 상태만 사용하고 배터리, 위치, 연결상태를 추측하지 마세요. '
-                  '카메라는 함대 전체를 비스듬히 내려다보는 Gazebo 항공 관측 카메라입니다. 메인 함선은 직선 전진하고 USV와 드론은 선택된 함선 상대 대형을 유지합니다. USV는 추진력 기반, 드론은 위치 갱신 기반 시연입니다. 배터리는 시뮬레이션 추정값입니다. 상황과 대응안은 규칙 기반 시연이며 승인된 UAV 관측·복귀는 Gazebo에서 실행됩니다. 배정된 USV도 추진력으로 현장 확인 후 복귀합니다. 위험도와 우선순위는 제공된 규칙 계산 결과만 설명하고 재평가하거나 수정하지 마세요. S/U/A는 시연 기준이며 측정값과 구분하세요. 보이는 것만 설명하고 불확실하면 명시하세요. '
-                  '현재는 상태 조회와 이미지 설명만 가능하며 이동 명령 실행 기능은 없습니다. '
-                  '명령을 실행했다고 주장하지 마세요. 상태가 없는 기체는 미연결입니다. '
-                  '상태 요약에서 기체를 빠뜨리지 마세요. 연결 기체: '+', '.join(connected_ids)+
-                  '. 미연결 기체: '+', '.join(offline_ids)+'. 현재 상태 JSON: '+json.dumps(snapshot, ensure_ascii=False))
-        history = [{'role': t.role, 'content': t.content} for t in data.history if t.role in ('user','assistant')]
-        started = time.perf_counter()
+        started=time.perf_counter();snapshot=state()
+        question=((data.clarification_context+'\n') if data.clarification_context else '')+data.message
+        result=safety_answer(data.message,snapshot,data.clarification_context)
+        result['recommendations']=result.get('recommendations',[])[:2]
         try:
-            async with httpx.AsyncClient(timeout=180) as client:
-                response = await client.post(OLLAMA+'/api/chat', json={'model':MODEL,'messages':[{'role':'system','content':system}]+history+[msg], 'stream':False,'think':False,'options':{'temperature':0,'num_ctx':4096,'num_predict':384}})
-                response.raise_for_status(); output = response.json()
-                if 'error' in output:
-                    raise ValueError(output['error'])
-            return {'reply':output['message']['content'],'elapsed_seconds':round(time.perf_counter()-started,2),'used_camera':data.use_camera,'executed':False}
-        except (httpx.HTTPError, ValueError, KeyError) as error:
-            raise HTTPException(502, 'Model request failed: '+str(error))
+            result=await llm_generate(question,snapshot,result,OLLAMA,MODEL,data.history)
+        except (httpx.HTTPError,ValueError,KeyError,TypeError):
+            result.update(llm_used=False,model=MODEL,model_note='LLM 연결 또는 응답 검증 실패 · 규칙 기반 참고 답변')
+        result['ui_actions']=chat_actions(data.message,snapshot)
+        result.update(elapsed_seconds=round(time.perf_counter()-started,2),used_camera=False)
+        return result
 
 # Preserve human-approved plans and completed results across backend restarts.
 CONSOLE_SNAPSHOT=ROOT/'outputs'/'console_snapshot.json'

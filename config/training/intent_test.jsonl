@@ -1,0 +1,20 @@
+{"intent": "status", "text": "지금 뭐 하는 거야"}
+{"intent": "status", "text": "지금 상태가 어때"}
+{"intent": "status", "text": "무슨 임무 중이니"}
+{"intent": "status", "text": "진행 중인 작업 설명해"}
+{"intent": "reason", "text": "수행불가로 뜨는 이유가 뭐야"}
+{"intent": "reason", "text": "고장 판정의 근거가 궁금해"}
+{"intent": "reason", "text": "어째서 대기하고 있어"}
+{"intent": "reason", "text": "왜 임무를 못해"}
+{"intent": "risk", "text": "지금 위험 요소를 알려줘"}
+{"intent": "risk", "text": "위험한 상황이 발생했어"}
+{"intent": "risk", "text": "현재 가장 위험한 건 뭐야"}
+{"intent": "risk", "text": "위험이 있는지 봐줘"}
+{"intent": "response", "text": "어떻게 대응해야 할까"}
+{"intent": "response", "text": "뭘 하면 좋겠어"}
+{"intent": "response", "text": "대응 방법 추천해"}
+{"intent": "response", "text": "안전하게 처리하는 방법 알려줘"}
+{"intent": "resume", "text": "언제 임무를 재개할 수 있지"}
+{"intent": "resume", "text": "다시 사용할 조건이 뭐야"}
+{"intent": "resume", "text": "재투입 조건 설명해줘"}
+{"intent": "resume", "text": "복귀 가능한 조건이 궁금해"}

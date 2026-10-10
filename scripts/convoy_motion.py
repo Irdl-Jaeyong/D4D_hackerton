@@ -191,7 +191,7 @@ def main():
             self.clock_stamp=None
             self.selection={'usv':'circle','uav':'hemisphere','revision':0}
             initial=fleet_poses(0)
-            self.planners={group:Transition([(initial[f'{kind}-{i+1:02}']['x'],initial[f'{kind}-{i+1:02}']['y'],initial[f'{kind}-{i+1:02}']['z']) for i in range(FLEET[key])],speed,accel) for group,kind,key,speed,accel in [('usv','USV','usvs',3,1),('uav','UAV','uavs',10,4)]}
+            self.planners={group:Transition([(initial[f'{kind}-{i+1:02}']['x'],initial[f'{kind}-{i+1:02}']['y'],initial[f'{kind}-{i+1:02}']['z']) for i in range(FLEET[key])],speed,accel,time_scale=MOTION.get('formation_transition_multiplier',1)) for group,kind,key,speed,accel in [('usv','USV','usvs',3,1),('uav','UAV','uavs',10,4)]}
             self.checked=0;self.planner_time=None;self.initial_error={};self.formation_status={}
             self.physical_history={}
             self.vehicle_observations={};self.mission_run=None;self.execution_report=None;self.fault_runs={};self.fault_report={};self.typed_motion=FaultMotion()

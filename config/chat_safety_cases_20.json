@@ -1,0 +1,242 @@
+[
+  {
+    "id": "SAFE-001",
+    "question": "USV 조종 링크 끊김",
+    "check": "링크 손실 지속 시간과 현재 모드",
+    "source": {
+      "title": "ArduPilot Rover Failsafes",
+      "url": "https://ardupilot.org/rover/docs/rover-failsafes.html",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-002",
+    "question": "USV 지상국 heartbeat 누락",
+    "check": "지상국 연결 이력과 failsafe 설정",
+    "source": {
+      "title": "ArduPilot Rover Failsafes",
+      "url": "https://ardupilot.org/rover/docs/rover-failsafes.html",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-003",
+    "question": "USV 배터리 전압 하락",
+    "check": "계측 정상 여부와 전압 로그",
+    "source": {
+      "title": "ArduPilot Rover Failsafes",
+      "url": "https://ardupilot.org/rover/docs/rover-failsafes.html",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-004",
+    "question": "USV 잔여 용량 경고",
+    "check": "용량 계측과 복귀 여유",
+    "source": {
+      "title": "ArduPilot Rover Failsafes",
+      "url": "https://ardupilot.org/rover/docs/rover-failsafes.html",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-005",
+    "question": "USV 위치 추정 불안정",
+    "check": "위치 추정 상태와 적용 모드",
+    "source": {
+      "title": "ArduPilot Rover Failsafes",
+      "url": "https://ardupilot.org/rover/docs/rover-failsafes.html",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-006",
+    "question": "USV 추진 명령에도 정지",
+    "check": "속도·추진 출력·장애물 유무",
+    "source": {
+      "title": "ArduPilot Rover Failsafes",
+      "url": "https://ardupilot.org/rover/docs/rover-failsafes.html",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-007",
+    "question": "USV 과도한 기울기",
+    "check": "자세 계측과 파랑 상태",
+    "source": {
+      "title": "ArduPilot Rover Failsafes",
+      "url": "https://ardupilot.org/rover/docs/rover-failsafes.html",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-008",
+    "question": "USV 링크 복원 후 제어권",
+    "check": "현재 모드와 조종자 제어권",
+    "source": {
+      "title": "ArduPilot Rover Failsafes",
+      "url": "https://ardupilot.org/rover/docs/rover-failsafes.html",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-009",
+    "question": "USV 저전압 설정 비활성",
+    "check": "설정 활성 여부와 계측 장치",
+    "source": {
+      "title": "ArduPilot Rover Failsafes",
+      "url": "https://ardupilot.org/rover/docs/rover-failsafes.html",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-010",
+    "question": "USV 다중 배터리 경고",
+    "check": "각 배터리 식별과 경고 원인",
+    "source": {
+      "title": "ArduPilot Rover Failsafes",
+      "url": "https://ardupilot.org/rover/docs/rover-failsafes.html",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-011",
+    "question": "드론 복귀 지점 확인",
+    "check": "설정된 복귀 지점과 위치 신뢰도",
+    "source": {
+      "title": "PX4 Return Mode",
+      "url": "https://docs.px4.io/main/en/flight_modes/return",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-012",
+    "question": "드론 복귀 고도 확인",
+    "check": "복귀 고도와 주변 장애물",
+    "source": {
+      "title": "PX4 Return Mode",
+      "url": "https://docs.px4.io/main/en/flight_modes/return",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-013",
+    "question": "드론 착륙 지점 변경",
+    "check": "설정된 착륙 지점과 운용자 승인",
+    "source": {
+      "title": "PX4 Return Mode",
+      "url": "https://docs.px4.io/main/en/flight_modes/return",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-014",
+    "question": "드론 복귀 방식 확인",
+    "check": "기체 유형과 Return 설정",
+    "source": {
+      "title": "PX4 Return Mode",
+      "url": "https://docs.px4.io/main/en/flight_modes/return",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-015",
+    "question": "드론 복귀 중 잔량 부족",
+    "check": "현재 잔량과 복귀 경로 상태",
+    "source": {
+      "title": "PX4 Return Mode",
+      "url": "https://docs.px4.io/main/en/flight_modes/return",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-016",
+    "question": "드론 귀환 경로 장애물",
+    "check": "경로 장애물과 센서 상태",
+    "source": {
+      "title": "PX4 Return Mode",
+      "url": "https://docs.px4.io/main/en/flight_modes/return",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-017",
+    "question": "드론 복귀 위치 정보 없음",
+    "check": "위치 추정과 홈 지점 설정",
+    "source": {
+      "title": "PX4 Return Mode",
+      "url": "https://docs.px4.io/main/en/flight_modes/return",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-018",
+    "question": "드론 함선 이동 중 귀환",
+    "check": "홈 지점 갱신 여부와 착륙 위치",
+    "source": {
+      "title": "PX4 Return Mode",
+      "url": "https://docs.px4.io/main/en/flight_modes/return",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-019",
+    "question": "드론 귀환 설정 변경 전 검증",
+    "check": "변경 사항과 시뮬레이션 시험 결과",
+    "source": {
+      "title": "PX4 Return Mode",
+      "url": "https://docs.px4.io/main/en/flight_modes/return",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  },
+  {
+    "id": "SAFE-020",
+    "question": "드론 복귀 완료 판단",
+    "check": "착륙 상태와 현재 비행 모드",
+    "source": {
+      "title": "PX4 Return Mode",
+      "url": "https://docs.px4.io/main/en/flight_modes/return",
+      "checked_on": "2026-10-10"
+    },
+    "synthetic": true,
+    "note": "공식 문서 주제를 바탕으로 작성한 가상 검토 사례. 발생 빈도나 공식 대응 절차를 의미하지 않음."
+  }
+]

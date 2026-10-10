@@ -1,0 +1,1352 @@
+{
+  "sample_count": 50,
+  "selection": "20개 상황 범주마다 정상·자원 부족 각 1개 + FAQ 주제 10개 각 1개",
+  "reviewer": "assistant; no maritime expert or model performance validation",
+  "verdict_counts": {
+    "hold_for_revision": 50
+  },
+  "issue_counts": {
+    "template_specificity": 40,
+    "unresolved_information": 30,
+    "shared_target_without_separation": 5,
+    "question_specificity": 10,
+    "ten_perspectives_not_three_choices": 5
+  },
+  "reviews": [
+    {
+      "record_id": "DEF-101-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "UAV 고장·비행 이상",
+      "source_group": "UAV 고장·비행 이상",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 기체를 신규 배정에서 제외",
+        "사용자 신고와 원인 미확인을 구분"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "제어 가능 여부·실제 위치·착함 조건을 확인해야 하며 고장 원인을 단정하면 안 됩니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 UAV 1대가 반복해서 크게 흔들린다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-102-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "UAV 고장·비행 이상",
+      "source_group": "UAV 고장·비행 이상",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외",
+        "사용자 신고와 원인 미확인을 구분"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "제어 가능 여부·실제 위치·착함 조건을 확인해야 하며 고장 원인을 단정하면 안 됩니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 UAV의 한쪽 방향 기울기가 계속 유지된다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-111-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "USV 고장·추종 이상",
+      "source_group": "USV 고장·추종 이상",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 기체를 신규 배정에서 제외",
+        "사용자 신고와 원인 미확인을 구분"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "현재 USV 출동은 계획 등록입니다. 실제 추진·조향 제어를 실행한 것으로 학습시키면 안 됩니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 USV 1척의 전진 속도가 갑자기 떨어진다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-112-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "USV 고장·추종 이상",
+      "source_group": "USV 고장·추종 이상",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외",
+        "사용자 신고와 원인 미확인을 구분"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "현재 USV 출동은 계획 등록입니다. 실제 추진·조향 제어를 실행한 것으로 학습시키면 안 됩니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 USV가 계속 한쪽으로만 회전한다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-131-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "대형 유지·전환",
+      "source_group": "대형 유지·전환",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "현재 슬롯·경로·전환 가능성 확인이 필요하며 대형 선택과 실행 승인을 구분해야 합니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 원형에서 양측 종대로 바꾸는 중 USV 경로가 겹친다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-132-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "대형 유지·전환",
+      "source_group": "대형 유지·전환",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "현재 슬롯·경로·전환 가능성 확인이 필요하며 대형 선택과 실행 승인을 구분해야 합니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 후방 V자로 바꾸는 중 USV 1척이 함선에 가까워진다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-151-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "명령·데이터 무결성",
+      "source_group": "명령·데이터 무결성",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "출처·시각·버전 확인 전 명령을 적용하지 않아야 합니다. 서로 다른 안의 한계가 에너지 소비 같은 일반 문구에 치우칩니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 과거 텔레메트리가 최신 자료처럼 다시 들어온다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-152-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "명령·데이터 무결성",
+      "source_group": "명령·데이터 무결성",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "출처·시각·버전 확인 전 명령을 적용하지 않아야 합니다. 서로 다른 안의 한계가 에너지 소비 같은 일반 문구에 치우칩니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 미래 시각으로 기록된 위치가 수신된다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-001-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "미확인 선박 접근",
+      "source_group": "미확인 선박 접근",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 위치는 합성 예시로 표시, ETA는 직선 추정",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "방향·거리·척수뿐 아니라 진로·속도·신원 미확인 여부를 답변에 남겨야 합니다."
+        },
+        {
+          "severity": "blocking",
+          "code": "shared_target_without_separation",
+          "note": "복수 UAV에 같은 관측 좌표가 배정됩니다. 별도 관측 구역·고도·충돌 회피 경로가 계산되지 않아 서로 다른 구역 감시라는 설명을 뒷받침하지 못합니다."
+        }
+      ],
+      "question": "야 우현 전방 500m에서 신원 미확인 소형선 1척이 접근한다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-002-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "미확인 선박 접근",
+      "source_group": "미확인 선박 접근",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 위치는 합성 예시로 표시, ETA는 직선 추정",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "방향·거리·척수뿐 아니라 진로·속도·신원 미확인 여부를 답변에 남겨야 합니다."
+        }
+      ],
+      "question": "야 좌현 전방에서 소형선 2척이 서로 다른 속도로 접근한다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-061-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "바람·비행 환경",
+      "source_group": "바람·비행 환경",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "풍속·돌풍·복귀 여유를 확인하는 추가 질문이 필요합니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 횡풍이 강해져 좌현 UAV들이 담당 위치를 벗어난다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-062-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "바람·비행 환경",
+      "source_group": "바람·비행 환경",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "풍속·돌풍·복귀 여유를 확인하는 추가 질문이 필요합니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 맞바람으로 UAV의 도달 시간이 늘어난다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-091-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "배터리·복귀 여유",
+      "source_group": "배터리·복귀 여유",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 기체를 신규 배정에서 제외",
+        "사용자 신고와 원인 미확인을 구분"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "잔량만으로 복귀 가능성을 판단하지 말고 계측 출처와 복귀 에너지를 확인해야 합니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 UAV 1대의 잔량이 배정 기준보다 낮아진다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-092-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "배터리·복귀 여유",
+      "source_group": "배터리·복귀 여유",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외",
+        "사용자 신고와 원인 미확인을 구분"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "잔량만으로 복귀 가능성을 판단하지 말고 계측 출처와 복귀 에너지를 확인해야 합니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 관측 중인 UAV의 복귀 예상 소모량이 남은 잔량과 비슷하다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-021-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "복수 접근·혼잡",
+      "source_group": "복수 접근·혼잡",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 위치는 합성 예시로 표시, ETA는 직선 추정",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "대상별 위치가 없는데 한 점을 여러 대상의 관측 위치로 사용합니다. 대상별 신고를 다시 묻도록 수정해야 합니다."
+        },
+        {
+          "severity": "blocking",
+          "code": "shared_target_without_separation",
+          "note": "복수 UAV에 같은 관측 좌표가 배정됩니다. 별도 관측 구역·고도·충돌 회피 경로가 계산되지 않아 서로 다른 구역 감시라는 설명을 뒷받침하지 못합니다."
+        }
+      ],
+      "question": "야 정면에 선박 3척이 서로 다른 방향으로 움직인다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-022-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "복수 접근·혼잡",
+      "source_group": "복수 접근·혼잡",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 위치는 합성 예시로 표시, ETA는 직선 추정",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "대상별 위치가 없는데 한 점을 여러 대상의 관측 위치로 사용합니다. 대상별 신고를 다시 묻도록 수정해야 합니다."
+        }
+      ],
+      "question": "야 좌현 2척과 우현 2척이 동시에 접근한다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-191-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "복합 상황·운용자 부담",
+      "source_group": "복합 상황·운용자 부담",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "기존 세 안만 반복하는 대신 위험 우선순위와 먼저 확인할 항목을 질문해야 합니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 선박 접근 중 UAV 1대가 고장 나고 다른 UAV 잔량도 부족하다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-192-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "복합 상황·운용자 부담",
+      "source_group": "복합 상황·운용자 부담",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "기존 세 안만 반복하는 대신 위험 우선순위와 먼저 확인할 항목을 질문해야 합니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 구조 신고와 항로 장애물 보고가 동시에 들어온다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-031-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "부유물·항로 장애물",
+      "source_group": "부유물·항로 장애물",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 위치는 합성 예시로 표시, ETA는 직선 추정",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "크기·표류 방향을 확인해야 하며 좌표 지정만으로 접근 경로가 안전하다고 판단할 수 없습니다."
+        },
+        {
+          "severity": "blocking",
+          "code": "shared_target_without_separation",
+          "note": "복수 UAV에 같은 관측 좌표가 배정됩니다. 별도 관측 구역·고도·충돌 회피 경로가 계산되지 않아 서로 다른 구역 감시라는 설명을 뒷받침하지 못합니다."
+        }
+      ],
+      "question": "야 정면 항로에 큰 통나무가 떠 있다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-032-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "부유물·항로 장애물",
+      "source_group": "부유물·항로 장애물",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 위치는 합성 예시로 표시, ETA는 직선 추정",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "크기·표류 방향을 확인해야 하며 좌표 지정만으로 접근 경로가 안전하다고 판단할 수 없습니다."
+        }
+      ],
+      "question": "야 우현 앞쪽에 어망으로 보이는 물체가 있다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-121-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "센서 오인·불일치",
+      "source_group": "센서 오인·불일치",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "자료별 발생 시각·출처를 확인하고 단일 센서 보고를 확정 탐지로 사용하면 안 됩니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 영상의 파도 반사가 선박으로 탐지된다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-122-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "센서 오인·불일치",
+      "source_group": "센서 오인·불일치",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "자료별 발생 시각·출처를 확인하고 단일 센서 보고를 확정 탐지로 사용하면 안 됩니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 부표가 사람으로 탐지됐을 가능성이 있다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-181-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "야간·가시성 저하",
+      "source_group": "야간·가시성 저하",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "가시성·센서 신뢰도를 확인해야 하며 대상이 보이지 않는다는 사실을 대상 부재로 해석하면 안 됩니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 야간에 선박의 불빛만 보이고 선체가 보이지 않는다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-182-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "야간·가시성 저하",
+      "source_group": "야간·가시성 저하",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "가시성·센서 신뢰도를 확인해야 하며 대상이 보이지 않는다는 사실을 대상 부재로 해석하면 안 됩니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 안개 때문에 접근 선박이 영상에서 사라진다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-171-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "연안·항만·제한 공간",
+      "source_group": "연안·항만·제한 공간",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "통행 공간·장애물·관할 규칙 정보가 부족하면 다시 질문해야 합니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 방파제 근처에서 넓은 원형 대형이 구조물과 겹친다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-172-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "연안·항만·제한 공간",
+      "source_group": "연안·항만·제한 공간",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "통행 공간·장애물·관할 규칙 정보가 부족하면 다시 질문해야 합니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 항만 출입구에서 선박이 양방향으로 통행한다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-041-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "인명·구조 지원",
+      "source_group": "인명·구조 지원",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 위치는 합성 예시로 표시, ETA는 직선 추정",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "사람 확인·전문 구조 지원 검토와 단순 관측 계획을 구분해야 합니다."
+        },
+        {
+          "severity": "blocking",
+          "code": "shared_target_without_separation",
+          "note": "복수 UAV에 같은 관측 좌표가 배정됩니다. 별도 관측 구역·고도·충돌 회피 경로가 계산되지 않아 서로 다른 구역 감시라는 설명을 뒷받침하지 못합니다."
+        }
+      ],
+      "question": "야 좌현에서 물에 빠진 사람 1명이 신고됐다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-042-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "인명·구조 지원",
+      "source_group": "인명·구조 지원",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 위치는 합성 예시로 표시, ETA는 직선 추정",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "사람 확인·전문 구조 지원 검토와 단순 관측 계획을 구분해야 합니다."
+        }
+      ],
+      "question": "야 우현에서 사람 2명이 서로 떨어진 곳에 보인다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-141-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "착함·충전·갑판 운영",
+      "source_group": "착함·충전·갑판 운영",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "실제 착함·슬롯 점유가 확인되어야 충전을 표시할 수 있습니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 UAV 2대가 같은 갑판 슬롯으로 내려온다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-142-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "착함·충전·갑판 운영",
+      "source_group": "착함·충전·갑판 운영",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "실제 착함·슬롯 점유가 확인되어야 충전을 표시할 수 있습니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 착함 슬롯에 이미 다른 UAV가 있다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-011-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "충돌 가능성",
+      "source_group": "충돌 가능성",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 위치는 합성 예시로 표시, ETA는 직선 추정",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "거리만으로 충돌 위험·최근접 시각을 확정하면 안 됩니다. 상대 진로와 속도의 추가 확인이 필요합니다."
+        },
+        {
+          "severity": "blocking",
+          "code": "shared_target_without_separation",
+          "note": "복수 UAV에 같은 관측 좌표가 배정됩니다. 별도 관측 구역·고도·충돌 회피 경로가 계산되지 않아 서로 다른 구역 감시라는 설명을 뒷받침하지 못합니다."
+        }
+      ],
+      "question": "야 우현에서 좌현으로 선박이 함선의 전방 항로를 가로지른다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-012-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "충돌 가능성",
+      "source_group": "충돌 가능성",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 위치는 합성 예시로 표시, ETA는 직선 추정",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "거리만으로 충돌 위험·최근접 시각을 확정하면 안 됩니다. 상대 진로와 속도의 추가 확인이 필요합니다."
+        }
+      ],
+      "question": "야 좌현에서 우현으로 선박이 함선의 전방 항로를 가로지른다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-081-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "통신·데이터 지연",
+      "source_group": "통신·데이터 지연",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "영상·관제·조종 링크 종류와 마지막 수신 시각을 구분해서 다시 물어야 합니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 UAV 1대의 텔레메트리가 6초 동안 갱신되지 않는다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-082-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "통신·데이터 지연",
+      "source_group": "통신·데이터 지연",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "영상·관제·조종 링크 종류와 마지막 수신 시각을 구분해서 다시 물어야 합니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 USV 1척이 연결됐다 끊겼다 반복한다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-051-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "파도·해상 상태",
+      "source_group": "파도·해상 상태",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "파고·주기·기체 운용 한계가 누락된 상태에서 특정 대형이 더 안전하다고 단정하면 안 됩니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 전체 구역에서 파도가 점점 높아진다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-052-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "파도·해상 상태",
+      "source_group": "파도·해상 상태",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "파고·주기·기체 운용 한계가 누락된 상태에서 특정 대형이 더 안전하다고 단정하면 안 됩니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 좌현 USV들만 큰 파도의 영향을 받는다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-161-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "함선 상태·항로",
+      "source_group": "함선 상태·항로",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "자동 감속·변침은 현재 구현된 실행 기능과 구분해야 합니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 함선이 갑자기 감속해 USV가 앞서 나간다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-162-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "함선 상태·항로",
+      "source_group": "함선 상태·항로",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "자동 감속·변침은 현재 구현된 실행 기능과 구분해야 합니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 함선이 가속해 후방 USV가 따라오지 못한다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "DEF-071-V1-Q1",
+      "kind": "scenario_dialogue",
+      "category": "항법·위치 신뢰도",
+      "source_group": "항법·위치 신뢰도",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "위치 신뢰도 불량 기체를 정상 위치 자료와 분리해야 하며 복귀 가능성을 단정하면 안 됩니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 UAV 1대의 위치가 갑자기 수십 미터 이동한 것으로 표시된다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 현재 연결된 기체들 중 정상 기체로 검토해줘."
+    },
+    {
+      "record_id": "DEF-072-V3-Q1",
+      "kind": "scenario_dialogue",
+      "category": "항법·위치 신뢰도",
+      "source_group": "항법·위치 신뢰도",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "대응안 3개와 자원 조건 확인",
+        "부족한 자원을 수행 불가로 표시",
+        "신고 기체를 신규 배정에서 제외"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "template_specificity",
+          "note": "위치 신뢰도 불량 기체를 정상 위치 자료와 분리해야 하며 복귀 가능성을 단정하면 안 됩니다."
+        },
+        {
+          "severity": "revision",
+          "code": "unresolved_information",
+          "note": "추가 답변에서도 원인이나 확인 항목이 미확인인 채 최종 계획 설명으로 넘어갑니다. 재질문 또는 조건부 제안을 학습 예시에 명확히 넣어야 합니다."
+        }
+      ],
+      "question": "야 USV 1척이 지도에서는 정상인데 영상에서는 다른 곳에 있다. 누구를 보내고 나머지는 어떤 대형으로 두면 돼? 지금 가용 UAV와 USV가 각각 한 대뿐이야."
+    },
+    {
+      "record_id": "FAQ-001",
+      "kind": "web_faq",
+      "category": "배터리·복귀 여유",
+      "source_group": "배터리·복귀 여유",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "출처와 합성 제안의 범위를 분리",
+        "자동 실행하지 않음"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "question_specificity",
+          "note": "서로 다른 FAQ 질문에 주제별 동일 확인 문구와 일반 절차를 사용합니다. 각 질문에 대한 직접적인 설명과 필요한 추가 질문을 작성해야 합니다."
+        }
+      ],
+      "question": "배터리 몇 퍼센트면 드론을 복귀시켜야 해?"
+    },
+    {
+      "record_id": "FAQ-007-S01",
+      "kind": "faq_situation",
+      "category": "통신·데이터 지연",
+      "source_group": "통신·데이터 지연",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "출처와 합성 제안의 범위를 분리",
+        "자동 실행하지 않음"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "question_specificity",
+          "note": "서로 다른 FAQ 질문에 주제별 동일 확인 문구와 일반 절차를 사용합니다. 각 질문에 대한 직접적인 설명과 필요한 추가 질문을 작성해야 합니다."
+        },
+        {
+          "severity": "blocking",
+          "code": "ten_perspectives_not_three_choices",
+          "note": "답변 10개는 함께 적용 가능한 점검 관점입니다. 이를 서로 다른 선택지로 취급하면 안 됩니다. 세 추천안·근거·한계 형식으로 변환이 필요합니다."
+        }
+      ],
+      "question": "조종기 연결이 끊기면 드론은 어떻게 돼? 지금 이상 신고는 받았지만 문제 기체·발생 시각·측정값은 아직 확인하지 못했다. 이럴 때 어떻게 판단할까?"
+    },
+    {
+      "record_id": "FAQ-013",
+      "kind": "web_faq",
+      "category": "통신·데이터 지연",
+      "source_group": "통신·데이터 지연",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "출처와 합성 제안의 범위를 분리",
+        "자동 실행하지 않음"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "question_specificity",
+          "note": "서로 다른 FAQ 질문에 주제별 동일 확인 문구와 일반 절차를 사용합니다. 각 질문에 대한 직접적인 설명과 필요한 추가 질문을 작성해야 합니다."
+        }
+      ],
+      "question": "관제 화면 연결이 끊기면 드론도 조종 불가야?"
+    },
+    {
+      "record_id": "FAQ-019-S01",
+      "kind": "faq_situation",
+      "category": "항법·위치 신뢰도",
+      "source_group": "항법·위치 신뢰도",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "출처와 합성 제안의 범위를 분리",
+        "자동 실행하지 않음"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "question_specificity",
+          "note": "서로 다른 FAQ 질문에 주제별 동일 확인 문구와 일반 절차를 사용합니다. 각 질문에 대한 직접적인 설명과 필요한 추가 질문을 작성해야 합니다."
+        },
+        {
+          "severity": "blocking",
+          "code": "ten_perspectives_not_three_choices",
+          "note": "답변 10개는 함께 적용 가능한 점검 관점입니다. 이를 서로 다른 선택지로 취급하면 안 됩니다. 세 추천안·근거·한계 형식으로 변환이 필요합니다."
+        }
+      ],
+      "question": "GPS가 안 잡히면 무조건 복귀할 수 있어? 지금 이상 신고는 받았지만 문제 기체·발생 시각·측정값은 아직 확인하지 못했다. 이럴 때 어떻게 판단할까?"
+    },
+    {
+      "record_id": "FAQ-025",
+      "kind": "web_faq",
+      "category": "항법·위치 신뢰도",
+      "source_group": "항법·위치 신뢰도",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "출처와 합성 제안의 범위를 분리",
+        "자동 실행하지 않음"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "question_specificity",
+          "note": "서로 다른 FAQ 질문에 주제별 동일 확인 문구와 일반 절차를 사용합니다. 각 질문에 대한 직접적인 설명과 필요한 추가 질문을 작성해야 합니다."
+        }
+      ],
+      "question": "드론이 지정 구역 밖으로 나가면 어떻게 해?"
+    },
+    {
+      "record_id": "FAQ-031-S01",
+      "kind": "faq_situation",
+      "category": "UAV 고장·비행 이상",
+      "source_group": "UAV 고장·비행 이상",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "출처와 합성 제안의 범위를 분리",
+        "자동 실행하지 않음"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "question_specificity",
+          "note": "서로 다른 FAQ 질문에 주제별 동일 확인 문구와 일반 절차를 사용합니다. 각 질문에 대한 직접적인 설명과 필요한 추가 질문을 작성해야 합니다."
+        },
+        {
+          "severity": "blocking",
+          "code": "ten_perspectives_not_three_choices",
+          "note": "답변 10개는 함께 적용 가능한 점검 관점입니다. 이를 서로 다른 선택지로 취급하면 안 됩니다. 세 추천안·근거·한계 형식으로 변환이 필요합니다."
+        }
+      ],
+      "question": "드론이 아예 시동이 안 걸리면 뭘 봐? 지금 이상 신고는 받았지만 문제 기체·발생 시각·측정값은 아직 확인하지 못했다. 이럴 때 어떻게 판단할까?"
+    },
+    {
+      "record_id": "FAQ-037",
+      "kind": "web_faq",
+      "category": "UAV 고장·비행 이상",
+      "source_group": "UAV 고장·비행 이상",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "출처와 합성 제안의 범위를 분리",
+        "자동 실행하지 않음"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "question_specificity",
+          "note": "서로 다른 FAQ 질문에 주제별 동일 확인 문구와 일반 절차를 사용합니다. 각 질문에 대한 직접적인 설명과 필요한 추가 질문을 작성해야 합니다."
+        }
+      ],
+      "question": "드론이 흔들리면 프로펠러 고장이라고 보면 돼?"
+    },
+    {
+      "record_id": "FAQ-049-S01",
+      "kind": "faq_situation",
+      "category": "충돌 가능성",
+      "source_group": "충돌 가능성",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "출처와 합성 제안의 범위를 분리",
+        "자동 실행하지 않음"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "question_specificity",
+          "note": "서로 다른 FAQ 질문에 주제별 동일 확인 문구와 일반 절차를 사용합니다. 각 질문에 대한 직접적인 설명과 필요한 추가 질문을 작성해야 합니다."
+        },
+        {
+          "severity": "blocking",
+          "code": "ten_perspectives_not_three_choices",
+          "note": "답변 10개는 함께 적용 가능한 점검 관점입니다. 이를 서로 다른 선택지로 취급하면 안 됩니다. 세 추천안·근거·한계 형식으로 변환이 필요합니다."
+        }
+      ],
+      "question": "작은 무인배도 항법 규칙을 확인해야 해? 지금 이상 신고는 받았지만 문제 기체·발생 시각·측정값은 아직 확인하지 못했다. 이럴 때 어떻게 판단할까?"
+    },
+    {
+      "record_id": "FAQ-043",
+      "kind": "web_faq",
+      "category": "시뮬레이션 검증",
+      "source_group": "시뮬레이션 검증",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "출처와 합성 제안의 범위를 분리",
+        "자동 실행하지 않음"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "question_specificity",
+          "note": "서로 다른 FAQ 질문에 주제별 동일 확인 문구와 일반 절차를 사용합니다. 각 질문에 대한 직접적인 설명과 필요한 추가 질문을 작성해야 합니다."
+        }
+      ],
+      "question": "시뮬레이션에서 성공하면 실제 배에서도 똑같이 돼?"
+    },
+    {
+      "record_id": "FAQ-055-S01",
+      "kind": "faq_situation",
+      "category": "실제 운용 준비",
+      "source_group": "실제 운용 준비",
+      "review_type": "assistant_content_review_with_structural_checks",
+      "expert_review": false,
+      "verdict": "hold_for_revision",
+      "training_approved": false,
+      "passes": [
+        "출처와 합성 제안의 범위를 분리",
+        "자동 실행하지 않음"
+      ],
+      "issues": [
+        {
+          "severity": "revision",
+          "code": "question_specificity",
+          "note": "서로 다른 FAQ 질문에 주제별 동일 확인 문구와 일반 절차를 사용합니다. 각 질문에 대한 직접적인 설명과 필요한 추가 질문을 작성해야 합니다."
+        },
+        {
+          "severity": "blocking",
+          "code": "ten_perspectives_not_three_choices",
+          "note": "답변 10개는 함께 적용 가능한 점검 관점입니다. 이를 서로 다른 선택지로 취급하면 안 됩니다. 세 추천안·근거·한계 형식으로 변환이 필요합니다."
+        }
+      ],
+      "question": "바다 위면 드론 비행 허가가 필요 없어? 지금 이상 신고는 받았지만 문제 기체·발생 시각·측정값은 아직 확인하지 못했다. 이럴 때 어떻게 판단할까?"
+    }
+  ]
+}
