@@ -18,6 +18,28 @@ class FaultAPI(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(api.inspection_vehicle,'UAV-02')
             self.assertEqual(api.formation['revision'],revision)
         finally:api.camera_view=previous
+    async def test_first_person_ignores_frames_from_previous_vehicle_or_revision(self):
+        import base64
+        previous=(api.camera_view,api.inspection_vehicle,api.camera_revision,api.camera,api.camera_ready)
+        try:
+            old=await api.set_camera_view(api.CameraView(mode='inspect',vehicle_id='UAV-01'))
+            new=await api.set_camera_view(api.CameraView(mode='inspect',vehicle_id='UAV-02'))
+            frame=dict(vehicle_id='SHIP-01',x=0,y=0,z=0,yaw=0,speed=0,sim_time=0,camera_jpeg=base64.b64encode(b'\xff\xd8test').decode(),camera_mode='inspect')
+            await api.telemetry(api.Telemetry(**frame,camera_revision=old['revision'],camera_vehicle_id='UAV-01'),x_bridge_token='test-only')
+            self.assertIsNone(api.camera)
+            await api.telemetry(api.Telemetry(**frame,camera_revision=new['revision'],camera_vehicle_id='UAV-01'),x_bridge_token='test-only')
+            self.assertIsNone(api.camera)
+            await api.telemetry(api.Telemetry(**frame,camera_revision=new['revision'],camera_vehicle_id='UAV-02'),x_bridge_token='test-only')
+            self.assertIsNone(api.camera)
+            with self.assertRaises(HTTPException):
+                await api.camera_applied(api.CameraReady(revision=old['revision'],vehicle_id='UAV-01',sim_time=5),x_bridge_token='test-only')
+            await api.camera_applied(api.CameraReady(revision=new['revision'],vehicle_id='UAV-02',sim_time=5),x_bridge_token='test-only')
+            await api.telemetry(api.Telemetry(**frame,camera_revision=new['revision'],camera_vehicle_id='UAV-02',camera_capture_sim_time=5),x_bridge_token='test-only')
+            self.assertIsNone(api.camera)
+            await api.telemetry(api.Telemetry(**frame,camera_revision=new['revision'],camera_vehicle_id='UAV-02',camera_capture_sim_time=6),x_bridge_token='test-only')
+            self.assertEqual(api.camera['jpeg'],b'\xff\xd8test')
+        finally:api.camera_view,api.inspection_vehicle,api.camera_revision,api.camera,api.camera_ready=previous
+
     async def test_fault_cannot_be_released_in_air(self):
         await api.set_simulated_fault('UAV-01',api.FaultRequest(unavailable=True))
         with self.assertRaises(HTTPException):await api.set_simulated_fault('UAV-01',api.FaultRequest(unavailable=False))

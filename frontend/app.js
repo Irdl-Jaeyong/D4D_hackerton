@@ -222,7 +222,7 @@ function vehicleDetails(s){
   $('positionId').textContent=v?.id||'기체 선택';
   for(const axis of ['X','Y','Z'])$('position'+axis).textContent=t?Number(t[axis.toLowerCase()]||0).toFixed(1):'—';
 
-  $('cameraIdentity').textContent=s.camera_view==='inspect'?`${s.inspection_vehicle} · 실제 기체 근접 관측 · ${stateLabels[s.vehicles.find(v=>v.id===s.inspection_vehicle)?.readiness.operational_state]||'상태 확인 필요'}`:v?`선택: ${v.id} · ${v.type==='UAV'?'드론':v.type==='USV'?'무인 수상정':'메인 함선'} · 근접 관측으로 형상을 확인하세요.`:'기체나 목록을 클릭해 선택한 뒤 근접 관측으로 형상을 확인하세요.';
+  $('cameraIdentity').textContent=s.camera_view==='inspect'?`${s.inspection_vehicle} · 기체 전방 1인칭 · ${stateLabels[s.vehicles.find(v=>v.id===s.inspection_vehicle)?.readiness.operational_state]||'상태 확인 필요'}`:v?`선택: ${v.id} · ${v.type==='UAV'?'드론':v.type==='USV'?'무인 수상정':'메인 함선'} · 선택 기체 버튼으로 1인칭 시점을 보세요.`:'기체나 목록을 클릭해 선택한 뒤 선택 기체 버튼으로 1인칭 시점을 보세요.';
   if(!v)return;
   const r=v.readiness,p=v.telemetry;
   $('faultToggle').disabled=v.type==='SHIP'||!!(v.fault&&v.type==='UAV'&&v.fault.phase!=='charging');$('faultToggle').textContent=v.fault?'정비 완료 · 고장 해제':'선택 기체 고장 주입';
@@ -366,7 +366,7 @@ $('faultToggle').addEventListener('click',async()=>{const v=lastState?.vehicles.
 $('cancelMission').addEventListener('click',()=>missionRequest('/api/mission/cancel',{mission_id:lastState?.mission?.id}));
 $('assignmentPlan').addEventListener('change',()=>{const m=lastState?.mission;if(m&&!m.approved){selectedResponse={mission_id:m.id,option_id:$('assignmentPlan').value,plan_revision:m.plan_revision||0};renderHumanApproval(lastState);}if(lastState)renderVehicles(lastState);});
 $('vehicleFilter').addEventListener('change',()=>{if(lastState)renderVehicles(lastState);});
-function chooseVehicle(event){const row=event.target.closest('[data-vehicle]');if(row){selectedVehicle=row.dataset.vehicle;if(lastState){renderVehicles(lastState);map(lastState);cameraOverlay(lastState);}}}
+function chooseVehicle(event){const row=event.target.closest('[data-vehicle]');if(row){selectedVehicle=row.dataset.vehicle;if(lastState?.camera_view==='inspect')inspectSelected();if(lastState){renderVehicles(lastState);map(lastState);cameraOverlay(lastState);}}}
 $('cards').addEventListener('click',chooseVehicle);
 
 async function health(){try{const r=await fetch('/api/health'),s=await r.json();$('health').textContent=s.model_installed?'백엔드 · Ollama 준비됨':'Ollama 또는 모델 확인 필요';}catch{$('health').textContent='백엔드 연결 실패';}setTimeout(health,15000);}poll();health();
@@ -410,5 +410,5 @@ for(const button of document.querySelectorAll('[data-filter]'))button.addEventLi
 $('map').addEventListener('click',e=>{
   if(!lastState)return;const rect=$('map').getBoundingClientRect(),x=(e.clientX-rect.left)*$('map').width/rect.width,y=(e.clientY-rect.top)*$('map').height/rect.height;
   const nearest=mapPickables.map(p=>({...p,d:Math.hypot(p.x-x,p.y-y)})).sort((a,b)=>a.d-b.d)[0];
-  if(nearest&&nearest.d<18*(window.devicePixelRatio||1)){selectedVehicle=nearest.id;renderVehicles(lastState);map(lastState);cameraOverlay(lastState);}
+  if(nearest&&nearest.d<18*(window.devicePixelRatio||1)){selectedVehicle=nearest.id;if(lastState.camera_view==='inspect')inspectSelected();renderVehicles(lastState);map(lastState);cameraOverlay(lastState);}
 });

@@ -85,12 +85,19 @@ FLEET = json.loads((ROOT/'config/fleet.json').read_text())
 IDS = [f'{kind}-{i:02}' for kind, key in [('SHIP','ships'),('UAV','uavs'),('USV','usvs')] for i in range(1, FLEET[key]+1)]
 CAMERA_VEHICLE = FLEET['camera_vehicle']
 camera_view = 'wide'
+camera_revision=0
+camera_ready=None
 inspection_vehicle='UAV-01'
 CAMERA_VIEWS = FLEET.get('camera_views', {'wide':FLEET['camera']})
 
 class CameraView(BaseModel):
     mode: Literal['wide','detail','inspect']
     vehicle_id: str | None = None
+
+class CameraReady(BaseModel):
+    revision: int
+    vehicle_id: str
+    sim_time: float = Field(ge=0, allow_inf_nan=False)
 
 class Telemetry(BaseModel):
     vehicle_id: str = 'USV-01'
@@ -103,6 +110,10 @@ class Telemetry(BaseModel):
     speed: float = Field(ge=0, allow_inf_nan=False)
     sim_time: float = Field(ge=0, allow_inf_nan=False)
     speed_source: Literal['ros_twist','odometry_position_delta'] = 'ros_twist'
+    camera_mode: Literal['wide','detail','inspect'] | None = None
+    camera_vehicle_id: str | None = None
+    camera_revision: int | None = None
+    camera_capture_sim_time: float | None = Field(default=None, ge=0, allow_inf_nan=False)
     camera_jpeg: str | None = Field(default=None, max_length=2_000_000)
 
 class Turn(BaseModel):
@@ -177,7 +188,7 @@ def state():
         if item['scenario'] in DEFENSE_SCENARIOS:item['threats'].append(target)
     reassess_missions(vehicles)
     queue=sorted((m for m in missions.values() if not m.get('approved')),key=sort_key)
-    return {'auto_scenarios':{'enabled':auto_generator.config['enabled'],'next_in_seconds':max(0,round(auto_generator.next_at-time.monotonic())),'max_pending':auto_generator.config['max_pending']} if auto_generator else None,'mission':mission or next(iter(queue),None),'active_mission':mission,'approval_queue':queue,'scenario_catalog':SCENARIOS,'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'selected vehicle inspection camera' if camera_view=='inspect' else 'SHIP-01 stabilized overhead sensors', 'scene_mode': FLEET['motion']['uav_pattern'], 'camera_view':camera_view,'inspection_vehicle':inspection_vehicle, 'formations': {**formation, 'catalog':CATALOG,'status':formation_status}, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion'], 'scenario': None,'sim_time':stamp,'situations':situations}}
+    return {'auto_scenarios':{'enabled':auto_generator.config['enabled'],'next_in_seconds':max(0,round(auto_generator.next_at-time.monotonic())),'max_pending':auto_generator.config['max_pending']} if auto_generator else None,'mission':mission or next(iter(queue),None),'active_mission':mission,'approval_queue':queue,'scenario_catalog':SCENARIOS,'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'selected vehicle forward first-person camera' if camera_view=='inspect' else 'SHIP-01 stabilized overhead sensors', 'scene_mode': FLEET['motion']['uav_pattern'], 'camera_view':camera_view,'inspection_vehicle':inspection_vehicle, 'formations': {**formation, 'catalog':CATALOG,'status':formation_status}, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion'], 'scenario': None,'sim_time':stamp,'situations':situations}}
 
 def fault_signals(vehicle_id):
     kind=fault_kinds.get(vehicle_id,'payload');criteria=FAULT_TYPES[kind]
@@ -231,7 +242,7 @@ class FormationRequest(BaseModel):
     scenario_id: int | None = None
 @app.get('/api/formations')
 async def get_formations():
-    return {**formation,'catalog':CATALOG,'status':formation_status,'mission':mission,'scenario_context':missions.get(formation.get('scenario_id')),'inspection_vehicle':inspection_vehicle,'faults':list(simulated_faults),'fault_modes':{id:fault_kinds.get(id,'payload') for id in simulated_faults},'fault_states':fault_status,'availability':{v['id']:v['connected'] and v['id'] not in simulated_faults and (v['type']=='SHIP' or v['readiness']['battery_percent']>=35) for v in state()['vehicles']}}
+    return {**formation,'catalog':CATALOG,'status':formation_status,'mission':mission,'scenario_context':missions.get(formation.get('scenario_id')),'inspection_vehicle':inspection_vehicle,'camera_revision':camera_revision,'camera_view':camera_view,'faults':list(simulated_faults),'fault_modes':{id:fault_kinds.get(id,'payload') for id in simulated_faults},'fault_states':fault_status,'availability':{v['id']:v['connected'] and v['id'] not in simulated_faults and (v['type']=='SHIP' or v['readiness']['battery_percent']>=35) for v in state()['vehicles']}}
 @app.post('/api/formations')
 async def set_formation(data: FormationRequest):
     if data.mode not in CATALOG[data.group]:raise HTTPException(422,'Unknown formation')
@@ -499,21 +510,34 @@ async def get_state():
 
 @app.get('/api/camera/view')
 async def get_camera_view():
-    return {'mode':camera_view,'vehicle_id':inspection_vehicle, 'camera':CAMERA_VIEWS[camera_view]}
+    return {'mode':camera_view,'vehicle_id':inspection_vehicle,'revision':camera_revision,'ready_sim_time':camera_ready['sim_time'] if camera_ready else None, 'camera':CAMERA_VIEWS[camera_view]}
 
 @app.post('/api/camera/view')
 async def set_camera_view(data: CameraView):
-    global camera_view,inspection_vehicle,camera
+    global camera_view,inspection_vehicle,camera,camera_revision,camera_ready
     if data.mode not in CAMERA_VIEWS:
         raise HTTPException(422, 'Camera view unavailable')
     if data.mode=='inspect':
-        if data.vehicle_id not in IDS:raise HTTPException(422,'근접 관측할 기체를 선택하세요.')
+        if data.vehicle_id not in IDS:raise HTTPException(422,'1인칭으로 볼 기체를 선택하세요.')
         value=latest.get(data.vehicle_id)
-        if not value or time.time()-value['received_at']>=5:raise HTTPException(409,'기체의 최신 위치가 필요합니다.')
+        if not value or time.time()-value['received_at']>=5 or (data.vehicle_id in simulated_faults and fault_kinds.get(data.vehicle_id)=='communication'):raise HTTPException(409,'기체의 최신 연결·위치가 필요합니다.')
         inspection_vehicle=data.vehicle_id
     camera_view = data.mode
+    camera_revision+=1
+    camera_ready=None
     camera=None
-    return {'mode':camera_view,'vehicle_id':inspection_vehicle, 'camera':CAMERA_VIEWS[camera_view]}
+    return {'mode':camera_view,'vehicle_id':inspection_vehicle,'revision':camera_revision,'ready_sim_time':camera_ready['sim_time'] if camera_ready else None, 'camera':CAMERA_VIEWS[camera_view]}
+
+@app.post('/api/internal/camera-ready')
+async def camera_applied(data: CameraReady, x_bridge_token: str = Header(default='')):
+    global camera_ready
+    if not TOKEN or not hmac.compare_digest(TOKEN, x_bridge_token):
+        raise HTTPException(403, 'Bridge token required')
+    if camera_view!='inspect' or data.revision!=camera_revision or data.vehicle_id!=inspection_vehicle:
+        raise HTTPException(409, 'Camera selection changed')
+    if camera_ready is None:
+        camera_ready=data.model_dump()
+    return {'ok':True}
 
 @app.post('/api/internal/telemetry')
 async def telemetry(data: Telemetry, x_bridge_token: str = Header(default='')):
@@ -536,7 +560,8 @@ async def telemetry(data: Telemetry, x_bridge_token: str = Header(default='')):
         received = time.time()
         if data.vehicle_id not in battery_origin or data.sim_time<battery_origin[data.vehicle_id]:battery_origin[data.vehicle_id]=data.sim_time
         latest[data.vehicle_id] = {**data.model_dump(exclude={'camera_jpeg'}), 'received_at': received}
-        if raw:
+        inspection_ready=(camera_view!='inspect' or (camera_ready is not None and data.camera_revision==camera_revision and data.camera_vehicle_id==inspection_vehicle and data.camera_capture_sim_time is not None and data.camera_capture_sim_time>camera_ready['sim_time']))
+        if raw and inspection_ready and (data.camera_revision is None or data.camera_revision==camera_revision) and (data.camera_mode is None or data.camera_mode==camera_view) and (camera_view!='inspect' or data.camera_vehicle_id is None or data.camera_vehicle_id==inspection_vehicle):
             camera = {'jpeg': raw, 'received_at': received}
     return {'ok': True}
 
@@ -561,7 +586,7 @@ async def chat(data: Chat):
         offline_ids = [v['id'] for v in snapshot['vehicles'] if not v['connected']]
         system = ('당신은 NAVIS-AI 시뮬레이션 관제 보조입니다. 한국어로 짧고 명확하게 답하세요. '
                   '제공된 실제 상태만 사용하고 배터리, 위치, 연결상태를 추측하지 마세요. '
-                  '카메라는 함대 전체를 비스듬히 내려다보는 Gazebo 항공 관측 카메라입니다. 메인 함선은 직선 전진하고 USV와 드론은 선택된 함선 상대 대형을 유지합니다. USV는 추진력 기반, 드론은 위치 갱신 기반 시연입니다. 배터리는 시뮬레이션 추정값입니다. 상황과 대응안은 규칙 기반 시연이며 승인된 UAV 관측·복귀는 Gazebo에서 실행됩니다. 외부 접근 상황은 모의 접촉입니다. 운용자가 대형을 직접 선택할 수 있습니다. 방어 대응안 실행 시 드론은 지속 추적하고 USV는 경계선을 유지하며 운용자가 종료하면 복귀합니다. 위험도와 우선순위는 제공된 규칙 계산 결과만 설명하고 재평가하거나 수정하지 마세요. S/U/A는 시연 기준이며 측정값과 구분하세요. 보이는 것만 설명하고 불확실하면 명시하세요. '
+                  '카메라는 전체 편대·함선 근접·선택 기체 전방 1인칭 중 선택된 Gazebo 카메라입니다. 메인 함선은 직선 전진하고 USV와 드론은 선택된 함선 상대 대형을 유지합니다. USV는 추진력 기반, 드론은 위치 갱신 기반 시연입니다. 배터리는 시뮬레이션 추정값입니다. 상황과 대응안은 규칙 기반 시연이며 승인된 UAV 관측·복귀는 Gazebo에서 실행됩니다. 외부 접근 상황은 모의 접촉입니다. 운용자가 대형을 직접 선택할 수 있습니다. 방어 대응안 실행 시 드론은 지속 추적하고 USV는 경계선을 유지하며 운용자가 종료하면 복귀합니다. 위험도와 우선순위는 제공된 규칙 계산 결과만 설명하고 재평가하거나 수정하지 마세요. S/U/A는 시연 기준이며 측정값과 구분하세요. 보이는 것만 설명하고 불확실하면 명시하세요. '
                   '현재는 상태 조회와 이미지 설명만 가능하며 이동 명령 실행 기능은 없습니다. '
                   '명령을 실행했다고 주장하지 마세요. 상태가 없는 기체는 미연결입니다. '
                   '상태 요약에서 기체를 빠뜨리지 마세요. 연결 기체: '+', '.join(connected_ids)+

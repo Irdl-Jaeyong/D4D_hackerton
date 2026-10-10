@@ -8,6 +8,7 @@ All USVs are excluded from pose commands and uses a Gazebo force-based plugin.
 The flagship and drones use scripted trajectories; no flight controller runs.
 """
 import json
+import re
 from collections import deque
 import math
 import signal
@@ -16,6 +17,7 @@ import os
 import urllib.request
 from formation_motion import Transition,targets
 from mission_execution import ObservationRun
+from first_person_camera import mounted_camera
 from defense_scenarios import formation_goals
 from fault_motion import FaultReturn
 from typed_fault_motion import FaultMotion
@@ -170,11 +172,10 @@ def poses(t, camera=None, history=None, formations=None, faults=None, inspection
     if inspection:
         name=inspection['id'];target=fleet.get(name)
         if name.startswith('USV') and history and history.get(name):
-            point=history[name][-1];target={'x':point[1],'y':point[2],'z':.7}
+            point=history[name][-1];target={'x':point[1],'y':point[2],'yaw':point[3],'z':point[4] if len(point)>4 else .7,'roll':point[5] if len(point)>5 else 0,'pitch':point[6] if len(point)>6 else 0}
         if target:
-            scale=15 if name.startswith('SHIP') else 1.5 if name.startswith('USV') else 1
-            dx,dy,dz=-6*scale,-8*scale,6*scale
-            fleet['inspection_camera']={'x':target['x']+dx,'y':target['y']+dy,'z':target['z']+dz,'yaw':math.atan2(-dy,-dx),'pitch':math.atan2(dz,math.hypot(dx,dy)),'roll':0}
+            if name.startswith('SHIP'):target=fleet.get(name+'_hull',target)
+            fleet['inspection_camera']=mounted_camera(name,target)
     return ' '.join('pose {'+pose_message(name,p)+'}' for name,p in fleet.items() if name!='fleet_observer' and not name.startswith('USV-'))
 
 
@@ -190,6 +191,7 @@ def main():
             super().__init__('navis_convoy')
             self.origin=None;self.elapsed=None;self.last_sent=None;self.failures=0
             self.clock_stamp=None
+            self.camera_acknowledged=None
             self.selection={'usv':'circle','uav':'hemisphere','revision':0}
             initial=fleet_poses(0)
             self.planners={group:Transition([(initial[f'{kind}-{i+1:02}']['x'],initial[f'{kind}-{i+1:02}']['y'],initial[f'{kind}-{i+1:02}']['z']) for i in range(FLEET[key])],speed,accel) for group,kind,key,speed,accel in [('usv','USV','usvs',3,1),('uav','UAV','uavs',10,4)]}
@@ -218,7 +220,9 @@ def main():
             yaw=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
             history=self.physical_history.setdefault(name,deque(maxlen=400))
             if not history or t>history[-1][0]:
-                history.append((t,p.x,p.y,yaw))
+                roll=math.atan2(2*(q.w*q.x+q.y*q.z),1-2*(q.x*q.x+q.y*q.y))
+                pitch=math.asin(max(-1,min(1,2*(q.w*q.y-q.z*q.x))))
+                history.append((t,p.x,p.y,yaw,p.z,roll,pitch))
                 self.vehicle_observations[name]=(t,(p.x,p.y,p.z))
         def clock(self,msg):
             stamp=msg.clock.sec+msg.clock.nanosec/1e9
@@ -321,7 +325,21 @@ def main():
                 if response.returncode or 'true' not in response.stdout:
                     self.failures+=1
                     if self.failures%10==1:self.get_logger().warning('Pose update failed: '+response.stderr[:160])
-                else:self.failures=0;self.last_sent=t
+                else:
+                    self.failures=0;self.last_sent=t
+                    key=(self.selection.get('camera_revision'),self.selection.get('inspection_vehicle'))
+                    if self.selection.get('camera_view')=='inspect' and key!=self.camera_acknowledged:
+                        try:
+                            # Subscribe only after the pose service succeeds: reject every frame captured before that fresh clock sample.
+                            fresh=subprocess.run(['ign','topic','-t','/world/navis_prep/clock','-e','-n','1'],capture_output=True,text=True,timeout=1.5)
+                            sample=re.search(r'sim\s*\{([^}]*)\}',fresh.stdout)
+                            if fresh.returncode or sample is None:raise ValueError('Fresh simulation clock unavailable')
+                            seconds=re.search(r'(?<!n)sec:\s*(\d+)',sample[1]);nanoseconds=re.search(r'nsec:\s*(\d+)',sample[1])
+                            applied_stamp=(int(seconds[1]) if seconds else 0)+(int(nanoseconds[1]) if nanoseconds else 0)/1e9
+                            req=urllib.request.Request(BACKEND_URL+'/api/internal/camera-ready',data=json.dumps({'revision':key[0],'vehicle_id':key[1],'sim_time':applied_stamp}).encode(),headers={'Content-Type':'application/json','X-Bridge-Token':os.environ.get('NAVIS_BRIDGE_TOKEN','')})
+                            with urllib.request.urlopen(req,timeout=.2) as ack:ack.read()
+                            self.camera_acknowledged=key
+                        except (OSError,ValueError):pass
             except subprocess.TimeoutExpired:self.get_logger().warning('Pose update timed out')
     rclpy.init();node=Convoy()
     signal.signal(signal.SIGTERM,lambda *_:rclpy.try_shutdown())

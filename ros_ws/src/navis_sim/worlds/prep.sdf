@@ -22406,7 +22406,7 @@
           <update_rate>3</update_rate>
           <topic>/navis/camera/inspect</topic>
           <camera>
-            <horizontal_fov>0.7</horizontal_fov>
+            <horizontal_fov>1.25</horizontal_fov>
             <image>
               <width>1280</width>
               <height>720</height>
