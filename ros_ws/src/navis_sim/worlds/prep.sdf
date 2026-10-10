@@ -12,15 +12,15 @@
       <real_time_factor>1</real_time_factor>
     </physics>
     <scene>
-      <ambient>.28 .32 .38 1</ambient>
-      <background>.58 .73 .84 1</background>
+      <ambient>.24 .28 .32 1</ambient>
+      <background>.56 .69 .8 1</background>
       <shadows>true</shadows>
     </scene>
     <light name="sun" type="directional">
       <pose>0 0 100 0 0 0</pose>
-      <diffuse>1 .95 .85 1</diffuse>
+      <diffuse>.93 .95 1 1</diffuse>
       <specular>.5 .5 .5 1</specular>
-      <direction>-.4 .3 -.8</direction>
+      <direction>-.55 .4 -.72</direction>
       <cast_shadows>true</cast_shadows>
     </light>
     <model name="ocean">
@@ -65,10 +65,10 @@
               <parameters>
                 <rescale>.18</rescale>
                 <bumpScale>440 440</bumpScale>
-                <hdrMultiplier>.48</hdrMultiplier>
+                <hdrMultiplier>.6</hdrMultiplier>
                 <fresnelPower>4</fresnelPower>
-                <shallowColor>.018 .12 .15 1</shallowColor>
-                <deepColor>.007 .037 .064 1</deepColor>
+                <shallowColor>.018 .105 .14 1</shallowColor>
+                <deepColor>.005 .045 .078 1</deepColor>
               </parameters>
             </shader>
             <wavefield>
@@ -94,12 +94,12 @@
       <pose>0 0 2.4 0 0 0</pose>
       <link name="base_link">
         <sensor name="fleet_camera_wide" type="camera">
-          <pose>-290 -370 437.6 0 0.7523301645292618 0.906021831977551</pose>
+          <pose>-245 -315 357.6 0 0.7339833852972377 0.9097531579442097</pose>
           <always_on>true</always_on>
           <update_rate>5</update_rate>
           <topic>/navis/camera/wide</topic>
           <camera>
-            <horizontal_fov>1.25</horizontal_fov>
+            <horizontal_fov>1.35</horizontal_fov>
             <image>
               <width>1280</width>
               <height>720</height>

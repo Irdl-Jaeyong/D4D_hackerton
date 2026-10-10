@@ -63,15 +63,22 @@ def model_sdf(target):
 def defense_model_sdf(t):
     scale=t.get('scale',1);parts=[]
     def visual(name,geometry,pose,color,glow=False):
-        parts.append(f'<visual name="{name}"><pose>{pose}</pose><geometry>{geometry}</geometry><material><ambient>{color}</ambient><diffuse>{color}</diffuse>'+ (f'<emissive>{color}</emissive>' if glow else '')+'</material><cast_shadows>true</cast_shadows></visual>')
+        roughness=.16 if name=='glass' else .9 if name=='collar' or name.startswith('seat') else .55
+        pbr='' if name.startswith('wake') or glow else f'<specular>.25 .25 .25 1</specular><pbr><metal><metalness>.06</metalness><roughness>{roughness}</roughness></metal></pbr>'
+        parts.append(f'<visual name="{name}"><pose>{pose}</pose><geometry>{geometry}</geometry><material><ambient>{color}</ambient><diffuse>{color}</diffuse>'+pbr+ (f'<emissive>{color}</emissive>' if glow else '')+'</material><cast_shadows>true</cast_shadows></visual>')
     for name,color in [('hull','.21 .25 .27 1'),('deck','.43 .46 .46 1'),('collar','.055 .067 .07 1'),('cabin','.61 .65 .65 1'),('glass','.09 .19 .22 1'),('canopy','.47 .53 .53 1')]:
         visual(name,f'<mesh><uri>model://defense_contact/meshes/{name}.obj</uri><scale>{scale} {scale} {scale}</scale></mesh>','0 0 0 0 0 0',color)
     for side in [-1,1]:
         visual('outboard_'+str(side),'<box><size>.6 .5 1.2</size></box>',f'{-6.15*scale} {side*.7*scale} .5 0 0 0','.075 .085 .085 1')
         color='.9 .08 .04 1' if side>0 else '.06 .85 .26 1'
         visual('navigation_'+str(side),'<sphere><radius>.055</radius></sphere>',f'-.7 {side*.96*scale} 2.2 0 0 0',color,True)
+    for side in [-1,1]:
+        for x in [2,4.4]:visual(f'rail_post_{side}_{x}','<cylinder><radius>.025</radius><length>.6</length></cylinder>',f'{x} {side*1.15} 1.1 0 0 0','.48 .52 .53 1')
+        visual(f'rail_{side}','<cylinder><radius>.03</radius><length>2.4</length></cylinder>',f'3.2 {side*1.15} 1.4 0 1.5708 0','.48 .52 .53 1')
+        visual(f'seat_{side}','<box><size>1.2 .6 .25</size></box>',f'-4 {side*.8} 1.05 0 0 0','.075 .09 .1 1')
+        visual(f'seat_back_{side}','<box><size>.18 .6 .7</size></box>',f'-4.55 {side*.8} 1.45 0 -.15 0','.075 .09 .1 1')
     visual('antenna','<cylinder><radius>.025</radius><length>1.6</length></cylinder>','-1.3 0 3.3 0 0 0','.2 .23 .24 1')
     visual('stern_light','<sphere><radius>.055</radius></sphere>','-1.3 0 4.1 0 0 0','.95 .94 .8 1',True)
     for side in [-1,1]:
-        visual('wake_'+str(side),'<mesh><uri>model://navis_ocean/meshes/usv_foam.obj</uri><scale>1.4 1.6 1</scale></mesh>',f'-5 {side*.85} .06 0 0 {side*.12}','.83 .9 .9 .38')
+        visual('wake_'+str(side),f'<mesh><uri>model://navis_ocean/meshes/usv_foam.obj</uri><scale>{max(.7,min(1.5,t.get("speed_mps",1.5)/2))} 1.1 1</scale></mesh>',f'-5 {side*.85} .06 0 0 {side*.12}','.83 .9 .9 .38')
     return f'<sdf version="1.8"><model name="{escape(t["name"])}"><static>true</static><pose>{t["x"]} {t["y"]} {t["z"]} {t.get("roll",0)} {t.get("pitch",0)} {t["yaw"]}</pose><link name="hull">'+''.join(parts)+'</link></model></sdf>'
