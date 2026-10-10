@@ -6,7 +6,7 @@ class ObservationRun:
         self.id=mission['id'];self.approved_at=mission['approved'].get('approved_at');self.started=t;self.cancelled=False;self.defense=mission.get('scenario') in DEFENSE_SCENARIOS
         initial_contacts=mission.get('threats') or (scenario_contacts(mission,t) if self.defense else [])
         offset=mission['card']['offset'];target=mission.get('target_world',[leader_x+offset[0],offset[1]]);self.tasks={}
-        for task in mission['approved']['tasks']:
+        for task in mission.get('execution_tasks',mission['approved']['tasks']):
             name=task['vehicle'];marine=name.startswith('USV-')
             if not marine and not name.startswith('UAV-'):continue
             offset=task.get('target_offset',[0,25 if target[1]>=0 else -25] if marine else [0,0])
@@ -61,3 +61,35 @@ class ObservationRun:
         complete=bool(tasks) and all(task['stage']=='completed' for task in tasks.values())
         return {'mission_id':self.id,'sim_time':t,'elapsed_seconds':round(t-self.started,1),'tasks':tasks,
                 'status':'cancelled' if complete and self.cancelled else 'completed' if complete else 'running','cancelled':self.cancelled}
+
+
+class MultiMissionRuns:
+    """Independent controllers; unchanged assignments retain their measured progress."""
+    def __init__(self):
+        self.runs={}
+        self.revisions={}
+    def step(self,missions,t,leader_x,homes,observations,available):
+        requested={m['id']:m for m in missions if m.get('approved')}
+        for mid in list(self.runs):
+            if mid not in requested:
+                del self.runs[mid];self.revisions.pop(mid,None)
+        overrides={};reports=[];owners={}
+        for mid,item in requested.items():
+            revision=item.get('assignment_revision',0)
+            run=self.runs.get(mid)
+            if run is None or run.approved_at!=item['approved'].get('approved_at'):
+                run=ObservationRun(item,t,leader_x);self.runs[mid]=run
+            elif self.revisions.get(mid)!=revision:
+                fresh=ObservationRun(item,t,leader_x)
+                run.tasks={name:run.tasks.get(name,task) for name,task in fresh.tasks.items()}
+            self.revisions[mid]=revision
+            for name in run.tasks:
+                if name in owners:raise ValueError(f'Duplicate vehicle assignment: {name}')
+                owners[name]=mid
+            goals=run.step(t,leader_x,homes,observations,available,item.get('cancel_requested',False),target_world=item.get('target_world_current'),contacts=item.get('threats'))
+            overrides.update(goals)
+            report=run.report(t,observations,available);report['assignment_revision']=revision
+            # Failed vehicles already follow their independent fault controller.
+            if run.cancelled and all(task['stage']=='completed' or not available.get(name,False) for name,task in run.tasks.items()):report['status']='cancelled'
+            reports.append(report)
+        return overrides,reports

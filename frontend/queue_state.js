@@ -3,7 +3,7 @@ function queueReviewKey(m) {
   if (!m) return 'none';
   const r=m.risk||{};
   return JSON.stringify([m.id,m.plan_revision||0,m.approved?.id||null,
-    r.priority,r.score,r.scores,r.status,r.p0_reasons,r.missing,!!m.resolved,m.ai_status?.state,m.ai_status?.generated_at]);
+    r.priority,r.score,r.scores,r.status,r.p0_reasons,r.missing,!!m.resolved,m.assignment_revision,m.intervention?.kind,m.ai_status?.state,m.ai_status?.generated_at]);
 }
 function responseExecutionRequest(m,optionId) {
   const plan=m?.options?.find(p=>p.id===optionId);
@@ -15,12 +15,13 @@ function responseExecutionRequest(m,optionId) {
 function reviewedMission(state, selectedId) {
   const active=state.active_mission || (state.mission?.approved ? state.mission : null);
   const queue=state.approval_queue || [];
-  const selected=queue.find(m=>m.id===selectedId);
+  const running=state.active_missions|| (active?[active]:[]);
+  const selected=[...queue,...running].find(m=>m.id===selectedId);
   if(selected)return selected;
   if(active)return active;
   return queue.find(m=>m.id===selectedId) || queue[0] || state.mission || null;
 }
-if(typeof module!=='undefined')module.exports={queueReviewKey,responseExecutionRequest,reviewedMission,queueSnapshot,needsPlanRefresh,responseControlState};
+if(typeof module!=='undefined')module.exports={visibleResponsePlans,queueReviewKey,responseExecutionRequest,reviewedMission,queueSnapshot,needsPlanRefresh,responseControlState};
 
 function queueSnapshot(previous,queue,now,filter='all',force=false) {
   if(previous&&!force&&previous.filter===filter&&now-previous.updatedAt<10000)return previous;
@@ -43,5 +44,11 @@ function responseControlState(m,optionId,active,pending){
   const plan=m.options.find(p=>p.id===optionId);
   if(optionId==='ai'&&(m.ai_status?.state!=='ready'||!plan?.expires_at||plan.expires_at<=Date.now()/1000))return {disabled:true,selected:false,label:'AI 제안 갱신 필요'};
   if(!plan?.available)return {disabled:true,selected:false,label:'출동 불가 · 기체 부족'};
-  return {disabled:false,selected:false,label:active?'기존 대응 중단 · 이 대응으로 전환':'이 대응안 선택 · 즉시 출동'};
+  return {disabled:false,selected:false,label:'이 대응안 선택 · 임무 추가'};
+}
+
+function visibleResponsePlans(plans){
+ const base=plans.filter(p=>p.id!=='ai').slice(0,2);
+ const ai=plans.findLast(p=>p.id==='ai');
+ return ai?[...base,ai]:base;
 }
