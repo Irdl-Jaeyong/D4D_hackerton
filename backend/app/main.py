@@ -23,6 +23,7 @@ from formation_motion import CATALOG
 from safety_chat import answer as safety_answer
 from vehicle_briefing import brief as vehicle_brief
 from llm_dialogue import generate as llm_generate
+from chat_scenario_briefing import prepare as prepare_brief, context as brief_context, SYSTEM as BRIEF_SYSTEM, validated_explanations, assemble as assemble_brief
 from chat_ui_actions import actions as chat_actions
 from mission_console import readiness, options, SCENARIOS
 from auto_scenarios import ScenarioGenerator
@@ -715,5 +716,40 @@ def save_console():
     CONSOLE_SNAPSHOT.parent.mkdir(exist_ok=True)
     data={'formation':formation,'mission':mission,'missions':list(missions.values()),'mission_counter':mission_counter,'faults':list(simulated_faults),'automatic_returns':list(automatic_returns),'battery_origin':battery_origin,'fault_status':fault_status,'charge_credit':charge_credit,'fault_kinds':fault_kinds,'fault_last_known':fault_last_known,'interference_owner':interference_owner}
     temp=CONSOLE_SNAPSHOT.with_suffix('.tmp');temp.write_text(json.dumps(data,ensure_ascii=False));temp.replace(CONSOLE_SNAPSHOT)
+
+@app.post('/api/chat/scenario')
+async def scenario_chat(data: Chat):
+    if chat_lock.locked():
+        raise HTTPException(429, 'AI is processing another request')
+    async with chat_lock:
+        snapshot = state()
+        msg = {'role': 'user', 'content': data.message}
+        if data.use_camera:
+            if not snapshot['camera_available']:
+                raise HTTPException(409, 'No fresh camera image; start the simulation')
+            msg['images'] = [base64.b64encode(camera['jpeg']).decode()]
+        if not data.message.strip():raise HTTPException(422, '질문을 입력하세요.')
+        question=(data.clarification_context+'\n'+data.message) if data.clarification_context else data.message
+        if len(question)>6000:raise HTTPException(422,'추가 질문이 너무 길어졌습니다. 새 상황으로 질문해주세요.')
+        try:brief=prepare_brief(question,snapshot)
+        except ValueError as error:raise HTTPException(422, str(error)) from error
+        system=BRIEF_SYSTEM+'\n참고 자료 JSON: '+json.dumps(brief_context(brief,snapshot),ensure_ascii=False)
+        # The current question is matched independently; prior bot text is never
+        # treated as telemetry or authoritative scenario evidence.
+        started=time.perf_counter();explanations=None;model_note=None
+        try:
+            if brief.get('clarification_questions'):raise ValueError('Clarification needed')
+            async with httpx.AsyncClient(timeout=60) as client:
+                response=await client.post(OLLAMA+'/api/chat',json={'model':MODEL,'messages':[{'role':'system','content':system},msg],
+                    'stream':False,'think':False,'format':'json','options':{'temperature':0,'num_ctx':8192,'num_predict':512}})
+                response.raise_for_status();output=response.json()
+            explanations=validated_explanations(output['message']['content'])
+        except (httpx.HTTPError,ValueError,KeyError,TypeError):
+            model_note=None if brief.get('clarification_questions') else 'AI 설명을 가져오거나 검증하지 못해, 상황 카드와 배정 엔진의 근거로 대응안 세 개를 표시합니다.'
+        reply,recommendations=assemble_brief(brief,explanations)
+        return {'reply':reply,'summary':brief['summary'],'recommendations':recommendations,'scenario_reference':brief['scenario'],
+                'web_sources':brief.get('web_sources',[]),'faq_reference':brief.get('faq_reference'),'faq_check_question':brief.get('faq_check_question'),'related_examples':brief['candidates'],'retrieval_method':brief['retrieval_method'],'catalog_count':brief['catalog_count'],
+                'clarification_questions':brief.get('clarification_questions',[]),'clarification_context':brief.get('clarification_context'),'reported_details':brief.get('reported_details'),'llm_used':explanations is not None,'model_note':model_note,'elapsed_seconds':round(time.perf_counter()-started,2),
+                'used_camera':data.use_camera,'executed':False}
 
 app.mount('/', StaticFiles(directory=ROOT/'frontend', html=True), name='frontend')
