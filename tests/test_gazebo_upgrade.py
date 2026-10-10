@@ -8,6 +8,13 @@ class UpgradeAPI(unittest.IsolatedAsyncioTestCase):
         if hasattr(api,'fault_kinds'):api.fault_kinds.clear();api.fault_last_known.clear()
         for name in ['SHIP-01','UAV-01','USV-01']:
             api.latest[name]={'x':10,'y':0,'z':60 if name.startswith('UAV') else 0,'yaw':0,'sim_time':10,'received_at':time.time()}
+    async def test_scenario_returns_to_fleet_camera(self):
+        previous=api.camera_view
+        try:
+            api.camera_view='inspect'
+            await api.start_scenario(api.ScenarioRequest(scenario='rescue'))
+            self.assertEqual(api.camera_view,'wide')
+        finally:api.camera_view=previous
     async def test_scenario_has_world_object_and_stays_fixed_for_debris(self):
         m=await api.start_scenario(api.ScenarioRequest(scenario='debris'))
         first=api.state()['scene'].get('situations',[])

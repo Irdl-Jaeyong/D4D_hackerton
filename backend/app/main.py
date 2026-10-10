@@ -172,12 +172,14 @@ class ApprovalRequest(BaseModel):
 
 @app.post('/api/mission/scenario')
 async def start_scenario(data: ScenarioRequest):
-    global mission,mission_counter
+    global mission,mission_counter,camera_view,camera
     if data.scenario=='fault':
         if not data.vehicle_id:raise HTTPException(422,'고장 대상 기체를 선택하세요.')
         await set_simulated_fault(data.vehicle_id,FaultRequest(unavailable=True,fault_type=data.fault_type))
+        if camera_view!='wide':camera_view='wide';camera=None
         return {'ok':True,'vehicle_id':data.vehicle_id,'fault_type':data.fault_type,'source':'synthetic'}
     if mission and mission.get('approved'):raise HTTPException(409,'진행 중인 대응안을 먼저 종료하세요.')
+    if camera_view!='wide':camera_view='wide';camera=None
     snapshot=state();plans=options(snapshot['vehicles'],formation,data.scenario)
     mission_counter+=1
     mission={'id':mission_counter,'scenario':data.scenario,'card':SCENARIOS[data.scenario],

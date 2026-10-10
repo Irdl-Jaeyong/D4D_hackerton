@@ -26,6 +26,11 @@ class SceneTests(unittest.TestCase):
         from scenario_scene import targets
         m={'id':4,'scenario':'rescue','scene_origin':{'x':0,'y':0,'yaw':0,'sim_time':0},'risk':{'priority':'P1'},'approved':{'id':'verify'}}
         self.assertEqual(targets([m],1)[0]['mission_id'],4)
+    def test_default_marker_is_bright_without_inventing_priority(self):
+        from scenario_scene import model_sdf
+        xml=ET.fromstring(model_sdf({'name':'situation_1','scenario':'rescue','priority':None,'x':0,'y':0,'z':0,'yaw':0}))
+        marker=xml.find(".//visual[@name='marker_0']")
+        self.assertEqual(marker.find('material/emissive').text,'1 .82 .12 1')
     def test_all_models_valid_sdf_and_priority_changes_marker(self):
         from scenario_scene import model_sdf
         for scenario in ['crossing','debris','rescue']:

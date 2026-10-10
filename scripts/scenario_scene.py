@@ -2,7 +2,7 @@
 import math
 from xml.sax.saxutils import escape
 from mission_console import SCENARIOS
-COLORS={'P0':'1 .12 .18 1','P1':'1 .42 .08 1','P2':'1 .82 .12 1','P3':'.2 .65 1 1',None:'.65 .65 .65 1'}
+COLORS={'P0':'1 .12 .18 1','P1':'1 .42 .08 1','P2':'1 .82 .12 1','P3':'.2 .65 1 1',None:'1 .82 .12 1'}
 
 def targets(missions,sim_time):
     result=[]
@@ -27,7 +27,8 @@ def targets(missions,sim_time):
 def model_sdf(target):
     pieces=[]
     def visual(name,geom,pos,color,rotation='0 0 0'):
-        pieces.append(f'<visual name="{name}"><pose>{pos} {rotation}</pose><geometry>{geom}</geometry><cast_shadows>false</cast_shadows><material><ambient>{color}</ambient><diffuse>{color}</diffuse></material></visual>')
+        glow=f'<emissive>{color}</emissive>' if name.startswith('marker_') or name=='priority_flag' else ''
+        pieces.append(f'<visual name="{name}"><pose>{pos} {rotation}</pose><geometry>{geom}</geometry><cast_shadows>false</cast_shadows><material><ambient>{color}</ambient><diffuse>{color}</diffuse>{glow}</material></visual>')
     def box(name,size,pos,color,rotation='0 0 0'):
         visual(name,f'<box><size>{size}</size></box>',pos,color,rotation)
     def sphere(name,r,pos,color):visual(name,f'<sphere><radius>{r}</radius></sphere>',pos,color)
