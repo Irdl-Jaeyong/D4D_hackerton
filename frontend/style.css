@@ -73,3 +73,5 @@ header #health{flex-shrink:0;max-width:240px}
 .live-mission{max-height:680px;overflow-y:auto}.right-column>.chat{height:420px}.risk-response button:disabled{opacity:.4}.risk-panel .title h2{font-size:14px}
 
 .camera-tools{flex-wrap:wrap}#cameraIdentity{padding:0 14px;margin:6px 0;font-size:12px;color:#84ece6}#inspectVehicle:disabled{opacity:.4}
+
+.chat-summary{white-space:pre-line}.chat-response{border:1px solid #285165;border-radius:7px;padding:9px;margin:8px 0}.chat-response h4{margin:0 0 6px;color:#65d9e6}.chat-response p{margin:5px 0}.chat-response small{color:#9bb6c7}

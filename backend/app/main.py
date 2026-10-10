@@ -22,6 +22,7 @@ from formation_motion import CATALOG
 from mission_console import readiness, options, SCENARIOS
 from risk_monitor import assess
 from fault_motion import deck_slot
+from chat_scenario_briefing import prepare as prepare_brief, context as brief_context, SYSTEM as BRIEF_SYSTEM, validated_explanations, assemble as assemble_brief
 mission=None
 mission_counter=0
 formation={'usv':'circle','uav':'hemisphere','revision':0}
@@ -79,6 +80,7 @@ class Chat(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
     use_camera: bool = False
     history: list[Turn] = Field(default_factory=list, max_length=8)
+    clarification_context: str | None = Field(default=None,max_length=6000)
 
 def state():
     now = time.time()
@@ -352,26 +354,29 @@ async def chat(data: Chat):
             if not snapshot['camera_available']:
                 raise HTTPException(409, 'No fresh camera image; start the simulation')
             msg['images'] = [base64.b64encode(camera['jpeg']).decode()]
-        connected_ids = [v['id'] for v in snapshot['vehicles'] if v['connected']]
-        offline_ids = [v['id'] for v in snapshot['vehicles'] if not v['connected']]
-        system = ('당신은 NAVIS-AI 시뮬레이션 관제 보조입니다. 한국어로 짧고 명확하게 답하세요. '
-                  '제공된 실제 상태만 사용하고 배터리, 위치, 연결상태를 추측하지 마세요. '
-                  '카메라는 함대 전체를 비스듬히 내려다보는 Gazebo 항공 관측 카메라입니다. 메인 함선은 직선 전진하고 USV와 드론은 선택된 함선 상대 대형을 유지합니다. USV는 추진력 기반, 드론은 위치 갱신 기반 시연입니다. 배터리는 시뮬레이션 추정값입니다. 상황과 대응안은 규칙 기반 시연이며 관측 임무 출동은 미연결입니다. 보이는 것만 설명하고 불확실하면 명시하세요. '
-                  '현재는 상태 조회와 이미지 설명만 가능하며 이동 명령 실행 기능은 없습니다. '
-                  '명령을 실행했다고 주장하지 마세요. 상태가 없는 기체는 미연결입니다. '
-                  '상태 요약에서 기체를 빠뜨리지 마세요. 연결 기체: '+', '.join(connected_ids)+
-                  '. 미연결 기체: '+', '.join(offline_ids)+'. 현재 상태 JSON: '+json.dumps(snapshot, ensure_ascii=False))
-        history = [{'role': t.role, 'content': t.content} for t in data.history if t.role in ('user','assistant')]
-        started = time.perf_counter()
+        if not data.message.strip():raise HTTPException(422, '질문을 입력하세요.')
+        question=(data.clarification_context+'\n'+data.message) if data.clarification_context else data.message
+        if len(question)>6000:raise HTTPException(422,'추가 질문이 너무 길어졌습니다. 새 상황으로 질문해주세요.')
+        try:brief=prepare_brief(question,snapshot)
+        except ValueError as error:raise HTTPException(422, str(error)) from error
+        system=BRIEF_SYSTEM+'\n참고 자료 JSON: '+json.dumps(brief_context(brief,snapshot),ensure_ascii=False)
+        # The current question is matched independently; prior bot text is never
+        # treated as telemetry or authoritative scenario evidence.
+        started=time.perf_counter();explanations=None;model_note=None
         try:
-            async with httpx.AsyncClient(timeout=180) as client:
-                response = await client.post(OLLAMA+'/api/chat', json={'model':MODEL,'messages':[{'role':'system','content':system}]+history+[msg], 'stream':False,'think':False,'options':{'temperature':0,'num_ctx':4096,'num_predict':384}})
-                response.raise_for_status(); output = response.json()
-                if 'error' in output:
-                    raise ValueError(output['error'])
-            return {'reply':output['message']['content'],'elapsed_seconds':round(time.perf_counter()-started,2),'used_camera':data.use_camera,'executed':False}
-        except (httpx.HTTPError, ValueError, KeyError) as error:
-            raise HTTPException(502, 'Model request failed: '+str(error))
+            if brief.get('clarification_questions'):raise ValueError('Clarification needed')
+            async with httpx.AsyncClient(timeout=60) as client:
+                response=await client.post(OLLAMA+'/api/chat',json={'model':MODEL,'messages':[{'role':'system','content':system},msg],
+                    'stream':False,'think':False,'format':'json','options':{'temperature':0,'num_ctx':8192,'num_predict':512}})
+                response.raise_for_status();output=response.json()
+            explanations=validated_explanations(output['message']['content'])
+        except (httpx.HTTPError,ValueError,KeyError,TypeError):
+            model_note=None if brief.get('clarification_questions') else 'AI 설명을 가져오거나 검증하지 못해, 상황 카드와 배정 엔진의 근거로 대응안 세 개를 표시합니다.'
+        reply,recommendations=assemble_brief(brief,explanations)
+        return {'reply':reply,'summary':brief['summary'],'recommendations':recommendations,'scenario_reference':brief['scenario'],
+                'web_sources':brief.get('web_sources',[]),'faq_reference':brief.get('faq_reference'),'faq_check_question':brief.get('faq_check_question'),'related_examples':brief['candidates'],'retrieval_method':brief['retrieval_method'],'catalog_count':brief['catalog_count'],
+                'clarification_questions':brief.get('clarification_questions',[]),'clarification_context':brief.get('clarification_context'),'reported_details':brief.get('reported_details'),'llm_used':explanations is not None,'model_note':model_note,'elapsed_seconds':round(time.perf_counter()-started,2),
+                'used_camera':data.use_camera,'executed':False}
 
 # Preserve human-approved plans and completed results across backend restarts.
 CONSOLE_SNAPSHOT=ROOT/'outputs'/'console_snapshot.json'

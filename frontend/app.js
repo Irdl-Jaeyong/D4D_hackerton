@@ -1,4 +1,4 @@
-const $=id=>document.getElementById(id);let history=[],connections={},lastState=null,lastScenarioStage=null;const cameraPickables=[];
+const $=id=>document.getElementById(id);let clarificationContext=null;let history=[],connections={},lastState=null,lastScenarioStage=null;const cameraPickables=[];
 function event(text){if(!$('events'))return;const li=document.createElement('li');li.textContent=`${new Date().toLocaleTimeString('ko-KR')} · ${text}`;$('events').prepend(li);while($('events').children.length>20)$('events').lastChild.remove();}
 function bubble(text,role){const p=document.createElement('p');p.className='bubble '+role;p.textContent=text;$('messages').append(p);$('messages').scrollTop=$('messages').scrollHeight;return p;}
 const stateLabels={defending:'방어중',waiting:'대기·복귀',unavailable:'수행불가'},stateColors={defending:'#2ce099',waiting:'#4aa8ff',unavailable:'#ff6b6b'};
@@ -111,7 +111,7 @@ if(lead&&s.scene.scenario){const t=lead.telemetry.x/s.scene.motion.ship_speed,ph
 const stage=phase<18?0:phase<80?1:phase<170?2:3,key=`${Math.floor(t/180)}-${stage}`;
 if(key!==lastScenarioStage){event(['민간 배 접근: 충돌 예측 감시','교차 통항 구간: 위험을 예측한 USV가 우회','민간 배 통과 구간: 호위 위치 복귀','정상 호위 구간'][stage]);lastScenarioStage=key;}}
 }catch{$('connected').textContent='백엔드 연결 끊김';document.querySelectorAll('.badge').forEach(b=>{b.className='badge';b.textContent='확인 불가';});$('fleetSummary').textContent='백엔드 연결 끊김 · 상태 확인 불가';document.querySelectorAll('#responseOptions button').forEach(b=>b.disabled=true);$('finalApprove').disabled=true;$('submitApprovalCommand').disabled=true;$('cards').replaceChildren();$('vehicleDetails').textContent='연결 끊김 · 마지막 상태를 사용할 수 없습니다.';$('assignmentSummary').textContent='연결 끊김 · 배정 결과 확인 불가';$('assignmentReasons').replaceChildren();$('assignmentPlan').disabled=true;$('map').getContext('2d').clearRect(0,0,760,300);$('camera').style.display='none';$('cameraEmpty').style.display='block';$('cameraEmpty').textContent='백엔드 연결 끊김';$('cameraOverlay').getContext('2d').clearRect(0,0,1280,720);}finally{setTimeout(poll,500);}}
-$('chatForm').addEventListener('submit',async e=>{e.preventDefault();const message=$('message').value.trim();if(!message)return;bubble(message,'user');$('message').value='';$('send').disabled=true;$('chatStatus').textContent='AI 분석 중 · 최초 요청은 로딩 시간이 걸릴 수 있습니다';try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,use_camera:$('useCamera').checked,history:history.slice(-8)})});const data=await r.json();if(!r.ok)throw Error(data.detail||'요청 실패');bubble(data.reply,'ai');history.push({role:'user',content:message},{role:'assistant',content:data.reply.slice(0,4000)});$('chatStatus').textContent=`${data.elapsed_seconds}초 · ${data.used_camera?'카메라 포함':'텍스트'} · 명령 실행 없음`;}catch(err){bubble(err.message,'ai error');$('chatStatus').textContent='요청 실패';}finally{$('send').disabled=false;}});
+$('chatForm').addEventListener('submit',async e=>{e.preventDefault();const message=$('message').value.trim();if(!message)return;bubble(message,'user');$('message').value='';$('send').disabled=true;$('chatStatus').textContent='AI 분석 중 · 최초 요청은 로딩 시간이 걸릴 수 있습니다';try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,clarification_context:clarificationContext,use_camera:$('useCamera').checked,history:history.slice(-8)})});const data=await r.json();if(!r.ok)throw Error(data.detail||'요청 실패');clarificationContext=data.clarification_context||null;renderChatAnswers(data);history.push({role:'user',content:message},{role:'assistant',content:data.reply.slice(0,4000)});$('chatStatus').textContent=data.clarification_questions?.length?'추가 정보 대기 · 아래 입력창에 이어서 답해주세요':`${data.elapsed_seconds}초 · 사례 ${data.catalog_count||200}개 참고 · ${data.llm_used?'AI 설명':'규칙 기반 설명'} · 명령 실행 없음`;}catch(err){bubble(err.message,'ai error');$('chatStatus').textContent='요청 실패';}finally{$('send').disabled=false;}});
 
 let selectedVehicle=null,missionRenderKey='',selectedResponse=null;
 function element(tag,text,className){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(className)node.className=className;return node;}
@@ -307,3 +307,26 @@ $('returnFleet').addEventListener('click',()=>{
  $('cameraView').value='wide';$('cameraView').dispatchEvent(new Event('change'));
  cameraZoom=1;cameraPan={x:0,y:0};transformCamera();
 });
+
+function renderChatAnswers(data){
+  if(!Array.isArray(data.recommendations)){bubble(data.reply,'ai');return;}
+  const wrap=element('div',undefined,'bubble ai chat-briefing');
+  if(data.clarification_questions?.length){
+    wrap.append(element('p',data.summary));
+    for(const question of data.clarification_questions)wrap.append(element('p',question));
+    wrap.append(element('small','아래 입력창에 이어서 답해주세요.'));
+    const reset=element('button','새 상황으로 질문');reset.type='button';reset.onclick=()=>{clarificationContext=null;reset.disabled=true;$('chatStatus').textContent='새 상황을 입력하세요.';};wrap.append(reset);
+    $('messages').append(wrap);$('messages').scrollTop=$('messages').scrollHeight;return;
+  }
+  wrap.append(element('p',data.summary,'chat-summary'));
+  for(const answer of data.recommendations){
+    const card=element('article',undefined,'chat-response');
+    card.append(element('h4',`${answer.number}. ${answer.title}`),element('p',answer.formation_label),element('p',answer.assignment_label),element('p',answer.explanation),element('small',answer.status_label));
+    wrap.append(card);
+  }
+  if(data.faq_check_question)wrap.append(element('p','추가 확인: '+data.faq_check_question,'note'));
+  for(const source of data.web_sources||[]){if(/^https:\/\//.test(source.url)){const link=element('a',source.title);link.href=source.url;link.target='_blank';link.rel='noopener noreferrer';wrap.append(link);}}
+  if(data.model_note)wrap.append(element('p',data.model_note,'note'));
+  wrap.append(element('p','사례를 참고한 설명입니다. 기체 배정은 엔진 계산 결과이며 이동·승인은 실행하지 않습니다.','note'));
+  $('messages').append(wrap);$('messages').scrollTop=$('messages').scrollHeight;
+}

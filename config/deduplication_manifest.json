@@ -1,0 +1,23 @@
+{
+  "policy": "exact behavioral equality; preserve numeric targets, all snapshot states, scenario identity, engine results and question aliases",
+  "chat": {
+    "before": 1800,
+    "after": 900,
+    "removed": 900
+  },
+  "faq_situations": {
+    "before": 600,
+    "after": 100,
+    "removed": 500
+  },
+  "base_faq_retained": 60,
+  "review_records": 1060,
+  "stored_answer_blocks_before": 11580,
+  "stored_answer_blocks_after": 3880,
+  "source_answer_blocks_not_repeated": 7700,
+  "source_files_preserved": true,
+  "limitations": [
+    "의미가 비슷해도 조건이나 결과가 다르면 합치지 않습니다.",
+    "공통 문구는 남아 있습니다. 전문가 검토·모델 학습·평가는 아직 진행하지 않았습니다."
+  ]
+}
