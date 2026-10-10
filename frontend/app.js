@@ -120,7 +120,7 @@ function selectSituation(id){
   reviewMissionId=id;scenarioDraft=false;selectedResponse=null;missionRenderKey='';
   if(lastState){lastState=reviewState(lastState);renderMission(lastState);renderVehicles(lastState);}
 }
-function priorityText(r){return r?.priority?`${r.priority} ${{P0:'긴급',P1:'높음',P2:'주의',P3:'정보'}[r.priority]}`:'평가 불가';}
+function priorityText(m){const index=queueView?.items.findIndex(item=>item.id===m.id)??-1;return index>=0?`${index+1}순위`:'실행 중';}
 function renderMissionReview(s){
   queueView=queueSnapshot(queueView,s.approval_queue||[],Date.now());
   const seconds=Math.max(0,Math.ceil((10000-Date.now()+queueView.updatedAt)/1000));
@@ -131,7 +131,7 @@ function renderMissionReview(s){
   const live=new Map((s.approval_queue||[]).map(m=>[m.id,m]));
   for(const entry of queueView.items){const m=live.get(entry.id);if(!m)continue;
     const b=element('button',undefined,'queue-item'+(reviewMissionId===m.id?' selected':''));b.type='button';b.disabled=missionRequestPending;b.setAttribute('aria-pressed',String(reviewMissionId===m.id));
-    b.append(element('span',priorityText(m.risk),'priority-badge '+(m.risk?.priority||'unknown')),element('strong',`#${m.id} ${m.card.title}`),element('small',`${m.resolved?'원인 해소':m.risk?.score==null?'평가 불가':m.risk.score+'점'} · ${new Date(m.created_at*1000).toLocaleTimeString('ko-KR')}`));
+    b.append(element('span',priorityText(m),'priority-badge queue-rank-'+((queueView?.items.findIndex(item=>item.id===m.id)??-1)+1)),element('strong',`#${m.id} ${m.card.title}`),element('small',`${m.resolved?'원인 해소':m.risk?.score==null?'평가 불가':m.risk.score+'점'} · ${new Date(m.created_at*1000).toLocaleTimeString('ko-KR')}`));
     b.addEventListener('click',()=>selectSituation(m.id));$('approvalQueue').append(b);
   }
   if(!queueView.items.length)$('approvalQueue').append(element('p','대기 중인 상황이 없습니다.','muted'));
@@ -257,6 +257,7 @@ function disconnectedDisplay(){
 }
 function renderMission(s){
   const m=s.mission,key=queueReviewKey(m);
+  $('situationSummary').textContent=m?`${priorityText(m)} · ${m.card.title} · 상세`:'선택 상황 상세';
   renderMissionReview(s);$('cancelMission').disabled=missionRequestPending||!m;$('startScenario').disabled=missionRequestPending||!!m?.approved;
   if(key!==missionRenderKey){
     missionRenderKey=key;$('situationCard').replaceChildren();$('responseOptions').replaceChildren();
@@ -264,7 +265,7 @@ function renderMission(s){
     else{
       if(!scenarioDraft&&[...$('scenarioSelect').options].some(o=>o.value===m.scenario))$('scenarioSelect').value=m.scenario;
       $('situationCard').append(element('strong',m.card.title),element('p',m.card.summary),element('p',`함선 상대 위치 x ${m.card.offset[0]}m / y ${m.card.offset[1]}m · 관제 지도에 가상 표식 표시`,'muted'),element('p',m.card.unknown,'scope-note'));
-      $('situationCard').append(element('p',`${priorityText(m.risk)} · ${m.risk?.score==null?'평가 불가':m.risk.score+' / 100점'}`,'priority-badge '+(m.risk?.priority||'unknown')));
+      $('situationCard').append(element('p',`${priorityText(m)} · ${m.risk?.score==null?'평가 불가':m.risk.score+' / 100점'}`,'priority-badge queue-rank-'+((queueView?.items.findIndex(item=>item.id===m.id)??-1)+1)));
       if(!m.options.length)$('responseOptions').append(element('p','함선의 최신 위치가 없어 추천을 생성할 수 없습니다. 연결되면 자동 갱신됩니다.'));
       for(const [i,plan] of m.options.entries()){
         const card=element('article',undefined,'response-card');card.append(element('h3',`${i+1}. ${plan.title}`),element('p',`USV: ${s.formations.catalog.usv[plan.formations.usv]} / 드론: ${s.formations.catalog.uav[plan.formations.uav]}`));
@@ -361,31 +362,6 @@ for(const eventName of ['pointerup','pointercancel'])viewport.addEventListener(e
 $('camera').draggable=false;
 $('resetCamera').addEventListener('click',()=>{cameraZoom=1;cameraPan={x:0,y:0};transformCamera();});
 window.addEventListener('resize',transformCamera);
-let latestRisks=null;
-async function refreshRisks(){
- try{
-  const response=await fetch('/api/risks');if(!response.ok)throw Error('위험 평가 연결 실패');const data=await response.json();latestRisks=data;
-  $('riskRefresh').textContent=new Date(data.evaluated_at*1000).toLocaleTimeString('ko-KR')+' · 10초 주기';
-  $('riskList').replaceChildren();$('riskResponses').replaceChildren();
-  if(!data.items.length){$('riskList').append(element('p','현재 기준을 넘는 위험 없음 · 계속 감시 중','muted'));return;}
-  for(const [i,risk] of data.items.slice(0,5).entries()){
-   const row=element('button',`${i+1}. ${risk.title} · ${risk.vehicle}`,i===0?'risk-item critical':'risk-item');row.type='button';row.append(element('small',risk.evidence));
-   row.addEventListener('click',()=>{selectedVehicle=risk.vehicle;if(lastState)renderVehicles(lastState);});$('riskList').append(row);
-  }
-  const top=data.items[0];if(!selectedVehicle){selectedVehicle=top.vehicle;if(lastState)renderVehicles(lastState);}$('riskResponses').append(element('strong','최우선 상황 · 대응안 3개'));
-  for(const [i,plan] of (top.options||[]).entries()){
-   const title=['현재 대형 유지 · 주변 관측','양측 종대 · 복귀 구역 확인','후방 V자 · 대체 기체 관측'][i];
-   const card=element('article',undefined,'risk-response');card.append(element('strong',`${i+1}. ${title}`),element('small',plan.tasks.map(t=>t.vehicle+' · '+t.task).join(' / ')||'가용 기체 없음'));
-   const button=element('button','이 대응안 즉시 실행');button.type='button';button.disabled=!plan.available;
-   button.addEventListener('click',async()=>{
-    await executeRiskResponse(top.id,plan.id);
-   });card.append(button);$('riskResponses').append(card);
-  }
- }catch(error){$('riskRefresh').textContent='평가 연결 실패';$('riskList').textContent=error.message;$('riskResponses').replaceChildren();}
- finally{setTimeout(refreshRisks,10000);}
-}
-refreshRisks();
-
 viewport.addEventListener('click',e=>{
  if(cameraDragged||lastState?.camera_view==='inspect')return;
  const rect=$('cameraOverlay').getBoundingClientRect(),x=(e.clientX-rect.left)*1280/rect.width,y=(e.clientY-rect.top)*720/rect.height;

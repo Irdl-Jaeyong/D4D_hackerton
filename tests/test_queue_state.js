@@ -60,6 +60,7 @@ test('main dashboard renders three queue cards and clicks select their own situa
  const approval_queue=Array.from({length:5},(_,i)=>({id:i+1,created_at:i,card:{title:'상황 '+i},risk:{priority:'P1',score:80}}));
  context.renderMissionReview({approval_queue,active_mission:null});
  assert.equal(dom.approvalQueue.children.length,3);assert.match(dom.queueCount.textContent,/전체 5건/);
+ assert.deepEqual(dom.approvalQueue.children.map(card=>card.children[0].text),['1순위','2순위','3순위']);
  dom.approvalQueue.children[0].click();assert.equal(context.selected,5);
  const html=fs.readFileSync(require('node:path').join(__dirname,'../frontend/index.html'),'utf8');
  assert.match(html,/id="approvalQueue"/);assert.doesNotMatch(html,/id="priorityFilter"|id="refreshMission"|id="missionReview"/);

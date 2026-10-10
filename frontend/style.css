@@ -99,3 +99,18 @@
 .priority-badge{display:inline-block;padding:3px 6px;border-radius:5px;font-size:10px;background:#253847;color:#b9cbd7;white-space:nowrap}.priority-badge.P0{background:#bc283d;color:#fff}.priority-badge.P1{background:#61381e;color:#ffb36f}.priority-badge.P2{background:#55461d;color:#ffe28b}.priority-badge.P3{background:#1f405d;color:#a1ceff}
 .scenario-setup,.assignment-panel{border:1px solid #284454;border-radius:7px;margin-bottom:10px;background:#0c202e}.scenario-setup>summary,.assignment-panel>summary{padding:9px 10px;font-size:11px;color:#91acbe;cursor:pointer}.scenario-setup .scenario-tools{padding:0 10px 10px}.assignment-panel[open]{padding-bottom:10px}.assignment-panel>.assignment-heading,.assignment-panel>p,.assignment-panel>div,.assignment-panel>small{margin-left:10px;margin-right:10px}
 #missionFeedback:empty{display:none}.response-card details{margin-top:6px;font-size:10px;color:#8faabc}.response-card button{width:100%}.human-approval p{font-size:11px;line-height:1.5}
+
+.priority-badge.queue-rank-1{background:#61381e;color:#ffb36f}.priority-badge.queue-rank-2{background:#55461d;color:#ffe28b}.priority-badge.queue-rank-3{background:#1f405d;color:#a1ceff}
+
+/* Give all three response choices space; keep chat compact. */
+.right-column>.chat{height:clamp(160px,18vh,210px);min-height:160px;flex:0 0 auto}
+.right-column>.chat .title{padding:9px 12px}.right-column>.chat #messages{height:auto;min-height:36px;flex:1;overflow:auto;padding:7px 10px}.right-column>.chat .bubble{font-size:11px;line-height:1.45;padding:7px 9px;margin-bottom:6px}
+.right-column>.chat #chatForm{padding:8px 10px}.right-column>.chat #chatStatus{margin:4px 0 0;font-size:9px}.right-column>.chat .toggle{font-size:10px;margin-bottom:5px}.right-column>.chat .inputrow input,.right-column>.chat .inputrow button{padding:7px;font-size:11px}
+.situation-panel .mission-content{max-height:none;overflow:visible}.right-column{gap:12px}
+.approval-queue{padding:9px;margin-bottom:8px}#queueCount{margin:4px 0 7px}.queue-item{padding:8px;gap:3px 6px}#approvalQueue{gap:5px}
+.scenario-setup,.assignment-panel{margin-bottom:7px}.scenario-setup>summary,.assignment-panel>summary{padding:7px 9px}
+.situation-details{margin:5px 0 8px;border:1px solid #284454;border-radius:6px;background:#0c202e}.situation-details>summary{padding:8px 9px;font-size:11px;color:#b2d3e1;cursor:pointer}.situation-details #situationCard{margin:0 8px 8px}
+.situation-panel .human-approval{padding:4px 0;margin:0;border:0;background:transparent}.situation-panel .human-approval>strong{display:none}.situation-panel #approvalPreview{margin:0 0 5px;font-size:10px;line-height:1.4}
+.response-card{padding:9px;margin-top:7px}.response-card h3{font-size:12px;margin:0 0 4px}.response-card p{font-size:10px;line-height:1.4;margin:3px 0}.response-card details{margin-top:4px}.response-card button{padding:7px;margin-top:6px;font-size:11px}
+#missionStage{margin:7px 0;font-size:10px}.mission-console>.scope-note{font-size:9px;line-height:1.4;margin:6px 0}
+@media(max-width:760px){.right-column>.chat{height:190px;min-height:190px}}
