@@ -5,7 +5,7 @@
 .position-layout{display:grid;grid-template-columns:minmax(0,1fr) 125px;padding:12px;gap:12px;align-items:center}.map-wrap{background:#081923;border:1px solid #1e3a4a;border-radius:7px;overflow:hidden}#map{display:block;width:100%;height:auto;aspect-ratio:760/300;cursor:crosshair}.map-legend{display:flex;align-items:center;gap:12px;font-size:9px;color:#93adbd;padding:9px 12px;border-top:1px solid #173341;flex-wrap:wrap}.map-legend>span{display:flex;align-items:center;gap:5px}.map-legend>span:last-child{margin-left:auto}.legend-dot{width:5px;height:5px;border-radius:50%;background:#63d8e3}.legend-dot.usv{background:#8fa9f7}.legend-dot.ship{background:#ead5a7}.coordinates{padding:10px 6px}.coordinates>strong{font-size:12px;color:#74e2e4}.coordinates dl{margin:14px 0}.coordinates dl>div{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1b3444;font-size:12px}.coordinates dt{color:var(--muted)}.coordinates dd{margin:0;font-variant-numeric:tabular-nums}.coordinates small{font-size:9px}.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px;margin:0;padding:16px}.detail-grid>div{min-width:0}.detail-grid dt{color:var(--muted);font-size:11px;margin-bottom:6px}.detail-grid dd{margin:0;font-size:14px;font-variant-numeric:tabular-nums}.selection-panel .title h2{font-size:14px}.selected-task{margin:0 16px 14px;font-size:11px;color:#93b6c8;line-height:1.6}.online{color:#38ddae!important}.offline{color:#ffb1a6!important}.chat{display:flex;flex-direction:column;height:clamp(365px,47vh,620px)}#messages{flex:1;min-height:0;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:13px;scrollbar-gutter:stable}.bubble{margin:0;max-width:94%;padding:11px 13px;border-radius:10px;white-space:pre-wrap;font-size:12px;line-height:1.7;overflow-wrap:anywhere}.bubble.ai{background:#163346;align-self:flex-start}.bubble.user{background:#0d626f;align-self:flex-end}.bubble.error{color:#ffb1a6}#chatForm{padding:12px 14px;border-top:1px solid var(--line)}.toggle{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);margin-bottom:8px}.toggle input{accent-color:var(--accent)}.inputrow{display:flex;gap:8px}#message{flex:1;width:0;padding:10px;font-size:11px}#send{background:#22cbd8;color:#062632;border:0;padding:8px 13px;font-weight:650;font-size:12px}#chatStatus{padding:0;margin:7px 0 0;min-height:16px;font-size:9px}
 .vehicle-toolbar{display:flex;align-items:center;gap:8px;padding:8px;font-size:11px}.vehicle-toolbar select{max-width:140px;font-size:11px}.state-parts{display:flex;gap:4px;padding:6px;flex-wrap:wrap}.state-parts button{font-size:10px;padding:6px}.vehicle-details{padding:10px;font-size:11px;line-height:1.8;color:#a9c6d5}.vehicle-assignment-title{display:block;color:#6bdedc;margin-top:7px}.fault-tools{padding:8px}.fault-tools button{font-size:10px;padding:7px}.formation-panel{padding:8px}.formation-options{display:flex;flex-wrap:wrap;gap:6px}.formation-options button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px;font-size:10px}.formation-options svg{width:38px;height:24px}.formation-options button[aria-pressed=true]{border-color:#65dbe1;background:#18474d}.formation-group{margin-bottom:12px}.formation-group h3{margin:0 0 8px}.formation-description{margin-top:8px}.mission-console{padding:9px}.scenario-tools{display:flex;flex-wrap:wrap;gap:6px}.scenario-tools button,.scenario-tools select{padding:7px;font-size:10px;max-width:100%}#missionFeedback{font-size:11px;color:#edbb77;min-height:16px;margin:8px 0}.human-approval,#situationCard,.response-card,.assignment-panel{padding:10px;border:1px solid #2e5062;border-radius:6px;background:#102a3a;margin:8px 0;font-size:11px;line-height:1.6}.response-card h3{font-size:12px;margin:0 0 6px}.response-card p,.human-approval p,#situationCard p{margin:6px 0}.response-card button,.human-approval button{font-size:10px;padding:7px}.selected-response{border-color:#5edde6}.human-approval form{padding-top:8px}.human-approval input{width:0;flex:1;font-size:11px;padding:7px}.human-approval label{display:block;margin-bottom:5px}.human-approval .inputrow{flex-wrap:wrap}#missionStage,.task-line{color:#65dddf;font-size:11px}.assignment-panel{margin:10px}.assignment-heading{display:flex;gap:8px;flex-wrap:wrap}.assignment-heading select{font-size:10px;padding:6px}.assignment-reason{padding:8px 0;border-bottom:1px solid #2e5062}.movement-summary{color:#edbb77}#riskList,#riskResponses{padding:8px}#riskRefresh{font-size:9px}.risk-item{display:block;width:100%;text-align:left;margin:6px 0;font-size:11px;padding:8px}.risk-item.critical{border-color:#b26762;background:#3a2830}.risk-response{font-size:11px;border-top:1px solid #2e5062;padding:8px 0}.risk-response button{padding:6px;font-size:10px;margin-top:6px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:#2a495a;border-radius:8px}
 @media(min-width:1600px){.app-header{padding:18px 30px}.dashboard-layout{padding:24px 30px;gap:20px}.sidebar-column,.center-column,.right-column{gap:20px}.camera{margin:14px}.title{padding:17px 19px}}
-@media(max-width:1100px){.dashboard-layout{grid-template-columns:205px minmax(0,1fr);padding:16px;gap:14px}.right-column{grid-column:2}.sidebar-column{grid-row:1/3}.app-header{gap:16px;padding:15px 18px}.brand strong{font-size:14px}.brand-mark{font-size:36px}#health{display:none}.overview{gap:7px}.overview>div{padding:7px 9px;font-size:10px}.chat{height:400px}.vehicle-list{height:55vh}.right-column{display:grid;grid-template-columns:1fr 1fr}.right-column .chat{grid-column:2;grid-row:1}.right-column .detail-grid{grid-template-columns:1fr}.position-layout{grid-template-columns:minmax(0,1fr) 110px}}
+@media(max-width:1100px){.dashboard-layout{grid-template-columns:205px minmax(0,1fr);padding:16px;gap:14px}.right-column{grid-column:2}.sidebar-column{grid-row:1/3}.app-header{gap:16px;padding:15px 18px}.brand strong{font-size:14px}.brand-mark{font-size:36px}#health{display:none}.overview{gap:7px}.overview>div{padding:7px 9px;font-size:10px}.chat{height:400px}.vehicle-list{height:55vh}.right-column{display:grid;grid-template-columns:1fr 1fr}.sidebar-column .chat{grid-column:auto;grid-row:auto}.right-column .detail-grid{grid-template-columns:1fr}.position-layout{grid-template-columns:minmax(0,1fr) 110px}}
 @media(max-width:700px){.app-header{flex-wrap:wrap;gap:14px}.brand{flex-basis:100%}.overview{width:100%}.overview>div{flex:1;justify-content:space-between}.dashboard-layout{display:flex;flex-direction:column;padding:12px}.sidebar-column,.center-column,.right-column{width:100%}.center-column{order:0}.sidebar-column{order:1}.right-column{order:2;display:flex}.vehicle-list{height:260px}.detail-grid{grid-template-columns:1fr 1fr}.position-layout{grid-template-columns:minmax(0,1fr) 90px;gap:8px;padding:9px}.camera-tools,.camera-footer{flex-wrap:wrap}.camera-tools select{max-width:115px}.coordinates{padding:6px 0}.map-legend{gap:7px;padding:7px;font-size:8px}.chat{height:450px}.title h2{font-size:14px}}
 
 /* Keep the position monitor readable within the desktop overview. */
@@ -67,9 +67,9 @@
 .situation-panel .assignment-heading select{width:100%;min-width:0}
 .situation-panel .human-approval .inputrow{flex-direction:column}
 .situation-panel .human-approval input{width:100%;min-width:0}
-.right-column>.chat{height:clamp(320px,34vh,480px)}
-@media(max-width:1100px) and (min-width:701px){.right-column{display:flex}.right-column>.chat{height:400px}}
-@media(max-width:700px){.formation-settings .formation-panel{grid-template-columns:minmax(0,1fr);gap:14px;padding:12px}.right-column>.chat{height:450px}}
+.sidebar-column>.chat{height:clamp(320px,34vh,480px)}
+@media(max-width:1100px) and (min-width:701px){.right-column{display:flex}.sidebar-column>.chat{height:400px}}
+@media(max-width:700px){.formation-settings .formation-panel{grid-template-columns:minmax(0,1fr);gap:14px;padding:12px}.sidebar-column>.chat{height:450px}}
 
 .mission-review-row{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;font-size:10px;color:var(--muted)}
 .mission-review-row[hidden]{display:none}
@@ -89,7 +89,7 @@
   .position-panel .map-wrap{display:flex;flex-direction:column;contain:size;min-height:calc(clamp(145px,17vh,185px) + 32px)}
   .position-panel #map{height:0;min-height:clamp(145px,17vh,185px);flex:1;aspect-ratio:auto}
   .position-panel .map-legend{flex-shrink:0}
-  .right-column>.chat{height:auto;min-height:clamp(320px,34vh,480px);flex:1}
+  .sidebar-column>.chat{height:auto;min-height:clamp(320px,34vh,480px);flex:1}
 }
 
 /* Compact risk-ranked approval queue in the main dashboard. */
@@ -103,9 +103,9 @@
 .priority-badge.queue-rank-1{background:#61381e;color:#ffb36f}.priority-badge.queue-rank-2{background:#55461d;color:#ffe28b}.priority-badge.queue-rank-3{background:#1f405d;color:#a1ceff}
 
 /* Give all three response choices space; keep chat compact. */
-.right-column>.chat{height:clamp(160px,18vh,210px);min-height:160px;flex:0 0 auto}
-.right-column>.chat .title{padding:9px 12px}.right-column>.chat #messages{height:auto;min-height:36px;flex:1;overflow:auto;padding:7px 10px}.right-column>.chat .bubble{font-size:11px;line-height:1.45;padding:7px 9px;margin-bottom:6px}
-.right-column>.chat #chatForm{padding:8px 10px}.right-column>.chat #chatStatus{margin:4px 0 0;font-size:9px}.right-column>.chat .toggle{font-size:10px;margin-bottom:5px}.right-column>.chat .inputrow input,.right-column>.chat .inputrow button{padding:7px;font-size:11px}
+.sidebar-column>.chat{height:clamp(160px,18vh,210px);min-height:160px;flex:0 0 auto}
+.sidebar-column>.chat .title{padding:9px 12px}.sidebar-column>.chat #messages{height:auto;min-height:36px;flex:1;overflow:auto;padding:7px 10px}.sidebar-column>.chat .bubble{font-size:11px;line-height:1.45;padding:7px 9px;margin-bottom:6px}
+.sidebar-column>.chat #chatForm{padding:8px 10px}.sidebar-column>.chat #chatStatus{margin:4px 0 0;font-size:9px}.sidebar-column>.chat .toggle{font-size:10px;margin-bottom:5px}.sidebar-column>.chat .inputrow input,.sidebar-column>.chat .inputrow button{padding:7px;font-size:11px}
 .situation-panel .mission-content{max-height:none;overflow:visible}.right-column{gap:12px}
 .approval-queue{padding:9px;margin-bottom:8px}#queueCount{margin:4px 0 7px}.queue-item{padding:8px;gap:3px 6px}#approvalQueue{gap:5px}
 .scenario-setup,.assignment-panel{margin-bottom:7px}.scenario-setup>summary,.assignment-panel>summary{padding:7px 9px}
@@ -113,7 +113,7 @@
 .situation-panel .human-approval{padding:4px 0;margin:0;border:0;background:transparent}.situation-panel .human-approval>strong{display:none}.situation-panel #approvalPreview{margin:0 0 5px;font-size:10px;line-height:1.4}
 .response-card{padding:9px;margin-top:7px}.response-card h3{font-size:12px;margin:0 0 4px}.response-card p{font-size:10px;line-height:1.4;margin:3px 0}.response-card details{margin-top:4px}.response-card button{padding:7px;margin-top:6px;font-size:11px}
 #missionStage{margin:7px 0;font-size:10px}.mission-console>.scope-note{font-size:9px;line-height:1.4;margin:6px 0}
-@media(max-width:760px){.right-column>.chat{height:190px;min-height:190px}}
+@media(max-width:760px){.sidebar-column>.chat{height:190px;min-height:190px}}
 
 .queue-actions{display:flex;justify-content:flex-end;margin:0 0 7px}.queue-actions button{padding:5px 8px;font-size:10px;color:#a9bdc9;background:transparent}
 
@@ -127,3 +127,19 @@
 
 
 .queue-explanation{grid-column:1/-1;font-size:11px;line-height:1.5}.queue-explanation p{margin:2px 0;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}.queue-explanation mark{background:#735721;color:#ffecad;border-radius:3px;padding:0 2px}.task-line{display:grid;gap:4px;padding:9px;background:#102a39;border-radius:6px;margin:7px 0}.task-line strong{color:#65e9e8}.task-line small{line-height:1.5;color:#aac0cd}.chat-actions{display:flex;flex-wrap:wrap;gap:6px}.chat-actions button{padding:7px;font-size:11px}
+
+/* Keep chat compact below vehicle details without widening the dashboard. */
+@media(min-width:1101px){
+  .sidebar-column>.selection-panel{flex:0 0 auto}
+  .sidebar-column>.chat{margin-top:0}
+  .sidebar-column .vehicle-list{height:clamp(200px,27vh,310px)}
+}
+.response-card.ai-response-card{padding:12px;margin-top:9px}
+.response-card.ai-response-card h3{font-size:14px;line-height:1.4;margin:0 0 5px}
+.response-card.ai-response-card p{font-size:11px;line-height:1.5;margin:3px 0}
+.response-card.ai-response-card small,.response-card.ai-response-card details{font-size:10px;line-height:1.5}
+.response-card.ai-response-card button{padding:8px;font-size:12px;margin-top:6px}
+
+/* Add room only to the message area of the existing chat panel. */
+.sidebar-column>.chat{height:calc(clamp(160px,18vh,210px) + 80px)}
+@media(max-width:760px){.sidebar-column>.chat{height:270px}}

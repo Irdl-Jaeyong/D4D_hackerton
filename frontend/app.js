@@ -74,17 +74,6 @@ function cameraOverlay(state){
       const a=sector*Math.PI/4;line(Array.from({length:31},(_,i)=>{const lat=i*Math.PI/60;return [m.hemisphere_radius*Math.cos(lat)*Math.cos(a),m.hemisphere_radius*Math.cos(lat)*Math.sin(a),m.hemisphere_center_height+m.hemisphere_radius*Math.sin(lat)];}),'#9ee9ff33');
     }
   }
-  ctx.font='bold 18px system-ui';
-  for(const t of state.scene.situations||[]){
-    if(t.source!=='scripted_contact')continue;const q=project(t.x-ship.x,t.y-ship.y,Math.max(3,t.z||0));if(!q)continue;
-    const selected=t.mission_id===state.mission?.id,r=selected?19:13;
-    ctx.strokeStyle='#ff7777';ctx.fillStyle='#ff77772a';ctx.lineWidth=selected?3:2;
-    ctx.beginPath();ctx.moveTo(q[0],q[1]-r);ctx.lineTo(q[0]+r,q[1]);ctx.lineTo(q[0],q[1]+r);ctx.lineTo(q[0]-r,q[1]);ctx.closePath();ctx.fill();ctx.stroke();
-    const label=contactLabel(t,ship),detail=`${Math.round(t.range_m)}m · ${(t.speed_mps*1.944).toFixed(1)}kn · 모의 접촉`,width=ctx.measureText(label).width+16;
-    const x=Math.max(4,Math.min(q[0]+r+8,c.width-width-4)),y=Math.max(4,Math.min(q[1]-26,c.height-52));
-    ctx.fillStyle='#08131fed';ctx.fillRect(x,y,width,50);ctx.fillStyle='#ffaaaa';ctx.font='bold 18px system-ui';ctx.fillText(label,x+8,y+20);
-    ctx.font='14px system-ui';ctx.fillStyle='#e7edf4';ctx.fillText(detail,x+8,y+40);ctx.font='bold 18px system-ui';
-  }
   ctx.font='bold 13px system-ui';
   for(const v of state.vehicles){
     if(!v.connected)continue;const t=v.telemetry,q=project(t.x-ship.x,t.y-ship.y,t.z);if(!q)continue;
@@ -132,7 +121,7 @@ const lead=s.vehicles.find(v=>v.id==='SHIP-01'&&v.connected);
 if(lead&&s.scene.scenario){const t=lead.telemetry.x/s.scene.motion.ship_speed,phase=t%180;
 const stage=phase<18?0:phase<80?1:phase<170?2:3,key=`${Math.floor(t/180)}-${stage}`;
 if(key!==lastScenarioStage){event(['민간 배 접근: 충돌 예측 감시','교차 통항 구간: 위험을 예측한 USV가 우회','민간 배 통과 구간: 호위 위치 복귀','정상 호위 구간'][stage]);lastScenarioStage=key;}}
-}catch{disconnectedDisplay();$('connected').textContent='백엔드 연결 끊김';document.querySelectorAll('.badge').forEach(b=>{b.className='badge';b.textContent='확인 불가';});$('fleetSummary').textContent='백엔드 연결 끊김 · 상태 확인 불가';document.querySelectorAll('#responseOptions button').forEach(b=>b.disabled=true);$('finalApprove').disabled=true;$('submitApprovalCommand').disabled=true;$('cards').replaceChildren();$('vehicleDetails').textContent='연결 끊김 · 마지막 상태를 사용할 수 없습니다.';$('assignmentSummary').textContent='연결 끊김 · 배정 결과 확인 불가';$('assignmentReasons').replaceChildren();$('assignmentPlan').disabled=true;$('map').getContext('2d').clearRect(0,0,$('map').width,$('map').height);$('camera').style.display='none';$('cameraEmpty').style.display='block';$('cameraEmpty').textContent='백엔드 연결 끊김';$('cameraOverlay').getContext('2d').clearRect(0,0,1280,720);}finally{setTimeout(poll,500);}}
+}catch{disconnectedDisplay();$('connected').textContent='백엔드 연결 끊김';document.querySelectorAll('.badge').forEach(b=>{b.className='badge';b.textContent='확인 불가';});$('fleetSummary').textContent='백엔드 연결 끊김 · 상태 확인 불가';document.querySelectorAll('#responseOptions button[data-option]').forEach(b=>b.disabled=true);$('finalApprove').disabled=true;$('submitApprovalCommand').disabled=true;$('cards').replaceChildren();$('vehicleDetails').textContent='연결 끊김 · 마지막 상태를 사용할 수 없습니다.';$('assignmentSummary').textContent='연결 끊김 · 배정 결과 확인 불가';$('assignmentReasons').replaceChildren();$('assignmentPlan').disabled=true;$('map').getContext('2d').clearRect(0,0,$('map').width,$('map').height);$('camera').style.display='none';$('cameraEmpty').style.display='block';$('cameraEmpty').textContent='백엔드 연결 끊김';$('cameraOverlay').getContext('2d').clearRect(0,0,1280,720);}finally{setTimeout(poll,500);}}
 let chatClarification=null;
 const newChat=document.createElement('button');newChat.type='button';newChat.textContent='새 상황 질문';newChat.addEventListener('click',()=>{chatClarification=null;$('chatStatus').textContent='이전 추가 질문 문맥을 초기화했습니다';});$('chatForm').append(newChat);
 $('chatForm').addEventListener('submit',async e=>{e.preventDefault();const message=$('message').value.trim();if(!message)return;bubble(message,'user');$('message').value='';$('send').disabled=true;$('chatStatus').textContent='실시간 근거 확인 · LLM 답변 생성 중';try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,clarification_context:chatClarification,use_camera:$('useCamera').checked,history:history.slice(-8)})});const data=await r.json();if(!r.ok)throw Error(data.detail||'요청 실패');chatClarification=data.clarification_context||null;bubble(data.reply,'ai');renderChatActions(data.ui_actions||[]);for(const source of data.web_sources||[]){const link=document.createElement('a');link.textContent=source.title;link.href=source.url;link.target='_blank';link.rel='noopener noreferrer';const row=document.createElement('div');row.className='bubble ai';row.append(link);$('messages').append(row);}history.push({role:'user',content:message},{role:'assistant',content:data.reply.slice(0,4000)});$('chatStatus').textContent=`${data.elapsed_seconds}초 · ${data.llm_used?'실제 LLM · '+data.model:'규칙 답변 · LLM 사용 안 함'} · 명령 실행 없음`;}catch(err){bubble(err.message,'ai error');$('chatStatus').textContent='요청 실패';}finally{$('send').disabled=false;}});
@@ -336,7 +325,7 @@ function renderMission(s){
       $('situationCard').append(element('p',`${priorityText(m)} · ${m.risk?.score==null?'평가 불가':m.risk.score+' / 100점'}`,'priority-badge queue-rank-'+((queueView?.items.findIndex(item=>item.id===m.id)??-1)+1)));
       if(!m.options.length)$('responseOptions').append(element('p','함선의 최신 위치가 없어 추천을 생성할 수 없습니다. 연결되면 자동 갱신됩니다.'));
       for(const [i,plan] of m.options.entries()){
-        const card=element('article',undefined,'response-card');card.append(element('h3',plan.id==='ai'?`AI 제안 · ${plan.title}`:`${i+1}. ${plan.title}`),element('p',`USV: ${s.formations.catalog.usv[plan.formations.usv]} / 드론: ${s.formations.catalog.uav[plan.formations.uav]}`));
+        const card=element('article',undefined,'response-card');card.append(element('h3',plan.id==='ai'?`AI 추천 · ${plan.title}`:`${i+1}. ${plan.title}`),element('p',`USV: ${s.formations.catalog.usv[plan.formations.usv]} / 드론: ${s.formations.catalog.uav[plan.formations.uav]}`));
         if(plan.id==='ai'){
           card.classList.add('ai-response-card');
           const facts=plan.input_summary,range=facts?.contacts.map(t=>`${Math.round(t.range_m)}m`).join(' / ');
@@ -356,7 +345,7 @@ function renderMission(s){
   renderHumanApproval(s);renderAIControls(s);
   if(!m){$('missionStage').textContent='';return;}
   if(!m.approved){const remaining=Math.max(0,60-Math.floor(Date.now()/1000-(m.planned_at??m.created_at)));$('missionStage').textContent=`승인 대기 · 추천 유효시간 ${remaining}초 · 가상 상황 / 규칙 기반 배정`;
-    for(const button of document.querySelectorAll('#responseOptions button')){const plan=m.options.find(p=>p.id===button.dataset.option);const ui=responseControlState(m,button.dataset.option,s.active_mission,pendingExecution);button.disabled=missionRequestPending||ui.disabled;button.textContent=ui.label;}
+    for(const button of document.querySelectorAll('#responseOptions button[data-option]')){const plan=m.options.find(p=>p.id===button.dataset.option);const ui=responseControlState(m,button.dataset.option,s.active_mission,pendingExecution);button.disabled=missionRequestPending||ui.disabled;button.textContent=ui.label;}
   }else{
     const groups=['usv','uav'],matched=groups.every(g=>s.formations.status[g]?.mode===m.approved.formations[g]);
     const moving=!matched||groups.some(g=>s.formations.status[g]?.moving);
@@ -373,18 +362,24 @@ function renderHumanApproval(s){
   $('finalApprove').disabled=missionRequestPending||!ready;
   $('submitApprovalCommand').disabled=missionRequestPending||!m||!!m.approved||expired;
   $('approvalCommand').disabled=missionRequestPending||!m||!!m.approved||expired;
-  for(const card of document.querySelectorAll('.response-card')){const button=card.querySelector('button'),ui=responseControlState(m,button.dataset.option,s.active_mission,pendingExecution);card.classList.toggle('selected-response',ui.selected);button.setAttribute('aria-pressed',String(ui.selected));button.textContent=ui.label;button.disabled=missionRequestPending||ui.disabled;}
+  for(const card of document.querySelectorAll('.response-card')){const button=card.querySelector('button[data-option]');if(!button)continue;const ui=responseControlState(m,button.dataset.option,s.active_mission,pendingExecution);card.classList.toggle('selected-response',ui.selected);button.setAttribute('aria-pressed',String(ui.selected));button.textContent=ui.label;button.disabled=missionRequestPending||ui.disabled;}
   $('approvalPreview').textContent=m?.approved?`운용자 최종 승인 기록 · ${m.approved.title} · ${m.approved.decision_source==='captain_text'?'직접 입력':'승인 버튼'} · ${new Date(m.approved.approved_at*1000).toLocaleTimeString('ko-KR')}`:plan?`선택: ${m.options.indexOf(plan)+1}번 ${plan.title} · ${expired?'추천 만료 · 자동 갱신을 기다려 주세요.':!plan.available?'가용 기체 부족 · 기체 상태를 확인하고 자동 갱신을 기다려 주세요.':s.formations.revision!==m.basis_revision?'대형 변경 · 자동 갱신을 기다려 주세요.':`배정 ${plan.tasks.map(t=>t.vehicle).join(', ')} · 대응안 선택 시 즉시 실행됩니다.`}`:expired?'추천이 만료되었습니다. 자동 갱신을 기다려 주세요.':'대응안을 선택해 검토하세요. 선택하면 즉시 실행됩니다.';
 }
 const aiRequests=new Set(),aiAttempts=new Set(),aiErrors=new Map();
 function aiAttemptKey(m,s){return `${m.id}:${m.ai_meta?.generated_at||'initial'}:${s.formations.revision}`;}
 function renderAIControls(s){
-  const m=s.mission,tools=$('aiResponseTools');tools.hidden=!m?.ai_supported;
+  const m=s.mission;
   if(!m?.ai_supported)return;
   const plan=m.options.find(p=>p.id==='ai'),pending=aiRequests.has(m.id)||m.ai_status?.state==='pending';
-  $('regenerateAI').disabled=pending||!!m.approved||!!m.resolved;
-  $('regenerateAI').textContent=pending?'AI 분석 중…':'현재 상태로 다시 제안';
-  $('aiResponseStatus').textContent=m.approved?(m.approved.id==='ai'?'선택한 AI 제안을 실행 중입니다.':'기본 대응안이 실행 중입니다.'):pending?'현재 상황·기체 상태를 읽고 새 대응안을 생성 중입니다.':aiErrors.get(m.id)||m.ai_status?.message||(plan?'AI 제안은 선택했을 때만 실행됩니다.':'AI가 현재 상황에 맞는 별도 대응안을 생성합니다.');
+  let placeholder=$('aiRecommendationPlaceholder');
+  if(plan||m.approved||m.resolved){placeholder?.remove();}
+  else{
+    if(!placeholder){placeholder=element('article',undefined,'response-card ai-response-card');placeholder.id='aiRecommendationPlaceholder';$('responseOptions').append(placeholder);}
+    placeholder.replaceChildren(element('h3','AI 추천'));
+    const error=aiErrors.get(m.id)||(m.ai_status?.state==='error'?m.ai_status.message:null);
+    const status=element('p',pending?'최신 상황을 바탕으로 LLM 추천을 생성 중입니다.':error||'최신 상황을 분석해 AI 추천을 준비합니다.');status.setAttribute('role','status');placeholder.append(status);
+    if(error&&!pending){const retry=element('button','AI 추천 다시 생성');retry.type='button';retry.addEventListener('click',()=>requestAI(m.id));placeholder.append(retry);}
+  }
   if(m.approved||m.resolved||pending)return;
   if(plan&&plan.expires_at>Date.now()/1000&&plan.formation_revision===s.formations.revision)return;
   const key=aiAttemptKey(m,s);
@@ -401,7 +396,6 @@ async function requestAI(id){
   }catch(error){aiErrors.set(id,error.message);}
   finally{aiRequests.delete(id);if(lastState?.mission?.id===id)renderAIControls(lastState);}
 }
-$('regenerateAI').addEventListener('click',()=>{if(lastState?.mission)requestAI(lastState.mission.id);});
 
 $('finalApprove').addEventListener('click',()=>{if(selectedResponse)missionRequest('/api/mission/approve',{...selectedResponse,human_confirmed:true,decision_source:'captain_button'});});
 $('approvalCommandForm').addEventListener('submit',e=>{
@@ -491,3 +485,23 @@ $('map').addEventListener('click',e=>{
   const nearest=mapPickables.map(p=>({...p,d:Math.hypot(p.x-x,p.y-y)})).sort((a,b)=>a.d-b.d)[0];
   if(nearest&&nearest.d<18*(window.devicePixelRatio||1)){selectedVehicle=nearest.id;if(lastState.camera_view==='inspect')inspectSelected();renderVehicles(lastState);map(lastState);cameraOverlay(lastState);}
 });
+
+// Extend only chat to the bottom edge of the right-hand content.
+const chatPanel=document.querySelector('.sidebar-column>.chat');
+const rightPanel=document.querySelector('.right-column').lastElementChild;
+let chatAlignmentFrame=null;
+function alignChatBottom(){
+  if(chatAlignmentFrame!==null)return;
+  chatAlignmentFrame=requestAnimationFrame(()=>{
+    chatAlignmentFrame=null;
+    if(window.innerWidth<=1100){chatPanel.style.height='';return;}
+    const top=chatPanel.getBoundingClientRect().top;
+    const bottom=rightPanel.getBoundingClientRect().bottom;
+    const minimum=Math.min(210,Math.max(160,window.innerHeight*.18))+80;
+    chatPanel.style.height=`${Math.max(minimum,bottom-top)}px`;
+  });
+}
+const chatAlignmentObserver=new ResizeObserver(alignChatBottom);
+for(const panel of [rightPanel,document.querySelector('.fleet-panel'),document.querySelector('.selection-panel')])chatAlignmentObserver.observe(panel);
+window.addEventListener('resize',alignChatBottom);
+alignChatBottom();

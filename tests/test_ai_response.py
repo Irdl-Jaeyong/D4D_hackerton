@@ -17,7 +17,7 @@ class AISchema(unittest.TestCase):
    with self.assertRaises(ValidationError):AIProposal(**{**VALID,**change})
  def test_fast_contact_cannot_use_interference_only_retreat_or_claim_to_slow_contact(self):
   m={'id':1,'scenario':'fast_approach','scene_origin':{'x':0,'y':0,'sim_time':0}}
-  for change in [{'uav_policy':'avoid'},{'usv_policy':'investigate'},{'reason':'드론 배치로 상대 선박의 속도를 감소시켜 접근을 저지합니다.'}]:
+  for change in [{'uav_policy':'avoid'},{'usv_policy':'investigate'},{'reason':'USV가 수중 탐지에 집중하고 UAV가 수면 위에서 보조 관측합니다.'},{'reason':'드론 배치로 상대 선박의 속도를 감소시켜 접근을 저지합니다.'}]:
    with self.assertRaises(ValueError):build_plan(AIProposal(**{**VALID,**change}),fleet(),{'usv':'circle','uav':'hemisphere'},m['scenario'],contacts(m,0))
  def test_plan_uses_available_measured_fleet_and_different_actual_targets(self):
   f=fleet();f[1]['readiness']['available']=False

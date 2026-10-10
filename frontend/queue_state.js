@@ -28,7 +28,7 @@ function queueSnapshot(previous,queue,now,filter='all',force=false) {
   const sorted=[...queue].sort((a,b)=>
     (rank(a)<0?4:rank(a))-(rank(b)<0?4:rank(b)) ||
     (b.risk?.score??-1)-(a.risk?.score??-1) || b.created_at-a.created_at || a.id-b.id);
-  return {updatedAt:now,filter,total:queue.length,items:sorted.filter(m=>filter==='all'||(m.risk?.priority||'unknown')===filter).slice(0,3)};
+  return {updatedAt:now,filter,total:queue.length,items:sorted.filter(m=>filter==='all'||(m.risk?.priority||'unknown')===filter).slice(0,2)};
 }
 
 function needsPlanRefresh(m,revision,now) {

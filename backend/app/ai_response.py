@@ -25,6 +25,8 @@ def validate_context(proposal,scenario):
         raise ValueError('교란 반대편 이격은 통신 교란 상황에서만 사용할 수 있습니다.')
     if proposal.usv_policy=='investigate' and scenario not in ('suspicious_float','underwater_contact'):
         raise ValueError('추정 구역 확인은 부유물·수중 접촉 상황에서만 사용할 수 있습니다.')
+    if re.search(r'소나|수중\s*(?:탐지|식별|촬영|추적)|수면.{0,12}(?:아래|밑)|전파\s*(?:탐지|차단)|전자전',proposal.reason+' '+proposal.title+' '+proposal.tradeoff):
+        raise ValueError('설치되지 않은 수중·전파 탐지 기능은 제안할 수 없습니다.')
     if re.search(r'속도.{0,14}(감소시|낮추|감속시|유도)',proposal.reason+' '+proposal.tradeoff):
         raise ValueError('관측·호위 기체는 상대의 속도나 행동을 변경할 수 없습니다.')
 def signature(plan):
@@ -49,10 +51,10 @@ def input_summary(item,vehicles,formation):
             'existing_plans':DEFENSE_RESPONSES[item['scenario']],
             'data_limits':'위치·연결은 Gazebo 오도메트리, 접촉과 배터리는 모의 값입니다. 실제 소나·전파 탐지·차단 장비는 없습니다.'}
 async def request_proposal(url,model,summary):
-    prompt=('You propose ONE alternative non-weapon escort observation plan for a Gazebo demonstration. '
+    prompt=('You recommend ONE best feasible alternative non-weapon escort observation plan for the current Gazebo demonstration. '
             'Return only the requested JSON. title, reason and tradeoff MUST be natural Korean. '
             'Use current supplied facts only; do not invent sensors, measurements, hostile intent or successful interception. '
-            'Do not change risk scores or priority. Leave ship navigation unchanged. '
+            'Do not change risk scores or priority. Leave ship navigation unchanged. No sonar or underwater detection exists: USVs can ONLY observe the surface around the assumed underwater contact area, and UAVs ONLY observe above water. Never claim underwater detection or compare battery efficiency without measured evidence. '
             'The escort vehicles CANNOT change the contact speed, movement or intention. Do not claim any such effects. '
             'Do not claim stopping, repelling, slowing or redirecting the contact. Describe only actual observation and escort movements. '
             'Title is a short Korean strategy name such as 이격 관측·근접 호위, NEVER repeat the situation name. '
@@ -63,7 +65,7 @@ async def request_proposal(url,model,summary):
             'protect: positions near the ship; investigate: USV observation around estimated contact area; '
             'avoid: positions on opposite side of interference. No weapons, jamming or physical interception. '
             'All coordinate goals and vehicle assignments will be calculated by deterministic rules. '
-            'Explain why your different choice suits THIS situation and give a concrete limitation.')
+            'Prioritize flagship separation, reliable observation, available battery and conserving reserve vehicles, in that order. Compare the supplied existing plans before choosing your recommendation. Do not claim a mathematically optimal or guaranteed outcome. Explain why your choice best suits the current supplied facts and give a concrete limitation.')
     schema=AIProposal.model_json_schema()
     if summary['scenario']!='communication_interference':
         for field in ('uav_policy','usv_policy'):schema['properties'][field]['enum'].remove('avoid')
@@ -82,4 +84,4 @@ async def request_proposal(url,model,summary):
             except ValueError:
                 if attempt:raise
                 messages.append({'role':'assistant','content':content[:2500]})
-                messages.append({'role':'user','content':'Return complete valid JSON matching the schema. Korean text. No extra fields.'})
+                messages.append({'role':'user','content':'Return complete valid JSON matching the schema. Korean text. No extra fields. Fix unsupported capabilities: no sonar, underwater detection or radio detection; only surface observation and escort movements.'})
