@@ -58,6 +58,13 @@ class MissionAPI(unittest.IsolatedAsyncioTestCase):
         v=next(v for v in api.state()['vehicles'] if v['id']=='USV-01')
         self.assertEqual(v['readiness']['operational_state'],'defending')
 
+    async def test_execution_pause_does_not_latch_availability_off(self):
+        m=await self.scenario();await self.approve(m['id'],option='observe')
+        id=m['approved']['tasks'][0]['vehicle']
+        m['execution']={'tasks':{id:{'stage':'outbound','blocked':True}}}
+        formations=await api.get_formations()
+        self.assertTrue(formations['availability'][id])
+
     async def test_missing_leader_rejects_approval(self):
         m=await self.scenario();api.latest['SHIP-01']['received_at']-=10
         with self.assertRaises(HTTPException):await self.approve(m['id'])

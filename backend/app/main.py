@@ -77,7 +77,15 @@ def state():
             if task:
                 v['readiness']['task']=task['task']+' · 계획만 등록'
                 v['readiness']['available']=False
-                if v['readiness']['operational_state']!='unavailable':
+                execution=mission.get('execution',{}).get('tasks',{}).get(v['id'])
+                if execution:
+                    labels={'outbound':'출동 중','observing':'관측 중','returning':'복귀 중','completed':'완료 · 대형 유지'}
+                    v['readiness']['task']=task['task']+' · '+labels.get(execution['stage'],'확인 필요')
+                    if execution.get('blocked'):v['readiness'].update(operational_state='unavailable',reason='임무 중 상태 확인 필요')
+                    elif v['readiness']['operational_state']!='unavailable':
+                        v['readiness']['operational_state']='waiting' if execution['stage']=='completed' else 'defending'
+                        v['readiness']['reason']='실측 위치 기반 임무 진행'
+                if not execution and v['readiness']['operational_state']!='unavailable':
                     v['readiness']['operational_state']='waiting'
                     v['readiness']['reason']='출동 미연결 · 승인 계획 대기'
     return {'mission':mission,'scenario_catalog':SCENARIOS,'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'SHIP-01 stabilized overhead sensors', 'scene_mode': FLEET['motion']['uav_pattern'], 'camera_view':camera_view, 'formations': {**formation, 'catalog':CATALOG,'status':formation_status}, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion'], 'scenario': None}}
@@ -87,7 +95,7 @@ class FormationRequest(BaseModel):
     mode: str
 @app.get('/api/formations')
 async def get_formations():
-    return {**formation,'catalog':CATALOG,'status':formation_status}
+    return {**formation,'catalog':CATALOG,'status':formation_status,'mission':mission,'availability':{v['id']:v['connected'] and v['id'] not in simulated_faults and (v['type']=='SHIP' or v['readiness']['battery_percent']>=35) for v in state()['vehicles']}}
 @app.post('/api/formations')
 async def set_formation(data: FormationRequest):
     if mission and mission.get('approved'):raise HTTPException(409,'승인된 대응안을 종료한 뒤 대형을 변경하세요.')
@@ -120,7 +128,7 @@ async def start_scenario(data: ScenarioRequest):
     mission_counter+=1
     mission={'id':mission_counter,'scenario':data.scenario,'card':SCENARIOS[data.scenario],
              'created_at':time.time(),'basis_revision':formation['revision'],'options':plans,'approved':None,'source':'synthetic',
-             'execution_scope':'승인 시 대형만 Gazebo에 적용됩니다. 관측·확인 임무는 계획 등록이며 기체 출동은 연결되지 않았습니다.'}
+             'execution_scope':'승인 시 대형과 UAV 관측·복귀를 실행합니다. USV 확인 출동은 계획 등록입니다.'}
     return mission
 
 @app.post('/api/mission/approve')
@@ -146,13 +154,41 @@ async def approve_plan(data: ApprovalRequest):
     for group,mode in plan['formations'].items():
         if formation[group]!=mode:formation[group]=mode;formation['revision']+=1
     mission['approved']={**plan,'approved_at':time.time(),'formation_revision':formation['revision'],'decision_source':data.decision_source,'operator_command':data.operator_command,'human_confirmed':True}
+    mission['energy_at_start']={t['vehicle']:current[t['vehicle']]['readiness']['battery_percent'] for t in plan['tasks']}
+    mission['execution']={'status':'pending','tasks':{}}
     return mission
 
 @app.post('/api/mission/cancel')
 async def cancel_plan():
     global mission
+    if mission and mission.get('approved') and mission.get('execution',{}).get('status') not in ('completed','cancelled'):
+        mission['cancel_requested']=True
+        return {'ok':True,'message':'취소 요청 · 관측 UAV가 대형으로 복귀합니다.'}
     mission=None
     return {'ok':True,'message':'계획 종료. 현재 대형은 유지됩니다.'}
+
+class ExecutionReport(BaseModel):
+    mission_id: int
+    sim_time: float = Field(ge=0,allow_inf_nan=False)
+    elapsed_seconds: float = Field(ge=0,allow_inf_nan=False)
+    tasks: dict
+    status: Literal['running','completed','cancelled']
+    cancelled: bool = False
+@app.post('/api/internal/execution')
+async def report_execution(data: ExecutionReport,x_bridge_token: str=Header(default='')):
+    if not TOKEN or not hmac.compare_digest(TOKEN,x_bridge_token):raise HTTPException(403,'Bridge token required')
+    if not mission or mission['id']!=data.mission_id or not mission.get('approved'):raise HTTPException(409,'Mission changed')
+    previous=mission.get('execution',{})
+    if previous.get('status') in ('completed','cancelled'):
+        previous['received_at']=time.time()
+        return {'ok':True}
+    mission['execution']={**data.model_dump(),'received_at':time.time()}
+    for id,task in mission['execution']['tasks'].items():
+        current=latest.get(id)
+        if current:
+            remaining=readiness({'id':id,'type':'UAV','connected':True,'telemetry':current},max(0,current['sim_time']-battery_origin.get(id,0)))['battery_percent']
+            task['simulated_battery_used']=round(max(0,mission['energy_at_start'].get(id,remaining)-remaining),1)
+    return {'ok':True}
 
 class FaultRequest(BaseModel):
     unavailable: bool
@@ -251,5 +287,24 @@ async def chat(data: Chat):
             return {'reply':output['message']['content'],'elapsed_seconds':round(time.perf_counter()-started,2),'used_camera':data.use_camera,'executed':False}
         except (httpx.HTTPError, ValueError, KeyError) as error:
             raise HTTPException(502, 'Model request failed: '+str(error))
+
+# Preserve human-approved plans and completed results across backend restarts.
+CONSOLE_SNAPSHOT=ROOT/'outputs'/'console_snapshot.json'
+def restore_console():
+    global mission,mission_counter
+    try:
+        saved=json.loads(CONSOLE_SNAPSHOT.read_text())
+        if any(saved['formation'][g] not in CATALOG[g] for g in ('usv','uav')):return
+        formation.update(saved['formation']);mission=saved.get('mission');mission_counter=saved.get('mission_counter',0)
+        simulated_faults.update(id for id in saved.get('faults',[]) if id in IDS)
+        battery_origin.update(saved.get('battery_origin',{}))
+    except (OSError,ValueError,KeyError,TypeError):pass
+
+def save_console():
+    CONSOLE_SNAPSHOT.parent.mkdir(exist_ok=True)
+    data={'formation':formation,'mission':mission,'mission_counter':mission_counter,'faults':list(simulated_faults),'battery_origin':battery_origin}
+    temp=CONSOLE_SNAPSHOT.with_suffix('.tmp');temp.write_text(json.dumps(data,ensure_ascii=False));temp.replace(CONSOLE_SNAPSHOT)
+app.add_event_handler('startup',restore_console)
+app.add_event_handler('shutdown',save_console)
 
 app.mount('/', StaticFiles(directory=ROOT/'frontend', html=True), name='frontend')

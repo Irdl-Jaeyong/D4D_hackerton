@@ -15,6 +15,7 @@ import time
 import os
 import urllib.request
 from formation_motion import Transition,targets
+from mission_execution import ObservationRun
 import subprocess
 from pathlib import Path
 
@@ -167,6 +168,10 @@ def main():
             self.planners={group:Transition([(initial[f'{kind}-{i+1:02}']['x'],initial[f'{kind}-{i+1:02}']['y'],initial[f'{kind}-{i+1:02}']['z']) for i in range(FLEET[key])],speed,accel) for group,kind,key,speed,accel in [('usv','USV','usvs',3,1),('uav','UAV','uavs',10,4)]}
             self.checked=0;self.planner_time=None;self.initial_error={};self.formation_status={}
             self.physical_history={}
+            self.uav_observations={};self.mission_run=None;self.execution_report=None
+            for i in range(FLEET['uavs']):
+                name=f'UAV-{i+1:02}'
+                self.create_subscription(Odometry,f'/navis/{name.replace("-","_")}/odometry',lambda msg,name=name:self.uav_odom(name,msg),qos_profile_sensor_data)
             self.odom_subscriptions=[]
             for i in range(FLEET['usvs']):
                 name=f'USV-{i+1:02}'
@@ -174,6 +179,11 @@ def main():
             self.clock_subscription=self.create_subscription(Clock,'/world/navis_prep/clock',self.clock,qos_profile_sensor_data)
             self.timer=self.create_timer(.1,self.update)
             self.get_logger().info('Simulation-time convoy: straight leader, assigned escort stations, UAV leader-relative station keeping')
+        def uav_odom(self,name,msg):
+            if self.origin is None:return
+            stamp=msg.header.stamp.sec+msg.header.stamp.nanosec/1e9-self.origin
+            p=msg.pose.pose.position
+            if name not in self.uav_observations or stamp>self.uav_observations[name][0]:self.uav_observations[name]=(stamp,(p.x,p.y,p.z))
         def physical_odom(self,name,msg):
             if self.origin is None:return
             t=msg.header.stamp.sec+msg.header.stamp.nanosec/1e9-self.origin
@@ -209,6 +219,18 @@ def main():
                 if group=='uav' and mode=='hemisphere':
                     goals=[(reference[f'UAV-{i+1:02}']['x']-MOTION['ship_speed']*t,reference[f'UAV-{i+1:02}']['y'],reference[f'UAV-{i+1:02}']['z']) for i in range(FLEET['uavs'])]
                 else:goals=targets(group,mode,t)
+                if group=='uav':
+                    if planner.assignment is None:planner.select(goals)
+                    homes={f'UAV-{i+1:02}':goals[planner.assignment[i]] for i in range(FLEET['uavs'])}
+                    requested=self.selection.get('mission')
+                    if requested and requested.get('approved') and (self.mission_run is None or self.mission_run.id!=requested['id'] or self.mission_run.approved_at!=requested['approved'].get('approved_at')):
+                        self.mission_run=ObservationRun(requested,t,MOTION['ship_speed']*t)
+                    if self.mission_run:
+                        cancel=not requested or requested['id']!=self.mission_run.id or requested.get('cancel_requested',False)
+                        availability=self.selection.get('availability',{})
+                        overrides=self.mission_run.step(t,MOTION['ship_speed']*t,homes,self.uav_observations,availability,cancel)
+                        for id,point in overrides.items():goals[planner.assignment[int(id.split('-')[1])-1]]=point
+                        self.execution_report=self.mission_run.report(t,self.uav_observations,availability)
                 error=planner.step(goals,dt,marine=group=='usv');points[group]=planner.points
                 self.initial_error[group]=max(self.initial_error.get(group,0),error,1)
                 # Dynamic patrols retain a small steady tracking error.
@@ -225,6 +247,9 @@ def main():
                     data=json.dumps(self.formation_status).encode()
                     req=urllib.request.Request('http://127.0.0.1:8000/api/internal/formations',data=data,headers={'Content-Type':'application/json','X-Bridge-Token':os.environ.get('NAVIS_BRIDGE_TOKEN','')})
                     with urllib.request.urlopen(req,timeout=.2) as response:response.read()
+                    if self.execution_report:
+                        req=urllib.request.Request('http://127.0.0.1:8000/api/internal/execution',data=json.dumps(self.execution_report).encode(),headers={'Content-Type':'application/json','X-Bridge-Token':os.environ.get('NAVIS_BRIDGE_TOKEN','')})
+                        with urllib.request.urlopen(req,timeout=.2) as response:response.read()
                 except (OSError,ValueError):pass
             try:
                 response=subprocess.run(['ign','service','-s','/world/navis_prep/set_pose_vector','--reqtype','ignition.msgs.Pose_V','--reptype','ignition.msgs.Boolean','--timeout','1200','--req',poses(t,history=self.physical_history,formations=points)],capture_output=True,text=True,timeout=1.5)

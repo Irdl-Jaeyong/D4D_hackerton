@@ -17,6 +17,7 @@ def create(vehicles):
    name='status_dot_'+v['id']+'_'+state
    sdf=f'''<sdf version="1.8"><model name="{name}"><static>true</static><pose>0 0 -200 0 0 0</pose><link name="label"><visual name="indicator"><pose>0 0 0 0 0 0</pose><geometry><sphere><radius>1.5</radius></sphere></geometry><cast_shadows>false</cast_shadows><material><ambient>{color}</ambient><diffuse>{color}</diffuse><emissive>{color}</emissive></material></visual></link></model></sdf>'''
    request.append('data {sdf: '+json.dumps(sdf)+' allow_renaming: false}')
+ request.append('data {sdf: '+json.dumps('<sdf version="1.8"><model name="observation_target"><static>true</static><pose>0 0 -200 0 0 0</pose><link name="marker"><visual name="buoy"><geometry><sphere><radius>3</radius></sphere></geometry><material><ambient>1 .5 .05 1</ambient><diffuse>1 .5 .05 1</diffuse></material></visual></link></model></sdf>')+' allow_renaming: false}')
  results=[service('/world/navis_prep/create_multiple','ignition.msgs.EntityFactory_V',' '.join(request[i:i+15])) for i in range(0,len(request),15)]
  print('Status indicator creation:',sum(results),'/',len(results),flush=True)
  # Duplicate model names return false after a bridge restart. Pose updates
@@ -35,6 +36,11 @@ def poses(snapshot,last_positions):
    active=key==state and p is not None
    x,y,z=(p['x'],p['y'],p.get('z',0)+8) if active else (0,0,-200)
    result.append('pose {name: %s position {x:%s y:%s z:%s} orientation {w:%s x:%s y:%s z:%s}}' % (json.dumps('status_dot_'+v['id']+'_'+key),x,y,z,cr*cy,sr*cy,sr*sy,cr*sy))
+ execution=(snapshot.get('mission') or {}).get('execution',{})
+ task=next(iter(execution.get('tasks',{}).values()),None)
+ target=task.get('target_world') if task else None
+ x,y,z=(target[0],target[1],1) if target else (0,0,-200)
+ result.append('pose {name: "observation_target" position {x:%s y:%s z:%s}}'%(x,y,z))
  return ' '.join(result)
 
 if __name__=='__main__':
