@@ -35,6 +35,16 @@ class MissionAPI(unittest.IsolatedAsyncioTestCase):
         m['execution']['status']='cancelled'
         self.assertEqual(len(api.state()['scene']['situations']),2)
 
+    async def test_normal_start_clears_old_situations_faults_and_formations(self):
+        await self.scenario()
+        api.simulated_faults.add('UAV-01');api.fault_kinds['UAV-01']='propulsion'
+        api.formation.update(usv='fan',uav='triangle',scenario_id=1)
+        api.reset_demo_session()
+        self.assertIsNone(api.mission);self.assertEqual(api.missions,{})
+        self.assertFalse(api.simulated_faults);self.assertEqual(api.fault_kinds,{})
+        self.assertEqual(api.formation,{'usv':'circle','uav':'hemisphere','revision':0})
+        self.assertEqual(api.state()['scene']['situations'],[])
+
     async def test_missing_human_confirmation_does_not_execute(self):
         m=await self.scenario()
         with self.assertRaises(HTTPException):

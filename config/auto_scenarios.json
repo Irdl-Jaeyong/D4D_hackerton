@@ -18,5 +18,6 @@
     "payload",
     "propulsion",
     "communication"
-  ]
+  ],
+  "startup_mode": "normal"
 }

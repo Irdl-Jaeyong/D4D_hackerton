@@ -38,7 +38,9 @@ auto_generator=None
 async def console_lifespan(application):
     global auto_generator
     restore_console()
-    auto_generator=ScenarioGenerator(json.loads((ROOT/'config/auto_scenarios.json').read_text()),now=time.monotonic())
+    auto_config=json.loads((ROOT/'config/auto_scenarios.json').read_text())
+    if auto_config.get('startup_mode')=='normal':reset_demo_session()
+    auto_generator=ScenarioGenerator(auto_config,now=time.monotonic())
     auto_task=asyncio.create_task(generate_random_scenarios())
     try:
         yield
@@ -578,6 +580,15 @@ def restore_console():
         fault_kinds.update(saved.get('fault_kinds',{}));automatic_returns.update(saved.get('automatic_returns',set(saved.get('faults',[]))-set(saved.get('fault_kinds',{}))));fault_last_known.update(saved.get('fault_last_known',{}))
         fault_status.update(saved.get('fault_status',{}));charge_credit.update(saved.get('charge_credit',{}))
     except (OSError,ValueError,KeyError,TypeError):pass
+
+def reset_demo_session():
+    """Start a new healthy demonstration; retain unique mission IDs for reconciliation."""
+    global mission,camera_view
+    mission=None;missions.clear()
+    formation.clear();formation.update(usv='circle',uav='hemisphere',revision=0)
+    formation_status.clear();camera_view='wide'
+    for data in (simulated_faults,automatic_returns,fault_kinds,fault_status,fault_last_known,battery_origin,charge_credit):data.clear()
+    risk_cache['evaluated_at']=0
 
 def save_console():
     CONSOLE_SNAPSHOT.parent.mkdir(exist_ok=True)
