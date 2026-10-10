@@ -16,13 +16,13 @@ class MissionConsole(unittest.TestCase):
     def test_offline_and_low_energy_excluded(self):
         ship=vehicle('SHIP-01');offline=vehicle('UAV-01',connected=False);low=vehicle('UAV-02');low['readiness']=readiness(low,1800)
         plans=options([ship,offline,low],{'usv':'circle','uav':'hemisphere'},'crossing')
-        self.assertEqual(len(plans),3)
+        self.assertEqual(len(plans),2)
         self.assertTrue(all(not p['available'] for p in plans))
         self.assertTrue(all(not p['tasks'] for p in plans))
-    def test_three_plans_reserve_and_unique_assignment(self):
+    def test_two_plans_reserve_and_unique_assignment(self):
         vehicles=[vehicle('SHIP-01'),vehicle('UAV-01'),vehicle('UAV-02',100,-90),vehicle('USV-01')]
         plans=options(vehicles,{'usv':'columns','uav':'box'},'crossing')
-        self.assertEqual(len(plans),3)
+        self.assertEqual(len(plans),2)
         self.assertTrue(all(p['available'] for p in plans))
         for p in plans:
             ids=[t['vehicle'] for t in p['tasks']]

@@ -25,6 +25,9 @@ class Bridge(Node):
         self.images = {}
         self.camera_mode = "wide"
         self.camera_checked = 0
+        self.camera_revision = 0
+        self.camera_target = 'UAV-01'
+        self.camera_ready_sim_time = None
         self.odom_at = {}
         self.measured_speeds = {}
         self.image_at = 0
@@ -69,16 +72,22 @@ class Bridge(Node):
             self.camera_checked=now
             try:
                 with urllib.request.urlopen(os.environ.get('NAVIS_BACKEND_URL','http://127.0.0.1:18082')+'/api/camera/view',timeout=.2) as response:
-                    self.camera_mode=json.load(response)['mode']
+                    view=json.load(response)
+                    if (view['mode'],view['vehicle_id'],view.get('revision',0))!=(self.camera_mode,self.camera_target,self.camera_revision):
+                        self.camera_mode=view['mode'];self.camera_target=view['vehicle_id'];self.camera_revision=view.get('revision',0)
+                        self.images.pop(self.camera_mode,None)
+                    self.camera_ready_sim_time=view.get('ready_sim_time')
             except (OSError,ValueError,KeyError):pass
         img,image_at=self.images.get(self.camera_mode,(None,0))
-        if vehicle == self.camera_vehicle and img is not None and now-image_at < 2 and now-self.sent_image_at >= .2:
+        capture_stamp=img.header.stamp.sec+img.header.stamp.nanosec/1e9 if img is not None else None
+        ready=self.camera_mode!='inspect' or (self.camera_ready_sim_time is not None and capture_stamp is not None and capture_stamp>self.camera_ready_sim_time)
+        if vehicle == self.camera_vehicle and img is not None and ready and now-image_at < 2 and now-self.sent_image_at >= .2:
             channels = 3 if img.encoding in ('rgb8','bgr8') else 0
             if channels:
                 array = np.frombuffer(img.data,dtype=np.uint8).reshape(img.height,img.step)[:,:img.width*channels].reshape(img.height,img.width,channels)
                 if img.encoding == 'rgb8': array = cv2.cvtColor(array,cv2.COLOR_RGB2BGR)
-                ok, encoded = cv2.imencode('.jpg', array, [cv2.IMWRITE_JPEG_QUALITY,85])
-                if ok: payload['camera_jpeg'] = base64.b64encode(encoded).decode()
+                ok, encoded = cv2.imencode('.jpg', array, [cv2.IMWRITE_JPEG_QUALITY,92])
+                if ok: payload.update(camera_jpeg=base64.b64encode(encoded).decode(),camera_mode=self.camera_mode,camera_vehicle_id=self.camera_target,camera_revision=self.camera_revision,camera_capture_sim_time=capture_stamp)
         req = urllib.request.Request(os.environ.get('NAVIS_BACKEND_URL','http://127.0.0.1:18082')+'/api/internal/telemetry',data=json.dumps(payload).encode(),headers={'Content-Type':'application/json','X-Bridge-Token':os.environ['NAVIS_BRIDGE_TOKEN']})
         try:
             with urllib.request.urlopen(req, timeout=1) as response: response.read()

@@ -40,6 +40,9 @@ void main()
 {
   // Apply bump mapping to normal vector to make waves look more detailed:
   vec4 bump = texture(bumpMap, inPs.bumpCoord)*2.0 - 1.0;
+  // NAVIS: blend wind ripples with the broad wave normals, avoiding a flat surface.
+  vec3 detail = texture(bumpMap, inPs.bumpCoord * 3.73 + vec2(0.21, 0.47)).xyz * 2.0 - 1.0;
+  bump.xyz = normalize(vec3(bump.xy * 0.68 + detail.xy * 0.28, max(bump.z, 0.3)));
   vec3 N = normalize(inPs.rotMatrix * bump.xyz);
 
   // Reflected ray:

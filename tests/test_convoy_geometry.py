@@ -68,7 +68,7 @@ class PatrolGeometry(unittest.TestCase):
         self.assertLess(fleet['ocean']['z'],.7-.45*3/2)
         self.assertEqual(fleet['ocean']['x'],fleet['SHIP-01']['x'])
 
-    def test_inspection_camera_is_separate_and_looks_at_selected_aircraft(self):
+    def test_first_person_camera_is_separate_and_mounted_on_selected_aircraft(self):
         import re
         world=E.parse(ROOT/'ros_ws/src/navis_sim/worlds/prep.sdf')
         self.assertIsNotNone(world.find(".//model[@name='inspection_camera']/link/sensor"))
@@ -76,7 +76,7 @@ class PatrolGeometry(unittest.TestCase):
         match=re.search(r'name:"inspection_camera" position \{x:([-0-9.]+) y:([-0-9.]+) z:([-0-9.]+)',command)
         self.assertIsNotNone(match)
         point=list(map(float,match.groups()));target=convoy.fleet_poses(0)['UAV-02']
-        self.assertAlmostEqual(math.dist(point,[target[k] for k in ('x','y','z')]),math.sqrt(136),places=4)
+        self.assertAlmostEqual(math.dist(point,[target[k] for k in ('x','y','z')]),math.hypot(.46,.02),places=4)
     def test_render_cameras_are_rigidly_attached_to_straight_flagship(self):
         world=E.parse(ROOT/'ros_ws/src/navis_sim/worlds/prep.sdf')
         sensors=world.findall(".//model[@name='SHIP-01']/link/sensor")
