@@ -6,6 +6,63 @@
 
 .cameraView{display:flex;align-items:center;gap:12px;padding:12px 18px 0;font-size:13px;color:#adc7d7}.cameraView select{background:#122d42;color:#e3f2ff;border:1px solid #2b5872;border-radius:6px;padding:7px 12px}
 
+.formation-panel{padding:8px 10px;background:#091c29;border:1px solid #22485b;border-radius:12px;margin:6px 0}.formation-panel h3{font-size:12px;margin:5px 0}.formation-options{display:flex;flex-wrap:wrap;gap:5px}.formation-options button{background:#102b3c;border:1px solid #35556b;color:#dcebf7;padding:5px 7px;font-size:11px;border-radius:6px;cursor:pointer}.formation-options button[aria-pressed="true"]{background:#144e56;border-color:#55e7ef;box-shadow:0 0 0 1px #55e7ef}.formation-options button:disabled{opacity:.6}.formation-options button:focus-visible{outline:2px solid #fff;outline-offset:3px}
+
+.formation-options button{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:68px;min-height:52px}.formation-options svg{width:40px;height:24px;color:#76becf}.formation-options button[aria-pressed="true"] svg{color:#78fff2}
+
+.formation-panel .note{padding:0;margin:5px 0;font-size:10px;line-height:1.4}
+
+.fleet-summary{margin:12px 4% 0;padding:10px 14px;border:1px solid #28516c;border-radius:8px;font-size:12px;color:#b2d5e5;background:#102b3c}
+.mission-console{padding:12px}.scenario-tools{display:flex;flex-wrap:wrap;gap:6px}.scenario-tools select,.vehicle-toolbar select{background:#122d42;color:#e3f2ff;border:1px solid #2b5872;border-radius:6px;padding:7px;font-size:12px}.scenario-tools button{padding:7px 10px;font-size:12px}#cancelMission{background:#294357}#missionFeedback{font-size:12px;color:#ffcf94;min-height:16px;margin:8px 0}#situationCard{padding:10px;border:1px solid #335b6b;border-radius:8px;background:#102b3c}#situationCard p{font-size:12px;margin:6px 0}.muted,.scope-note{color:#8ba3b5;font-size:11px;line-height:1.5}.response-card{padding:10px;border:1px solid #274b62;border-radius:8px;margin-top:8px}.response-card h3{font-size:14px;margin:0 0 6px}.response-card p{font-size:12px;margin:5px 0}.response-card small{font-size:10px;line-height:1.4}.response-card button{margin-top:8px;padding:7px 10px;font-size:12px}.task-line{color:#7ce4e1}#missionStage{font-size:12px;color:#7ce4e1}.vehicle-toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;font-size:11px;color:#8ba3b5}.vehicle-table-wrap{max-height:280px;overflow:auto}.vehicle-table{width:100%;border-collapse:collapse;font-size:11px;min-width:360px}.vehicle-table th{position:sticky;top:0;background:#122d42;text-align:left;padding:8px}.vehicle-table td{padding:6px 8px;border-bottom:1px solid #173249}.vehicle-table tr{cursor:pointer}.vehicle-table tr:hover,.vehicle-table tr.selected{background:#17394a}.vehicle-table tr:focus-visible{outline:2px solid #55e7ef;outline-offset:-2px}.vehicle-table small{font-size:10px;margin:2px 0}.vehicle-table progress{width:65px;height:6px;accent-color:#28d7d5}.online{color:#32e2b4}.offline{color:#ffb1a6}.vehicle-details{padding:10px 12px;font-size:11px;line-height:1.6;color:#adc7d7;border-top:1px solid #193c53}.operations{align-self:start}
+
+.response-card details{font-size:10px;color:#8ba3b5;margin-top:6px}.response-card summary{cursor:pointer}.response-card details[open]{padding:5px;background:#102b3c;border-radius:4px}
+
+.state-parts{display:flex;gap:6px;padding:8px 12px}.state-parts button{flex:1;background:#102b3c;border:1px solid;padding:7px;font-size:12px}.fault-tools{padding:5px 12px 10px;font-size:10px;color:#8ba3b5}.fault-tools button{font-size:11px;padding:6px;margin-right:6px;background:#294357}
+
+.assignment-panel{margin:0 12px 8px;padding:10px;background:#102b3c;border:1px solid #28516c;border-radius:8px;font-size:12px}.assignment-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap}.assignment-heading select{background:#0b1d2d;color:#dcebf7;border:1px solid #35556b;border-radius:5px;padding:5px;font-size:11px}.assignment-panel p{margin:6px 0;line-height:1.5}.assignment-panel small{font-size:10px;line-height:1.5}.assignment-reason{padding:5px 0;border-top:1px solid #28516c}.assignment-reason strong{font-size:11px;color:#7ce4e1}.vehicle-assignment-title{display:block;margin-top:7px;color:#7ce4e1}
+
+.color-key{display:flex;gap:14px;padding:8px 18px;font-size:11px}
+
+.human-approval{margin-top:10px;padding:10px;border:1px solid #2f6978;border-radius:8px;background:#102b3c;font-size:12px}.human-approval p{margin:7px 0;line-height:1.5}.human-approval button{padding:7px 10px;font-size:12px}.human-approval form{padding:10px 0 0}.human-approval label{display:block;margin-bottom:5px}.human-approval input{padding:8px!important;font-size:12px}.human-approval small{font-size:10px;line-height:1.4}.selected-response{border-color:#55e7ef;background:#102b3c}.movement-summary{color:#ffcf94}
+
+/* Three-column observation layout, matching the 18081 dashboard. */
+:root{background:#00101e;color:#e5efff}
+body{background:radial-gradient(ellipse at 50% 15%,#07304b 0,transparent 58%),#00101e}
+header{padding:18px 24px;background:#00101de8;border-bottom-color:#075071}
+header b{font-size:36px;letter-spacing:-1px}
+.fleet-summary{margin:12px 16px 0;background:#032237;border-color:#075071}
+main.dashboard-layout{display:grid;grid-template-columns:310px minmax(420px,1.55fr) minmax(350px,1fr);gap:14px;padding:14px 16px;max-width:2200px;margin:auto;align-items:start}
+.sidebar-column,.center-column,.right-column{display:flex;flex-direction:column;gap:14px;min-width:0}
+section,.chat,.formation-drawer,.mission-drawer{background:linear-gradient(130deg,#032237e8,#001624ee);border:1px solid #075071;border-radius:8px;min-width:0}
+.title{padding:14px;border-color:#075071;align-items:flex-start;flex-wrap:wrap}
+.title h2{font-size:16px}.title span{font-size:11px}
+.camera{height:auto;min-height:0;aspect-ratio:16/9;margin:12px;background:#00101e;border:1px solid #075071;border-radius:6px;overflow:hidden}
+.camera img{width:100%;height:100%;object-fit:contain}
+.cameraView{padding-top:0}.cameraGuide{padding-top:4px}
+#map{width:100%;height:auto;aspect-ratio:760/300;margin:0;background:#001827}
+.fleet-panel .vehicle-table{min-width:0;font-size:11px}.fleet-panel .vehicle-table td{padding:9px 6px;overflow-wrap:anywhere}
+.fleet-panel .vehicle-table th{padding:9px 6px}.fleet-panel .vehicle-table progress{width:45px}
+.fleet-panel .vehicle-table th:last-child,.fleet-panel .vehicle-table td:last-child{display:none}
+.vehicle-table-wrap{max-height:520px;overflow:auto;scrollbar-gutter:stable}
+.state-parts{gap:4px}.state-parts button{padding:7px 3px;font-size:11px}
+.vehicle-toolbar{flex-wrap:wrap}.vehicle-toolbar span{font-size:10px}
+.formation-drawer>summary,.mission-drawer>summary{padding:14px;font-size:13px;color:#98b2ca;cursor:pointer}
+.formation-panel{margin:0 10px 10px}.mission-content{border-top:1px solid #075071}
+.selection-panel .vehicle-details{padding:16px;border-top:0;font-size:13px;line-height:1.8;min-height:110px}
+.right-column>.chat{border:1px solid #075071;border-radius:8px;display:flex;flex-direction:column;height:clamp(480px,65vh,760px);min-height:0}
+#messages{flex:1;min-height:0;height:auto;overflow-y:auto;scrollbar-gutter:stable}
+#chatForm{flex-shrink:0}.bubble{font-size:13px}.right-column .title{flex-shrink:0}
+.events{grid-column:auto}.events ul{padding:0 12px;max-height:200px}.events li{font-size:11px;line-height:1.5}
+button,select,input{font-family:inherit}button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid #8df2ff;outline-offset:3px}
+@media(max-width:1200px){main.dashboard-layout{grid-template-columns:260px minmax(0,1fr)}.right-column{grid-column:2}.sidebar-column{grid-row:1/3}.vehicle-table-wrap{max-height:450px}}
+@media(max-width:760px){main.dashboard-layout{display:flex;flex-direction:column;padding:10px}.sidebar-column,.center-column,.right-column{width:100%}.center-column{order:0}.sidebar-column{order:1}.right-column{order:2}.vehicle-table-wrap{max-height:280px}.right-column>.chat{height:540px}header{padding:14px;gap:10px}header b{font-size:28px}}
+
 /* JCC brand follows the existing fleet dashboard palette. */
 .jcc-brand{display:flex;align-items:center}.jcc-logo{display:block;width:184px;height:48px;flex:none}
 @media(max-width:700px){.jcc-logo{width:153px;height:40px}}
+
+/* Reference JCC lockup: gradient symbol and full crew name. */
+header .jcc-brand{display:block;min-width:0;flex:1}
+header .jcc-logo{display:block;width:min(660px,100%);height:auto;aspect-ratio:1380/130;object-fit:contain;object-position:left center}
+header #health{flex-shrink:0;max-width:240px}
+@media(max-width:760px){header{flex-wrap:wrap}header .jcc-brand{flex-basis:100%}header .jcc-logo{width:min(560px,100%)}header #health{margin:4px 0;max-width:none}}

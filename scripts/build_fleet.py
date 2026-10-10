@@ -51,7 +51,8 @@ def odom(m,id):
     p=E.SubElement(m,'plugin',filename='ignition-gazebo-odometry-publisher-system',name='ignition::gazebo::systems::OdometryPublisher')
     el(p,'odom_frame','world');el(p,'robot_base_frame',id+'/base_link');el(p,'odom_publish_frequency','5');el(p,'dimensions','3');el(p,'odom_topic',f'/navis/{id.replace("-","_")}/odometry')
 for i in range(cfg['ships']):
-    id=f'SHIP-{i+1:02}';m,l=model(id,f'{i*220} 0 2.4 0 0 0');odom(m,id)
+    id=f'SHIP-{i+1:02}';carrier,_=model(id,f'{i*220} 0 2.4 0 0 0');odom(carrier,id)
+    m,l=model(id+'_hull',f'{i*220} 0 2.4 0 0 0')
     # Licensed, complete source ship; native metre scale, waterline at z=-.25.
     parts=json.loads((R/'ros_ws/src/navis_sim/models/arleigh_burke/meshes/parts.json').read_text())
     for k,part in enumerate(parts):
@@ -75,17 +76,34 @@ for i in range(cfg['uavs']):
 for i in range(cfg['usvs']):
     id=f'USV-{i+1:02}';p=initial[id]
     m,l=model(id,f'{p["x"]} {p["y"]} {p["z"]} 0 0 {p["yaw"]}');odom(m,id)
-    v=visual(l,'wamv','mesh','model://wamv_real/mesh/WAM-V-Base.dae','0 0 -1.1 0 0 0',color='1 1 1 1')
+    m.find('static').text='false'
+    inertia=E.SubElement(l,'inertial');el(inertia,'mass','250')
+    tensor=E.SubElement(inertia,'inertia')
+    for key,value in [('ixx',150),('iyy',650),('izz',700),('ixy',0),('ixz',0),('iyz',0)]:el(tensor,key,value)
+    for side,y in [('port',-.8),('starboard',.8)]:
+        collision=E.SubElement(l,'collision',name=side+'_hull')
+        el(collision,'pose',f'0 {y} -.85 0 0 0')
+        geometry=E.SubElement(collision,'geometry');box=E.SubElement(geometry,'box');el(box,'size','4.4 .45 .45')
+    physics=E.SubElement(m,'plugin',filename='libNavisMaritimeEscort.so',name='navis::MaritimeEscort')
+    physics.append(E.fromstring(E.tostring(field)))
+    el(physics,'target_model',f'USV_target_{i+1:02}')
+    for key,value in [('phase',2*math.pi*i/cfg['usvs']),('leader_speed',cfg['motion']['ship_speed']),('angular_speed',cfg['motion']['escort_angular_speed']),('radius_x',cfg['motion']['escort_radii'][0]),('radius_y',cfg['motion']['escort_radii'][1]),('diagnostics_topic',f'/navis/{id.replace("-","_")}/physics')]:el(physics,key,value)
+    v=visual(l,'wamv' ,'mesh','model://wamv_real/mesh/WAM-V-Base.dae','0 0 -1.1 0 0 0',color='1 1 1 1')
     pbr=E.SubElement(v.find('material'),'pbr');metal=E.SubElement(pbr,'metal')
     for tag,texture in [('albedo_map','Albedo'),('normal_map','Normal'),('roughness_map','Roughness'),('metalness_map','Metalness')]:
         el(metal,tag,f'model://wamv_real/mesh/WAM-V_{texture}.png')
-# Sparse foam trailing each hull, separately tracked at the surface.
+# Invisible physical controller goals; only these markers receive pose commands.
+for i in range(cfg['usvs']):
+    p=initial[f'USV-{i+1:02}']
+    model(f'USV_target_{i+1:02}',f'{p["x"]} {p["y"]} .7 0 0 0')
+# Persistent path samples with progressively wider, fainter foam.
 for name,p in initial.items():
-    if not name.startswith(('SHIP-','USV-')):continue
-    m,l=model('wake_'+name,f'{p["x"]} {p["y"]} -.06 0 0 {p["yaw"]}')
-    flagship=name.startswith('SHIP-');aft=-77 if flagship else -2.5
-    v=visual(l,'foam','mesh','model://navis_ocean/meshes/'+('ship_foam.obj' if flagship else 'usv_foam.obj'),f'{aft} 0 0 0 0 0',color='.68 .78 .78 1')
-    el(v,'transparency','.45');v.find('cast_shadows').text='false'
+    if not name.startswith('wake_'):continue
+    segment=int(name.rsplit('_',1)[1]);flagship='SHIP-' in name
+    m,l=model(name,f'{p["x"]} {p["y"]} {p["z"]} 0 0 {p["yaw"]}')
+    v=visual(l,'foam','mesh','model://navis_ocean/meshes/foam_patch.obj',color='.72 .82 .82 1')
+    el(v.find('geometry/mesh'),'scale',f'{2.8 if flagship else 1.7} {(8 if flagship else .9)*(1+segment*.07)} 1')
+    el(v,'transparency',.22+.73*segment/19);v.find('cast_shadows').text='false'
 # Cameras inherit the flagship transform in the same render update. They never
 # orbit, ease toward a target, or receive independent per-frame pose commands.
 ship_link=w.find("model[@name='SHIP-01']/link")

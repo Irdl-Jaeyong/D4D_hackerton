@@ -30,6 +30,16 @@ def build():
      theta=j*math.pi/4;v.append((x+math.cos(theta)*radius*3,y+math.sin(theta)*radius,0));uv.append((.5+.5*math.cos(theta),.5+.5*math.sin(theta)))
     for j in range(1,7):f.append((a,a+j,a+j+1))
   save(name,v,uv,f)
+def foam_patch():
+    rng=random.Random(31);v=[];uv=[];faces=[]
+    for k in range(55):
+        x=rng.uniform(-.5,.5);y=rng.uniform(-.5,.5);a=len(v);radius=rng.uniform(.025,.07)
+        for j in range(8):
+            angle=j*math.pi/4
+            v.append((x+radius*math.cos(angle),y+radius*.4*math.sin(angle),0));uv.append((0,0))
+        for j in range(1,7):faces.append((a,a+j,a+j+1))
+    save('foam_patch.obj',v,uv,faces)
+
 def deck_surfaces():
     root=ROOT.parents[1]/'arleigh_burke/meshes'
     lines=(root/'part_47.obj').read_text().splitlines()
@@ -63,4 +73,5 @@ def deck_surfaces():
 
 if __name__=='__main__':
     build()
+    foam_patch()
     deck_surfaces()
