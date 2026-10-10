@@ -5,7 +5,7 @@ from app import main as api
 from fastapi import HTTPException
 class FaultAPI(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        api.latest.clear();api.simulated_faults.clear();api.fault_status.clear();api.charge_credit.clear();api.battery_origin.clear();api.mission=None;api.missions.clear()
+        api.latest.clear();api.simulated_faults.clear();api.automatic_returns.clear();api.fault_kinds.clear();api.fault_status.clear();api.charge_credit.clear();api.battery_origin.clear();api.mission=None;api.missions.clear()
         self.token=api.TOKEN;api.TOKEN='test-only'
         for id in ['SHIP-01','UAV-01','UAV-02','USV-01']:
             api.latest[id]={'x':0,'y':0,'z':80 if id.startswith('UAV') else 0,'sim_time':0,'received_at':time.time()}
@@ -55,3 +55,18 @@ class FaultAPI(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(HTTPException):await api.approve_plan(api.ApprovalRequest(mission_id=m['id'],option_id='observe'))
         api.simulated_faults.clear()
         with self.assertRaises(HTTPException):await api.risk_plan('UAV-01:fault')
+    async def test_low_battery_return_resumes_after_measured_deck_charge(self):
+        api.latest['UAV-01'].update(x=-74,y=-6,z=3.45,sim_time=2000)
+        api.state()
+        self.assertIn('UAV-01',api.simulated_faults)
+        api.charge_credit['UAV-01']=80
+        await api.report_faults(api.FaultReport(tasks={'UAV-01':{'phase':'charging','sim_time':2000}}),x_bridge_token='test-only')
+        self.assertNotIn('UAV-01',api.simulated_faults)
+        v=next(v for v in api.state()['vehicles'] if v['id']=='UAV-01')
+        self.assertTrue(v['readiness']['available']);self.assertEqual(v['readiness']['battery_percent'],80)
+    async def test_explicit_payload_fault_stays_faulted_after_full_charge(self):
+        await api.set_simulated_fault('UAV-02',api.FaultRequest(unavailable=True,fault_type='payload'))
+        api.latest['UAV-02'].update(x=-71.3,y=-6,z=3.45,sim_time=2000)
+        api.charge_credit['UAV-02']=100
+        await api.report_faults(api.FaultReport(tasks={'UAV-02':{'phase':'charging','sim_time':2000}}),x_bridge_token='test-only')
+        self.assertIn('UAV-02',api.simulated_faults)

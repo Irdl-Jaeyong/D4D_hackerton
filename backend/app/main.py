@@ -61,6 +61,7 @@ app = FastAPI(title='NAVIS-AI preparation MVP', lifespan=console_lifespan)
 latest = {}
 battery_origin = {}
 simulated_faults=set()
+automatic_returns=set()
 fault_status={}
 fault_kinds={}
 fault_last_known={}
@@ -119,8 +120,11 @@ def state():
         if v['readiness']['battery_percent'] is not None and credit:
             v['readiness']['battery_percent']=round(min(100,v['readiness']['battery_percent']+credit),1)
             v['readiness']['endurance_minutes']=round(v['readiness']['battery_percent']/100*(35 if v['type']=='UAV' else 180),1)
+            ready=v['connected'] and v['readiness']['battery_percent']>=35
+            v['readiness'].update(available=ready,reason='배정 가능' if ready else v['readiness']['reason'],operational_state=('waiting' if v['type']=='UAV' else 'defending') if ready else 'unavailable')
         if v['type']=='UAV' and v['connected'] and (v['readiness']['battery_percent']<35 or max(abs((v['telemetry'] or {}).get('roll',0)),abs((v['telemetry'] or {}).get('pitch',0)))>.22):
             simulated_faults.add(v['id'])
+            if v['id'] not in fault_kinds:automatic_returns.add(v['id'])
         if v['id'] in simulated_faults:
             v['fault']=fault_status.get(v['id'],{'phase':'pending'})
             phase=v['fault']['phase']
@@ -357,7 +361,7 @@ class FaultRequest(BaseModel):
 async def set_simulated_fault(vehicle_id: str,data: FaultRequest):
     if vehicle_id not in IDS or vehicle_id.startswith('SHIP'):raise HTTPException(422,'지원 기체를 선택하세요.')
     if data.unavailable:
-        simulated_faults.add(vehicle_id);fault_kinds[vehicle_id]=data.fault_type
+        simulated_faults.add(vehicle_id);automatic_returns.discard(vehicle_id);fault_kinds[vehicle_id]=data.fault_type
         fault_last_known[vehicle_id]=dict(latest[vehicle_id]) if vehicle_id in latest else None
         fault_status.pop(vehicle_id,None);risk_cache['evaluated_at']=0
     else:
@@ -366,7 +370,7 @@ async def set_simulated_fault(vehicle_id: str,data: FaultRequest):
             measured=latest.get(vehicle_id)
             recovered=kind=='communication' or (kind=='payload' and phase=='charging') or (kind=='propulsion' and phase=='ditched' and measured and time.time()-measured['received_at']<5 and measured['z']<=1.5)
             if not recovered:raise HTTPException(409,'장비 고장은 착함·충전 후, 추진 고장은 수면 도달·회수 후 해제하세요.')
-        simulated_faults.discard(vehicle_id);fault_status.pop(vehicle_id,None)
+        simulated_faults.discard(vehicle_id);automatic_returns.discard(vehicle_id);fault_status.pop(vehicle_id,None)
         fault_kinds.pop(vehicle_id,None);fault_last_known.pop(vehicle_id,None);risk_cache['evaluated_at']=0
     return {'ok':True,'source':'simulated'}
 
@@ -386,6 +390,14 @@ async def report_faults(data: FaultReport,x_bridge_token: str=Header(default='')
             dt=max(0,min(2,value.get('sim_time',0)-old.get('sim_time',0)))
             charge_credit[id]=charge_credit.get(id,0)+dt*.2
         fault_status[id]=value
+        if id in automatic_returns and value.get('phase')=='charging' and measured:
+            base=readiness({'id':id,'type':'UAV','connected':True},max(0,measured['sim_time']-battery_origin.get(id,0)))['battery_percent']
+            if base+charge_credit.get(id,0)>=80:
+                battery_origin[id]=measured['sim_time']
+                initial=readiness({'id':id,'type':'UAV','connected':True},0)['battery_percent']
+                charge_credit[id]=80-initial
+                simulated_faults.discard(id);automatic_returns.discard(id);fault_status.pop(id,None)
+                risk_cache['evaluated_at']=0
     return {'ok':True}
 
 @app.get('/api/risks')
@@ -528,13 +540,13 @@ def restore_console():
         mission_counter=max(saved.get('mission_counter',0),max(missions,default=0))
         simulated_faults.update(id for id in saved.get('faults',[]) if id in IDS)
         battery_origin.update(saved.get('battery_origin',{}))
-        fault_kinds.update(saved.get('fault_kinds',{}));fault_last_known.update(saved.get('fault_last_known',{}))
+        fault_kinds.update(saved.get('fault_kinds',{}));automatic_returns.update(saved.get('automatic_returns',set(saved.get('faults',[]))-set(saved.get('fault_kinds',{}))));fault_last_known.update(saved.get('fault_last_known',{}))
         fault_status.update(saved.get('fault_status',{}));charge_credit.update(saved.get('charge_credit',{}))
     except (OSError,ValueError,KeyError,TypeError):pass
 
 def save_console():
     CONSOLE_SNAPSHOT.parent.mkdir(exist_ok=True)
-    data={'formation':formation,'mission':mission,'missions':list(missions.values()),'mission_counter':mission_counter,'faults':list(simulated_faults),'battery_origin':battery_origin,'fault_status':fault_status,'charge_credit':charge_credit,'fault_kinds':fault_kinds,'fault_last_known':fault_last_known}
+    data={'formation':formation,'mission':mission,'missions':list(missions.values()),'mission_counter':mission_counter,'faults':list(simulated_faults),'automatic_returns':list(automatic_returns),'battery_origin':battery_origin,'fault_status':fault_status,'charge_credit':charge_credit,'fault_kinds':fault_kinds,'fault_last_known':fault_last_known}
     temp=CONSOLE_SNAPSHOT.with_suffix('.tmp');temp.write_text(json.dumps(data,ensure_ascii=False));temp.replace(CONSOLE_SNAPSHOT)
 
 app.mount('/', StaticFiles(directory=ROOT/'frontend', html=True), name='frontend')

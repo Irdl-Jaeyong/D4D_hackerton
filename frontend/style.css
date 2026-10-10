@@ -116,3 +116,5 @@
 @media(max-width:760px){.right-column>.chat{height:190px;min-height:190px}}
 
 .queue-actions{display:flex;justify-content:flex-end;margin:0 0 7px}.queue-actions button{padding:5px 8px;font-size:10px;color:#a9bdc9;background:transparent}
+
+.queue-item.selected{border:2px solid #5ee9da;background:#164e50;box-shadow:inset 4px 0 #5ee9da,0 0 0 1px #5ee9da33}.queue-item{position:relative}.selection-indicator{grid-column:2;grid-row:3;font-size:10px;color:#83f4df;font-weight:700}.queue-item:active,.response-card button:active:not(:disabled){transform:translateY(2px);filter:brightness(1.35)}.response-card.selected-response{border:2px solid #5ee9da;background:#124039}.response-card.selected-response button{background:#1a665b;color:#b8ffec}#missionFeedback:not(:empty){padding:8px 10px;border:1px solid #365263;border-radius:6px;background:#112c3b;font-size:11px}#missionFeedback[data-state=success],#missionFeedback[data-state=info]{color:#9cf5d9;border-color:#3c8974}#missionFeedback[data-state=pending]{color:#ffe3a4;border-color:#806732}#missionFeedback[data-state=error]{color:#ffb1b1;border-color:#a35858}

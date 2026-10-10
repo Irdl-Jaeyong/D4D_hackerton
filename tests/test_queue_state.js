@@ -73,3 +73,12 @@ test('risk response executes the API-created card even when it is outside the vi
  vm.runInContext(source.slice(start,source.indexOf('async function executeResponse(',start)),context);
  await context.executeRiskResponse('UAV-03:fault','verify');assert.deepEqual(executed,[99,'verify']);
 });
+test('response controls clearly distinguish ready, pending, confirmed and unavailable',()=>{
+ const {responseControlState}=require('../frontend/queue_state.js');
+ const m={id:1,options:[{id:'verify',available:true},{id:'observe',available:false}]};
+ assert.equal(responseControlState(m,'verify',null,null).disabled,false);
+ assert.match(responseControlState(m,'verify',null,{mission_id:1,option_id:'verify'}).label,/요청 중/);
+ assert.match(responseControlState({...m,approved:{id:'verify'}},'verify',null,null).label,/명령 전달/);
+ assert.match(responseControlState(m,'observe',null,null).label,/기체 부족/);
+ assert.match(responseControlState(m,'verify',{id:2},null).label,/다른 임무/);
+});

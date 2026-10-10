@@ -36,3 +36,12 @@ class AutoScenarios(unittest.TestCase):
     def test_unknown_scenario_and_invalid_interval_are_rejected(self):
         for config in [{**self.config,'scenarios':['unknown']},{**self.config,'interval_seconds':[0,10]}]:
             with self.assertRaises(ValueError):ScenarioGenerator(config,now=0)
+    def test_live_config_uses_two_minutes_and_four_pending(self):
+        import json
+        config=json.loads((Path(__file__).resolve().parents[1]/'config/auto_scenarios.json').read_text())
+        self.assertEqual(config['interval_seconds'],[120,120]);self.assertEqual(config['max_pending'],4)
+        g=ScenarioGenerator(config,random.Random(1),now=0)
+        self.assertIsNone(g.next_request(self.state,119));self.assertIsNotNone(g.next_request(self.state,120))
+        self.assertIsNone(g.next_request(self.state,239))
+        self.state['approval_queue']=[{'scenario':'rescue'}]*4
+        self.assertIsNone(g.next_request(self.state,240))

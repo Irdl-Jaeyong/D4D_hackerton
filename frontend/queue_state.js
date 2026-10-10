@@ -19,7 +19,7 @@ function reviewedMission(state, selectedId) {
   if(active)return active;
   return queue.find(m=>m.id===selectedId) || queue[0] || state.mission || null;
 }
-if(typeof module!=='undefined')module.exports={queueReviewKey,responseExecutionRequest,reviewedMission,queueSnapshot,needsPlanRefresh};
+if(typeof module!=='undefined')module.exports={queueReviewKey,responseExecutionRequest,reviewedMission,queueSnapshot,needsPlanRefresh,responseControlState};
 
 function queueSnapshot(previous,queue,now,filter='all',force=false) {
   if(previous&&!force&&previous.filter===filter&&now-previous.updatedAt<10000)return previous;
@@ -32,4 +32,14 @@ function queueSnapshot(previous,queue,now,filter='all',force=false) {
 
 function needsPlanRefresh(m,revision,now) {
   return !!m&&!m.approved&&!m.resolved&&(now-(m.planned_at??m.created_at)>=10||m.basis_revision!==revision);
+}
+
+function responseControlState(m,optionId,active,pending){
+  const selected=pending?.mission_id===m.id&&pending.option_id===optionId;
+  if(m.approved)return {disabled:true,selected:m.approved.id===optionId,label:m.approved.id===optionId?'✓ 출동 명령 전달 완료':'선택 종료'};
+  if(pending)return {disabled:true,selected,label:selected?'출동 요청 중…':'처리 중…'};
+  if(m.resolved)return {disabled:true,selected:false,label:'상황 해소됨'};
+  if(active)return {disabled:true,selected:false,label:'다른 임무 실행 중'};
+  if(!m.options.find(p=>p.id===optionId)?.available)return {disabled:true,selected:false,label:'출동 불가 · 기체 부족'};
+  return {disabled:false,selected:false,label:'이 대응안 선택 · 즉시 출동'};
 }
