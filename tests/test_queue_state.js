@@ -80,5 +80,18 @@ test('response controls clearly distinguish ready, pending, confirmed and unavai
  assert.match(responseControlState(m,'verify',null,{mission_id:1,option_id:'verify'}).label,/요청 중/);
  assert.match(responseControlState({...m,approved:{id:'verify'}},'verify',null,null).label,/명령 전달/);
  assert.match(responseControlState(m,'observe',null,null).label,/기체 부족/);
- assert.match(responseControlState(m,'verify',{id:2},null).label,/다른 임무/);
+ assert.equal(responseControlState(m,'verify',{id:2},null).disabled,false);
+ assert.match(responseControlState(m,'verify',{id:2},null).label,/전환/);
+});
+test('AI candidate has its own status and expires without changing two base choices',()=>{
+ const {responseExecutionRequest,responseControlState}=require('../frontend/queue_state.js');
+ const ai={id:'ai',available:true,expires_at:Date.now()/1000+60};
+ const m={id:9,plan_revision:3,ai_status:{state:'ready'},options:[{id:'observe',available:true},{id:'prepare',available:true},ai]};
+ assert.equal(responseExecutionRequest(m,'ai').option_id,'ai');
+ assert.equal(responseControlState(m,'ai',null,null).disabled,false);
+ ai.expires_at=Date.now()/1000-1;
+ assert.throws(()=>responseExecutionRequest(m,'ai'),/만료/);
+ assert.equal(responseControlState(m,'ai',null,null).disabled,true);
+ assert.equal(responseControlState(m,'prepare',null,null).disabled,false);
+ assert.notEqual(queueReviewKey(m),queueReviewKey({...m,ai_status:{state:'pending'}}));
 });

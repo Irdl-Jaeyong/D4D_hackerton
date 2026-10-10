@@ -30,6 +30,17 @@ class SituationQueue(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(HTTPException):await api.approve_plan(api.ApprovalRequest(mission_id=b['id'],option_id='observe',human_confirmed=True))
         await api.cancel_plan(api.CancelRequest(mission_id=b['id']))
         self.assertEqual(api.state()['active_mission']['id'],a['id'])
+    async def test_explicit_switch_validates_before_replacing_active(self):
+        a=await self.create('crossing')
+        await api.approve_plan(api.ApprovalRequest(mission_id=a['id'],option_id='observe',human_confirmed=True))
+        b=await self.create('rescue');await api.refresh_plan(b['id'])
+        args=dict(mission_id=b['id'],option_id='observe',human_confirmed=True,replace_active_id=a['id'])
+        with self.assertRaises(HTTPException):await api.approve_plan(api.ApprovalRequest(**args,plan_revision=999))
+        self.assertIs(api.mission,a)
+        await api.approve_plan(api.ApprovalRequest(**args,plan_revision=b['plan_revision']))
+        self.assertIs(api.mission,b);self.assertEqual(a['execution']['status'],'cancelled')
+        self.assertEqual(a['replaced_by'],b['id']);self.assertTrue(a['cancel_requested'])
+
     async def test_refresh_keeps_id_anchor_and_rejects_old_consent(self):
         a=await self.create('crossing');origin=dict(a['scene_origin']);created=a['created_at']
         await api.refresh_plan(a['id'])

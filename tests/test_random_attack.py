@@ -7,6 +7,8 @@ from defense_scenarios import DEFENSE_SCENARIOS
 from fastapi import HTTPException
 class RandomAttack(unittest.IsolatedAsyncioTestCase):
  def setUp(self):
+  from unittest.mock import patch
+  self.save_patch=patch.object(api,'save_console');self.save_patch.start()
   self.previous=(api.auto_generator,dict(api.latest),dict(api.missions),api.mission,api.mission_counter,api.camera_view)
   api.latest.clear();api.missions.clear();api.mission=None
   for kind,count in [('SHIP',1),('UAV',8),('USV',6)]:
@@ -14,6 +16,7 @@ class RandomAttack(unittest.IsolatedAsyncioTestCase):
   config=json.loads((api.ROOT/'config/auto_scenarios.json').read_text());config['scenarios']=[k for k in DEFENSE_SCENARIOS if k!='communication_interference']
   api.auto_generator=ScenarioGenerator(config,random.Random(1),now=time.monotonic())
  def tearDown(self):
+  self.save_patch.stop()
   api.auto_generator,latest,missions,api.mission,api.mission_counter,api.camera_view=self.previous
   api.latest.clear();api.latest.update(latest);api.missions.clear();api.missions.update(missions)
  async def test_button_generates_immediately_without_waiting_and_has_two_responses(self):

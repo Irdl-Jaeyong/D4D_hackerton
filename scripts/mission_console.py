@@ -51,12 +51,12 @@ def options(vehicles,formation,scenario,target_offset=None):
                        'validation':'연결·시뮬레이션 잔량·복귀 여유 조건 확인. ETA는 직선 거리 추정이며 경로 안전 검증 전입니다.'})
     return result
 
-def defense_options(vehicles,formation,scenario,target_offset=None,contacts=None):
+def defense_options(vehicles,formation,scenario,target_offset=None,contacts=None,specs=None):
     profile=DEFENSE_SCENARIOS[scenario];leader=next((v for v in vehicles if v['type']=='SHIP' and v['connected']),None)
     if not leader:return []
     ship=leader['telemetry'];ship_xy=(ship['x'],ship['y'])
     contacts=contacts or [{'x':ship['x']+profile['initial_range_m']*math.cos(math.radians(a)),'y':ship['y']+profile['initial_range_m']*math.sin(math.radians(a)),'contact_type':profile.get('contact_types',['surface']*len(profile['bearing_degrees']))[i]} for i,a in enumerate(profile['bearing_degrees'])]
-    specs=DEFENSE_RESPONSES[scenario]
+    specs=DEFENSE_RESPONSES[scenario] if specs is None else specs
     closest=min(range(len(contacts)),key=lambda i:math.hypot(contacts[i]['x']-ship['x'],contacts[i]['y']-ship['y']))
     out=[]
     policy_labels={'track':'지속 관측·추적','screen':'접근 방향 외곽 경계','protect':'함선 근접 보호·관측','standoff':'접촉과 이격 유지·관측','investigate':'추정 유입·접촉 구역 확인','avoid':'교란 구역 반대편으로 이격'}

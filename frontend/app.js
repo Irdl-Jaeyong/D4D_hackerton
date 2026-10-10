@@ -303,7 +303,12 @@ function renderMission(s){
       $('situationCard').append(element('p',`${priorityText(m)} · ${m.risk?.score==null?'평가 불가':m.risk.score+' / 100점'}`,'priority-badge queue-rank-'+((queueView?.items.findIndex(item=>item.id===m.id)??-1)+1)));
       if(!m.options.length)$('responseOptions').append(element('p','함선의 최신 위치가 없어 추천을 생성할 수 없습니다. 연결되면 자동 갱신됩니다.'));
       for(const [i,plan] of m.options.entries()){
-        const card=element('article',undefined,'response-card');card.append(element('h3',`${i+1}. ${plan.title}`),element('p',`USV: ${s.formations.catalog.usv[plan.formations.usv]} / 드론: ${s.formations.catalog.uav[plan.formations.uav]}`));
+        const card=element('article',undefined,'response-card');card.append(element('h3',plan.id==='ai'?`AI 제안 · ${plan.title}`:`${i+1}. ${plan.title}`),element('p',`USV: ${s.formations.catalog.usv[plan.formations.usv]} / 드론: ${s.formations.catalog.uav[plan.formations.uav]}`));
+        if(plan.id==='ai'){
+          card.classList.add('ai-response-card');
+          const facts=plan.input_summary,range=facts?.contacts.map(t=>`${Math.round(t.range_m)}m`).join(' / ');
+          card.append(element('p',`입력 데이터: 모의 접촉 ${range||'거리 확인 필요'} · 가용 UAV ${facts?.available.UAV??'—'} / USV ${facts?.available.USV??'—'} · ${plan.model}`,'ai-facts'),element('p',`AI 추론: ${plan.benefit}`),element('small',`기체 위치·연결은 Gazebo 데이터, 접촉·배터리는 모의 값 · ${new Date(plan.input_captured_at*1000).toLocaleTimeString('ko-KR')} 기준`));
+        }
         for(const task of plan.tasks)card.append(element('p',`${task.vehicle} → ${task.task}`,'task-line'));
         const details=element('details'),summary=element('summary','배정 근거 · 예상 시간 · 검증');details.append(summary);
         for(const task of plan.tasks)details.append(element('small',`${task.vehicle}: ${task.reason} · 직선 이동 추정 ${task.eta_seconds}초`));
@@ -315,7 +320,7 @@ function renderMission(s){
       }
     }
   }
-  renderHumanApproval(s);
+  renderHumanApproval(s);renderAIControls(s);
   if(!m){$('missionStage').textContent='';return;}
   if(!m.approved){const remaining=Math.max(0,60-Math.floor(Date.now()/1000-(m.planned_at??m.created_at)));$('missionStage').textContent=`승인 대기 · 추천 유효시간 ${remaining}초 · 가상 상황 / 규칙 기반 배정`;
     for(const button of document.querySelectorAll('#responseOptions button')){const plan=m.options.find(p=>p.id===button.dataset.option);const ui=responseControlState(m,button.dataset.option,s.active_mission,pendingExecution);button.disabled=missionRequestPending||ui.disabled;button.textContent=ui.label;}
@@ -331,13 +336,40 @@ function renderHumanApproval(s){
   if(selectedResponse?.mission_id!==m?.id||selectedResponse?.plan_revision!==(m?.plan_revision||0))selectedResponse=null;
   const plan=m?.options.find(p=>p.id===selectedResponse?.option_id);
   const expired=!!m&&Date.now()/1000-(m.planned_at??m.created_at)>60;
-  const ready=!s.active_mission&&!!plan&&plan.available&&!m.approved&&!expired&&s.formations.revision===m.basis_revision;
+  const ready=!!plan&&plan.available&&!m.approved&&!expired&&s.formations.revision===m.basis_revision;
   $('finalApprove').disabled=missionRequestPending||!ready;
   $('submitApprovalCommand').disabled=missionRequestPending||!m||!!m.approved||expired;
   $('approvalCommand').disabled=missionRequestPending||!m||!!m.approved||expired;
   for(const card of document.querySelectorAll('.response-card')){const button=card.querySelector('button'),ui=responseControlState(m,button.dataset.option,s.active_mission,pendingExecution);card.classList.toggle('selected-response',ui.selected);button.setAttribute('aria-pressed',String(ui.selected));button.textContent=ui.label;button.disabled=missionRequestPending||ui.disabled;}
   $('approvalPreview').textContent=m?.approved?`운용자 최종 승인 기록 · ${m.approved.title} · ${m.approved.decision_source==='captain_text'?'직접 입력':'승인 버튼'} · ${new Date(m.approved.approved_at*1000).toLocaleTimeString('ko-KR')}`:plan?`선택: ${m.options.indexOf(plan)+1}번 ${plan.title} · ${expired?'추천 만료 · 자동 갱신을 기다려 주세요.':!plan.available?'가용 기체 부족 · 기체 상태를 확인하고 자동 갱신을 기다려 주세요.':s.formations.revision!==m.basis_revision?'대형 변경 · 자동 갱신을 기다려 주세요.':`배정 ${plan.tasks.map(t=>t.vehicle).join(', ')} · 대응안 선택 시 즉시 실행됩니다.`}`:expired?'추천이 만료되었습니다. 자동 갱신을 기다려 주세요.':'대응안을 선택해 검토하세요. 선택하면 즉시 실행됩니다.';
 }
+const aiRequests=new Set(),aiAttempts=new Set(),aiErrors=new Map();
+function aiAttemptKey(m,s){return `${m.id}:${m.ai_meta?.generated_at||'initial'}:${s.formations.revision}`;}
+function renderAIControls(s){
+  const m=s.mission,tools=$('aiResponseTools');tools.hidden=!m?.ai_supported;
+  if(!m?.ai_supported)return;
+  const plan=m.options.find(p=>p.id==='ai'),pending=aiRequests.has(m.id)||m.ai_status?.state==='pending';
+  $('regenerateAI').disabled=pending||!!m.approved||!!m.resolved;
+  $('regenerateAI').textContent=pending?'AI 분석 중…':'현재 상태로 다시 제안';
+  $('aiResponseStatus').textContent=m.approved?(m.approved.id==='ai'?'선택한 AI 제안을 실행 중입니다.':'기본 대응안이 실행 중입니다.'):pending?'현재 상황·기체 상태를 읽고 새 대응안을 생성 중입니다.':aiErrors.get(m.id)||m.ai_status?.message||(plan?'AI 제안은 선택했을 때만 실행됩니다.':'AI가 현재 상황에 맞는 별도 대응안을 생성합니다.');
+  if(m.approved||m.resolved||pending)return;
+  if(plan&&plan.expires_at>Date.now()/1000&&plan.formation_revision===s.formations.revision)return;
+  const key=aiAttemptKey(m,s);
+  if(!aiAttempts.has(key)){aiAttempts.add(key);queueMicrotask(()=>requestAI(m.id));}
+}
+async function requestAI(id){
+  if(aiRequests.has(id))return;
+  aiRequests.add(id);aiErrors.delete(id);
+  if(lastState?.mission?.id===id){aiAttempts.add(aiAttemptKey(lastState.mission,lastState));renderAIControls(lastState);}
+  try{
+    const r=await fetch('/api/mission/'+id+'/ai-response',{method:'POST'}),result=await r.json();
+    if(!r.ok)throw Error(result.detail||'AI 제안 생성 실패');
+    if(lastState?.mission?.id===id)missionRenderKey='';
+  }catch(error){aiErrors.set(id,error.message);}
+  finally{aiRequests.delete(id);if(lastState?.mission?.id===id)renderAIControls(lastState);}
+}
+$('regenerateAI').addEventListener('click',()=>{if(lastState?.mission)requestAI(lastState.mission.id);});
+
 $('finalApprove').addEventListener('click',()=>{if(selectedResponse)missionRequest('/api/mission/approve',{...selectedResponse,human_confirmed:true,decision_source:'captain_button'});});
 $('approvalCommandForm').addEventListener('submit',e=>{
   e.preventDefault();const command=$('approvalCommand').value,match=command.match(/^\s*([12])\s*번\s*(?:최종\s*)?승인\s*$/),m=lastState?.mission;
@@ -358,7 +390,11 @@ async function executeResponse(m,optionId){
     while(plansRefreshing)await new Promise(resolve=>setTimeout(resolve,30));
     const r=await fetch('/api/mission/'+m.id+'/refresh',{method:'POST'}),fresh=await r.json();
     if(!r.ok)throw Error(fresh.detail||'대응안 갱신 실패');
-    const request=responseExecutionRequest(fresh,optionId);selectedResponse=request;$('assignmentPlan').value=optionId;
+    const request=responseExecutionRequest(fresh,optionId);
+    const activeResponse=await fetch('/api/state');if(!activeResponse.ok)throw Error('실행 임무 확인 실패');
+    const active=(await activeResponse.json()).active_mission;
+    if(active)request.replace_active_id=active.id;
+    selectedResponse=request;$('assignmentPlan').value=optionId;
     await missionRequest('/api/mission/approve',request);
   }catch(error){$('missionFeedback').textContent='실행 실패 · '+error.message;$('missionFeedback').dataset.state='error';}
   finally{responseExecuting=false;pendingExecution=null;if(lastState)renderMission(lastState);}

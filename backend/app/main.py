@@ -27,6 +27,7 @@ from mission_console import defense_options
 from risk_monitor import assess
 from fault_motion import deck_slot
 from scenario_scene import targets as scene_targets
+from .ai_response import AIProposal,build_plan as build_ai_plan,input_summary as ai_input_summary,request_proposal as request_ai_proposal
 from .approval_risk import evaluate,sort_key,CONFIG as RISK_CONFIG
 mission=None # only the human-approved execution; pending cards live in missions
 missions={}
@@ -82,6 +83,9 @@ lock = asyncio.Lock()
 chat_lock = asyncio.Lock()
 TOKEN = os.environ.get('NAVIS_BRIDGE_TOKEN', '')
 MODEL = os.environ.get('OLLAMA_MODEL', 'minicpm-v4.5:latest')
+AI_RESPONSE_MODEL=os.environ.get('AI_RESPONSE_MODEL','qwen3:4b')
+AI_RESPONSE_TTL=60
+ai_generating=set()
 OLLAMA = os.environ.get('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
 FLEET = json.loads((ROOT/'config/fleet.json').read_text())
 IDS = [f'{kind}-{i:02}' for kind, key in [('SHIP','ships'),('UAV','uavs'),('USV','usvs')] for i in range(1, FLEET[key]+1)]
@@ -235,7 +239,17 @@ def pending_plans(item,vehicles):
     if lead:item['plan_target_world']=[lead['x']+offset[0],lead['y']+offset[1]]
     if item['scenario'] in DEFENSE_SCENARIOS:
         if not item.get('threats'):return []
-        return defense_options(vehicles,formation,item['scenario'],contacts=item['threats'])
+        plans=defense_options(vehicles,formation,item['scenario'],contacts=item['threats'])
+        if item.get('ai_spec'):
+            try:
+                proposal=AIProposal.model_validate(item['ai_spec'])
+                plan=build_ai_plan(proposal,vehicles,formation,item['scenario'],item['threats'])
+                meta=item.get('ai_meta',{})
+                plan.update(meta)
+                plan['available']=plan['available'] and meta.get('expires_at',0)>time.time() and meta.get('formation_revision')==formation['revision'] and item.get('ai_status',{}).get('state')=='ready'
+                plans.append(plan)
+            except ValueError:pass
+        return plans
     return options(vehicles,formation,'rescue' if item['scenario']=='fault' else item['scenario'],target_offset=offset)
 
 class FormationRequest(BaseModel):
@@ -273,8 +287,9 @@ class ScenarioRequest(BaseModel):
     fault_type: Literal['payload','propulsion','communication'] = 'propulsion'
 class ApprovalRequest(BaseModel):
     mission_id: int
-    option_id: Literal['observe','verify','prepare']
+    option_id: Literal['observe','verify','prepare','ai']
     human_confirmed: bool = False
+    replace_active_id: int | None = None
     decision_source: Literal['captain_button','captain_text','response_button'] = 'captain_button'
     operator_command: str = Field(default='',max_length=100)
     plan_revision: int = Field(default=0,ge=0)
@@ -298,7 +313,7 @@ async def start_scenario(data: ScenarioRequest,preserve_camera: bool=False):
     else:card=SCENARIOS[data.scenario]
     now=time.time()
     item={'id':mission_counter,'scenario':data.scenario,'card':card,'created_at':now,'planned_at':now,'plan_revision':0,
-          'basis_revision':formation['revision'],'options':[],'approved':None,'source':'synthetic','scene_origin':origin,
+          'ai_supported':data.scenario in DEFENSE_SCENARIOS,'basis_revision':formation['revision'],'options':[],'approved':None,'source':'synthetic','scene_origin':origin,
           'scene_slot':1+max((m.get('scene_slot',0) for m in missions.values() if m['scenario']==data.scenario),default=-1),
           'execution_scope':'운용자 대형 선택으로 직접 대응합니다. 대응안 선택 시 지속 추적·경계도 실행할 수 있습니다.' if data.scenario in DEFENSE_SCENARIOS else '선택 시 대형 변경과 UAV·USV 출동·확인·복귀를 실행합니다.'}
     if data.scenario=='fault':item.update(vehicle_id=data.vehicle_id,fault_type=data.fault_type)
@@ -331,6 +346,49 @@ async def random_attack():
         save_console()
         return item
 
+def ai_generation_basis(item,vehicles):
+    return (formation['revision'],tuple(v['id'] for v in vehicles if v['type'] in ('UAV','USV') and v['readiness']['available']))
+
+@app.post('/api/mission/{mission_id}/ai-response')
+async def generate_ai_response(mission_id: int):
+    item=missions.get(mission_id)
+    if not item:raise HTTPException(404,'상황을 찾을 수 없습니다.')
+    if item.get('approved') or item.get('resolved'):raise HTTPException(409,'종료·승인된 상황은 새 제안을 만들 수 없습니다.')
+    if item['scenario'] not in DEFENSE_SCENARIOS:raise HTTPException(422,'방어 시나리오에서 AI 제안을 사용할 수 있습니다.')
+    if mission_id in ai_generating:raise HTTPException(409,'이 상황의 AI 제안을 생성 중입니다.')
+    ai_generating.add(mission_id)
+    item['ai_status']={'state':'pending','message':'현재 상황과 가용 기체를 분석 중입니다.'}
+    item.pop('ai_spec',None);item.pop('ai_meta',None)
+    item['options']=[p for p in item['options'] if p['id']!='ai'];item['plan_revision']=item.get('plan_revision',0)+1
+    try:
+        async with chat_lock:
+            snapshot=state();item=missions.get(mission_id)
+            if not item or item.get('approved') or item.get('resolved'):raise HTTPException(409,'상황이 변경되었습니다.')
+            if not item.get('threats') or not any(v['type']=='SHIP' and v['connected'] for v in snapshot['vehicles']):raise HTTPException(409,'최신 함선 위치와 접촉 정보가 필요합니다.')
+            captured_at=time.time();basis=ai_generation_basis(item,snapshot['vehicles']);summary=ai_input_summary(item,snapshot['vehicles'],formation)
+            if min(summary['available'].values())<len(item['threats']):raise HTTPException(409,'각 접촉에 UAV·USV를 배정할 가용 기체가 부족합니다.')
+            proposal=await request_ai_proposal(OLLAMA,AI_RESPONSE_MODEL,summary)
+            fresh=state();current=missions.get(mission_id)
+            if current is not item or item.get('approved') or item.get('resolved'):raise HTTPException(409,'상황이 변경되어 생성한 제안을 폐기했습니다.')
+            if basis!=ai_generation_basis(item,fresh['vehicles']) or time.time()-captured_at>=AI_RESPONSE_TTL:raise HTTPException(409,'분석 중 기체·대형 상태가 변경되었거나 데이터가 만료되었습니다. 다시 생성하세요.')
+            plan=build_ai_plan(proposal,fresh['vehicles'],formation,item['scenario'],item['threats'])
+            if not plan['available']:raise HTTPException(409,'현재 가용 기체로 실행할 수 없는 AI 제안입니다. 다시 생성하세요.')
+            generated=time.time()
+            item['ai_spec']=proposal.model_dump()
+            item['ai_meta']={'source':'llm','model':AI_RESPONSE_MODEL,'generated_at':generated,'input_captured_at':captured_at,'expires_at':captured_at+AI_RESPONSE_TTL,'formation_revision':formation['revision'],'input_summary':summary}
+            item['ai_status']={'state':'ready','message':'AI 제안 생성 · 배정 조건 검증 완료','generated_at':generated}
+            item['options']=pending_plans(item,fresh['vehicles']);item['basis_revision']=formation['revision']
+            item['planned_at']=generated;item['plan_revision']=item.get('plan_revision',0)+1
+            save_console()
+            return item
+    except HTTPException as error:
+        if missions.get(mission_id):missions[mission_id]['ai_status']={'state':'error','message':str(error.detail)}
+        raise
+    except (httpx.HTTPError,ValueError,KeyError) as error:
+        if missions.get(mission_id):missions[mission_id]['ai_status']={'state':'error','message':'AI 생성·검증에 실패했습니다. 다시 생성하세요.'}
+        raise HTTPException(502,'AI 생성·검증 실패. 모델 연결을 확인하거나 다시 생성하세요.') from error
+    finally:ai_generating.discard(mission_id)
+
 @app.post('/api/mission/{mission_id}/refresh')
 async def refresh_plan(mission_id: int):
     item=missions.get(mission_id)
@@ -350,7 +408,8 @@ async def refresh_plan(mission_id: int):
 async def approve_plan(data: ApprovalRequest):
     global mission
     item=missions.get(data.mission_id)
-    if mission:raise HTTPException(409,'승인 임무를 종료한 뒤 다음 상황을 승인하세요.')
+    if mission and data.replace_active_id!=mission['id']:raise HTTPException(409,'실행 중인 임무가 변경되었습니다. 현재 임무를 확인하고 다시 선택하세요.')
+    if not mission and data.replace_active_id is not None:raise HTTPException(409,'기존 임무가 종료되었습니다. 다시 선택하세요.')
     if not data.human_confirmed:raise HTTPException(409,'운용자의 명시적 최종 승인이 필요합니다.')
     if not item or item['id']!=data.mission_id:raise HTTPException(409,'상황 카드가 변경되었습니다.')
     if item.get('approved'):raise HTTPException(409,'이미 승인된 대응안입니다.')
@@ -360,6 +419,7 @@ async def approve_plan(data: ApprovalRequest):
     if item.get('risk_id') and not any(r['id']==item['risk_id'] for r in assess(state()['vehicles'])):raise HTTPException(409,'위험이 해소되었습니다. 최신 상황을 다시 검토하세요.')
     if time.time()-item.get('planned_at',item['created_at'])>60:raise HTTPException(409,'추천이 60초 이상 지났습니다. 최신 상태로 다시 계산하세요.')
     plan=next((p for p in item['options'] if p['id']==data.option_id),None)
+    if plan and plan['id']=='ai' and (plan.get('expires_at',0)<=time.time() or plan.get('formation_revision')!=formation['revision'] or item.get('ai_status',{}).get('state')!='ready'):raise HTTPException(409,'AI 제안이 만료되거나 상태가 변경되었습니다. 새로 생성하세요.')
     if not plan or not plan['available']:raise HTTPException(409,'가용 기체가 부족합니다.')
     if data.decision_source=='captain_text':
         import re
@@ -373,6 +433,11 @@ async def approve_plan(data: ApprovalRequest):
         if not v['readiness']['available']:raise HTTPException(409,'기체 가용 상태가 변경되었습니다. 다시 계산하세요.')
         eta=task['eta_seconds']
         if v['readiness']['endurance_minutes']*60<2*eta+300:raise HTTPException(409,'복귀 여유가 부족합니다. 다시 계산하세요.')
+    # Validate the new plan completely before transferring exclusive vehicle control.
+    if mission:
+        mission['cancel_requested']=True
+        mission['execution']={**mission.get('execution',{}),'status':'cancelled','ended_at':time.time(),'reason':'operator_switch'}
+        mission['replaced_by']=item['id']
     item['prior_formations']={g:formation[g] for g in ('usv','uav')}
     if item['scenario'] in DEFENSE_SCENARIOS:formation['scenario_id']=item['id']
     else:formation.pop('scenario_id',None)
@@ -604,7 +669,7 @@ async def chat(data: Chat):
         offline_ids = [v['id'] for v in snapshot['vehicles'] if not v['connected']]
         system = ('당신은 NAVIS-AI 시뮬레이션 관제 보조입니다. 한국어로 짧고 명확하게 답하세요. '
                   '제공된 실제 상태만 사용하고 배터리, 위치, 연결상태를 추측하지 마세요. '
-                  '대응책을 설명할 때는 현재 상황에 제공된 두 대응안만 비교하고 추가 대응안을 만들지 마세요. '
+                  '대응책을 설명할 때는 제공된 기본 두 대응안과 별도 AI 제안이 있으면 그것만 비교하세요. 채팅에서 실행 가능한 새 대응안을 만들거나 승인했다고 주장하지 마세요. '
                   '카메라는 전체 편대·함선 근접·선택 기체 전방 1인칭 중 선택된 Gazebo 카메라입니다. 메인 함선은 직선 전진하고 USV와 드론은 선택된 함선 상대 대형을 유지합니다. USV는 추진력 기반, 드론은 위치 갱신 기반 시연입니다. 배터리는 시뮬레이션 추정값입니다. 상황과 대응안은 규칙 기반 시연이며 승인된 UAV 관측·복귀는 Gazebo에서 실행됩니다. 외부 접근 상황은 모의 접촉입니다. 운용자가 대형을 직접 선택할 수 있습니다. 방어 대응안 실행 시 드론은 지속 추적하고 USV는 경계선을 유지하며 운용자가 종료하면 복귀합니다. 위험도와 우선순위는 제공된 규칙 계산 결과만 설명하고 재평가하거나 수정하지 마세요. S/U/A는 시연 기준이며 측정값과 구분하세요. 보이는 것만 설명하고 불확실하면 명시하세요. '
                   '현재는 상태 조회와 이미지 설명만 가능하며 이동 명령 실행 기능은 없습니다. '
                   '명령을 실행했다고 주장하지 마세요. 상태가 없는 기체는 미연결입니다. '
@@ -633,6 +698,8 @@ def restore_console():
         cards=saved.get('missions') or ([saved['mission']] if saved.get('mission') else [])
         for item in cards:
             allowed={p['id'] for p in DEFENSE_RESPONSES[item['scenario']]} if item['scenario'] in DEFENSE_RESPONSES else {'observe','verify'}
+            item['ai_supported']=item['scenario'] in DEFENSE_SCENARIOS
+            item.pop('ai_spec',None);item.pop('ai_meta',None);item.pop('ai_status',None)
             previous=item.get('options',[])
             item['options']=[p for p in previous if p['id'] in allowed][:2]
             if len(item['options'])!=len(previous):item['plan_revision']=item.get('plan_revision',0)+1
