@@ -3,6 +3,11 @@ function event(text){if(!$('events'))return;const li=document.createElement('li'
 function bubble(text,role){const p=document.createElement('p');p.className='bubble '+role;p.textContent=text;$('messages').append(p);$('messages').scrollTop=$('messages').scrollHeight;return p;}
 const stateLabels={defending:'방어중',waiting:'대기·복귀',unavailable:'수행불가'},stateColors={defending:'#2ce099',waiting:'#4aa8ff',unavailable:'#ff6b6b'};
 const bandColors=['#55e7ef','#7ebaff','#ae97ff','#ffb567','#88ed9d'];
+function contactLabel(t,ship){
+  const a=Math.atan2(t.y-(ship?.y||0),t.x-(ship?.x||0))-(ship?.yaw||0),bearing=Math.atan2(Math.sin(a),Math.cos(a));
+  const direction=Math.abs(bearing)<Math.PI/4?'전방':Math.abs(bearing)>3*Math.PI/4?'후방':bearing>0?'좌현':'우현';
+  return `외부 선박 · ${direction} · ${t.track_id}`;
+}
 function map(state){
   const c=$('map'),pixelRatio=window.devicePixelRatio||1;const width=Math.round(c.clientWidth*pixelRatio),height=Math.round(c.clientHeight*pixelRatio);if(c.width!==width)c.width=width;if(c.height!==height)c.height=height;const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);mapPickables.length=0;
   const live=state.vehicles.filter(v=>v.connected&&v.telemetry);
@@ -20,7 +25,12 @@ function map(state){
   }
   ctx.strokeStyle='#71889c66';ctx.setLineDash([5*pixelRatio,5*pixelRatio]);ctx.beginPath();
   for(let i=0;i<=80;i++){const a=i*Math.PI/40,[x,y]=point(ox+150*Math.cos(a),oy+150*Math.sin(a));i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();ctx.setLineDash([]);
-  for(const t of contacts){const [x,y]=point(t.x,t.y);ctx.strokeStyle='#e7ac67';ctx.fillStyle='#e7ac67';ctx.lineWidth=1.5*pixelRatio;ctx.strokeRect(x-5*pixelRatio,y-5*pixelRatio,10*pixelRatio,10*pixelRatio);ctx.textAlign='left';ctx.fillText(`${t.track_id} · ${Math.round(t.range_m)}m`,Math.min(x+9*pixelRatio,c.width-94*pixelRatio),Math.max(y-8*pixelRatio,12*pixelRatio));}
+  for(const t of contacts){
+    const [x,y]=point(t.x,t.y),selected=t.mission_id===state.mission?.id,r=(selected?9:6)*pixelRatio;
+    ctx.strokeStyle='#ff7777';ctx.fillStyle='#ff777733';ctx.lineWidth=(selected?2.5:1.5)*pixelRatio;
+    ctx.beginPath();ctx.moveTo(x,y-r);ctx.lineTo(x+r,y);ctx.lineTo(x,y+r);ctx.lineTo(x-r,y);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.textAlign='left';ctx.fillStyle='#ffaaaa';ctx.fillText(`${contactLabel(t,lead?.telemetry)} · ${Math.round(t.range_m)}m`,Math.max(left,Math.min(x+11*pixelRatio,c.width-180*pixelRatio)),Math.max(y-12*pixelRatio,12*pixelRatio));
+  }
   for(const v of live){
     const t=v.telemetry,[x,y]=point(t.x,t.y),selected=v.id===selectedVehicle;
     const color=v.fault?'#fb8383':({UAV:'#63d8e3',USV:'#8fa9f7',SHIP:'#ead5a7'}[v.type]||'#fff');
@@ -63,11 +73,16 @@ function cameraOverlay(state){
       const a=sector*Math.PI/4;line(Array.from({length:31},(_,i)=>{const lat=i*Math.PI/60;return [m.hemisphere_radius*Math.cos(lat)*Math.cos(a),m.hemisphere_radius*Math.cos(lat)*Math.sin(a),m.hemisphere_center_height+m.hemisphere_radius*Math.sin(lat)];}),'#9ee9ff33');
     }
   }
-  ctx.font='12px system-ui';
+  ctx.font='bold 18px system-ui';
   for(const t of state.scene.situations||[]){
     if(t.source!=='scripted_contact')continue;const q=project(t.x-ship.x,t.y-ship.y,3);if(!q)continue;
-    ctx.strokeStyle='#e7ac67';ctx.fillStyle='#e7ac67';ctx.lineWidth=1.5;ctx.strokeRect(q[0]-10,q[1]-8,20,16);
-    ctx.fillText(`${t.track_id} · ${Math.round(t.range_m)}m`,Math.max(3,Math.min(q[0]+14,c.width-120)),Math.max(16,q[1]-10));
+    const selected=t.mission_id===state.mission?.id,r=selected?19:13;
+    ctx.strokeStyle='#ff7777';ctx.fillStyle='#ff77772a';ctx.lineWidth=selected?3:2;
+    ctx.beginPath();ctx.moveTo(q[0],q[1]-r);ctx.lineTo(q[0]+r,q[1]);ctx.lineTo(q[0],q[1]+r);ctx.lineTo(q[0]-r,q[1]);ctx.closePath();ctx.fill();ctx.stroke();
+    const label=contactLabel(t,ship),detail=`${Math.round(t.range_m)}m · ${(t.speed_mps*1.944).toFixed(1)}kn · 모의 접촉`,width=ctx.measureText(label).width+16;
+    const x=Math.max(4,Math.min(q[0]+r+8,c.width-width-4)),y=Math.max(4,Math.min(q[1]-26,c.height-52));
+    ctx.fillStyle='#08131fed';ctx.fillRect(x,y,width,50);ctx.fillStyle='#ffaaaa';ctx.font='bold 18px system-ui';ctx.fillText(label,x+8,y+20);
+    ctx.font='14px system-ui';ctx.fillStyle='#e7edf4';ctx.fillText(detail,x+8,y+40);ctx.font='bold 18px system-ui';
   }
   ctx.font='bold 13px system-ui';
   for(const v of state.vehicles){
