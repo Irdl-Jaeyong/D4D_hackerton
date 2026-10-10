@@ -66,3 +66,7 @@ header .jcc-brand{display:block;min-width:0;flex:1}
 header .jcc-logo{display:block;width:min(660px,100%);height:auto;aspect-ratio:1380/130;object-fit:contain;object-position:left center}
 header #health{flex-shrink:0;max-width:240px}
 @media(max-width:760px){header{flex-wrap:wrap}header .jcc-brand{flex-basis:100%}header .jcc-logo{width:min(560px,100%)}header #health{margin:4px 0;max-width:none}}
+
+.approval-queue-heading{display:flex;align-items:center;justify-content:space-between}.approval-queue{display:grid;gap:6px;max-height:260px;overflow:auto;margin-bottom:12px}.queue-item{display:flex;align-items:center;gap:10px;text-align:left;background:#102332;border:1px solid #355064;padding:10px}.queue-item small{margin-left:auto}.queue-item.selected{border-color:#5ed9e8;box-shadow:inset 3px 0 #5ed9e8}.priority-badge{display:inline-block;border-radius:5px;padding:4px 8px;font-weight:700}.priority-badge.P0{background:#92293e;color:#fff}.priority-badge.P1{background:#653321;color:#ffd4af}.priority-badge.P2{background:#554921;color:#ffe69a}.priority-badge.P3{background:#1b4765;color:#c5e9ff}.priority-badge.unknown{background:#3b4350;color:#ddd}#activeApproval{margin:8px 0}#refreshMission{margin-bottom:8px}
+
+.vehicle-table tr.vehicle-unavailable{background:#461b26;color:#ff8993;box-shadow:inset 3px 0 #ff334d}.vehicle-table tr.vehicle-unavailable:hover,.vehicle-table tr.vehicle-unavailable.selected{background:#682331}.vehicle-unavailable small,.fault-label{color:#ff7785!important}.vehicle-unavailable progress{accent-color:#ff334d}

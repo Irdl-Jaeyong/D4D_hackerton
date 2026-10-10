@@ -15,6 +15,7 @@ import time
 import os
 import urllib.request
 from formation_motion import Transition,targets
+from fault_motion import FaultMotion
 import subprocess
 from pathlib import Path
 
@@ -124,7 +125,7 @@ def pose_message(name,p):
 
 
 
-def poses(t, camera=None, history=None, formations=None):
+def poses(t, camera=None, history=None, formations=None, fault_motion=None, faults=None):
     fleet=fleet_poses(t,camera)
     fleet.pop('CIV-01',None)
     if formations:
@@ -147,6 +148,7 @@ def poses(t, camera=None, history=None, formations=None):
             yaw=previous[3]+fraction*delta
             wake=fleet[f'wake_{name}_{segment:02}']
             wake.update(x=x-2.5*math.cos(yaw),y=y-2.5*math.sin(yaw),yaw=yaw,z=-.04 if stamp>=samples[0][0] else -2)
+    if fault_motion is not None:fleet=fault_motion.apply(fleet,t,faults or set())
     return ' '.join('pose {'+pose_message(name,p)+'}' for name,p in fleet.items() if name!='fleet_observer' and not name.startswith('USV-'))
 
 
@@ -161,7 +163,7 @@ def main():
         def __init__(self):
             super().__init__('navis_convoy')
             self.origin=None;self.elapsed=None;self.last_sent=None;self.failures=0
-            self.clock_stamp=None
+            self.clock_stamp=None;self.fault_motion=FaultMotion();self.faults=set()
             self.selection={'usv':'circle','uav':'hemisphere','revision':0}
             initial=fleet_poses(0)
             self.planners={group:Transition([(initial[f'{kind}-{i+1:02}']['x'],initial[f'{kind}-{i+1:02}']['y'],initial[f'{kind}-{i+1:02}']['z']) for i in range(FLEET[key])],speed,accel) for group,kind,key,speed,accel in [('usv','USV','usvs',3,1),('uav','UAV','uavs',10,4)]}
@@ -200,6 +202,7 @@ def main():
                         if selection[group]!=self.selection[group]:
                             self.planners[group].assignment=None;self.initial_error.pop(group,None)
                     self.selection=selection
+                    self.faults=selection.get("fault_modes",{id:"propulsion" for id in selection.get("simulated_faults",[])})
                 except (OSError,ValueError,KeyError):pass
             dt=min(.25,max(0,t-(self.planner_time if self.planner_time is not None else t)))
             self.planner_time=t
@@ -218,8 +221,16 @@ def main():
                         if history:
                             goal=goals[planner.assignment[i]]
                             error=max(error,math.hypot(history[-1][1]-MOTION['ship_speed']*t-goal[0],history[-1][2]-goal[1]))
+                blocked=any(id.startswith('UAV-') for id in self.faults) if group=='uav' else any(id.startswith('USV-') for id in self.faults)
+                recovering=bool(self.fault_motion.recovering or self.fault_motion.held) if group=='uav' else False
+                if group=='uav':
+                    for i in range(FLEET['uavs']):
+                        name=f'UAV-{i+1:02}';actual=self.fault_motion.last.get(name)
+                        if actual:
+                            goal=goals[planner.assignment[i]]
+                            error=max(error,math.dist((actual['x']-MOTION['ship_speed']*t,actual['y'],actual['z']),goal))
                 tolerance=10 if mode=='hemisphere' else 8 if mode=='circle' else 3
-                self.formation_status[group]={'mode':mode,'moving':error>tolerance,'remaining_m':round(error,1),'progress':round(max(0,min(100,100*(1-error/self.initial_error[group]))))}
+                self.formation_status[group]={'mode':mode,'moving':blocked or recovering or error>tolerance,'blocked':blocked,'recovering':recovering,'remaining_m':round(error,1),'progress':round(max(0,min(100,100*(1-error/self.initial_error[group]))))}
             if now-self.checked<.05:
                 try:
                     data=json.dumps(self.formation_status).encode()
@@ -227,7 +238,7 @@ def main():
                     with urllib.request.urlopen(req,timeout=.2) as response:response.read()
                 except (OSError,ValueError):pass
             try:
-                response=subprocess.run(['ign','service','-s','/world/navis_prep/set_pose_vector','--reqtype','ignition.msgs.Pose_V','--reptype','ignition.msgs.Boolean','--timeout','1200','--req',poses(t,history=self.physical_history,formations=points)],capture_output=True,text=True,timeout=1.5)
+                response=subprocess.run(['ign','service','-s','/world/navis_prep/set_pose_vector','--reqtype','ignition.msgs.Pose_V','--reptype','ignition.msgs.Boolean','--timeout','1200','--req',poses(t,history=self.physical_history,formations=points,fault_motion=self.fault_motion,faults=self.faults)],capture_output=True,text=True,timeout=1.5)
                 if response.returncode or 'true' not in response.stdout:
                     self.failures+=1
                     if self.failures%10==1:self.get_logger().warning('Pose update failed: '+response.stderr[:160])

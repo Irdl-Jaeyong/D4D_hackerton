@@ -29,7 +29,8 @@ def poses(snapshot,last_positions):
  cr,sr=math.cos(roll/2),math.sin(roll/2);cy,sy=math.cos(yaw/2),math.sin(yaw/2)
  result=[]
  for v in snapshot['vehicles']:
-  if v['connected'] and v['telemetry']:last_positions[v['id']]=v['telemetry']
+  if v.get('simulation_pose'):last_positions[v['id']]=v['simulation_pose']
+  elif v['connected'] and v['telemetry']:last_positions[v['id']]=v['telemetry']
   p=last_positions.get(v['id']);state=v['readiness']['operational_state']
   for key in STATES:
    active=key==state and p is not None

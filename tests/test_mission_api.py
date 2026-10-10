@@ -7,7 +7,7 @@ from fastapi import HTTPException
 
 class MissionAPI(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        api.mission=None;api.mission_counter=0;api.latest.clear();api.battery_origin.clear();api.simulated_faults.clear()
+        api.mission=None;api.mission_counter=0;api.missions.clear();api.latest.clear();api.battery_origin.clear();api.simulated_faults.clear()
         api.formation.update(usv='circle',uav='hemisphere',revision=0)
         for id in ['SHIP-01','UAV-01','UAV-02','USV-01']:
             api.latest[id]={'x':0,'y':0,'z':0,'sim_time':0,'received_at':time.time()}
@@ -20,7 +20,7 @@ class MissionAPI(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(HTTPException):
             await api.approve_plan(api.ApprovalRequest(mission_id=m['id'],option_id='verify'))
         self.assertEqual(api.formation['revision'],0)
-        self.assertIsNone(api.mission['approved'])
+        self.assertIsNone(m['approved'])
 
     async def test_text_approval_is_exact_and_recorded(self):
         m=await self.scenario()
@@ -38,17 +38,17 @@ class MissionAPI(unittest.IsolatedAsyncioTestCase):
             await api.set_formation(api.FormationRequest(group='usv',mode='v'))
         self.assertEqual(e.exception.status_code,409)
         await api.cancel_plan();self.assertEqual(api.formation['usv'],'columns')
-    async def test_expired_or_replaced_card_cannot_be_approved(self):
-        m=await self.scenario();id=m['id'];await self.scenario()
-        with self.assertRaises(HTTPException):await self.approve(id)
-        api.mission['created_at']-=61
-        with self.assertRaises(HTTPException):await self.approve(api.mission['id'])
-        self.assertIsNone(api.mission['approved'])
+    async def test_expired_card_cannot_be_approved(self):
+        m=await self.scenario();await self.scenario()
+        self.assertEqual(len(api.state()['approval_queue']),2)
+        m['planned_at']-=61
+        with self.assertRaises(HTTPException):await self.approve(m['id'])
+        self.assertIsNone(m['approved'])
     async def test_offline_candidate_rejected_on_approval(self):
         m=await self.scenario();task=m['options'][1]['tasks'][0]
         api.latest[task['vehicle']]['received_at']-=10
         with self.assertRaises(HTTPException):await self.approve(m['id'])
-        self.assertIsNone(api.mission['approved'])
+        self.assertIsNone(m['approved'])
     async def test_simulated_fault_excluded_and_recovers(self):
         await api.set_simulated_fault('USV-01',api.FaultRequest(unavailable=True))
         v=next(v for v in api.state()['vehicles'] if v['id']=='USV-01')

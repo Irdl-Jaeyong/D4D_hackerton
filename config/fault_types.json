@@ -1,0 +1,5 @@
+{
+ "payload": {"label":"임무 장비 고장","S":3,"U":3,"A":3,"uav_behavior":"비행 제어 유지 · 함선 후방 복귀 경로 시연","usv_behavior":"추진 유지 · 임무 제외"},
+ "propulsion": {"label":"추진계 고장","S":5,"U":5,"A":5,"uav_behavior":"호버링 불가 · 수면까지 비상 하강 경로 시연","usv_behavior":"추진 차단 · 관성/부력에 따른 표류"},
+ "communication": {"label":"통신 두절","S":4,"U":4,"A":4,"uav_behavior":"2초 대기 후 설정된 복귀 경로 시연 · 마지막 관측 표시","usv_behavior":"설정된 대기 모드 · 추진 차단 / 실제 상태 확인 불가"}
+}

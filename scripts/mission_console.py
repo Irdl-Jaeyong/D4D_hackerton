@@ -1,6 +1,7 @@
 """Non-combat briefing plans; battery and endurance are simulated, not sensed."""
 import math
 SCENARIOS={
+ 'fault':{'title':'기체 고장 발생','summary':'가상 기체 고장이 발생해 임무 수행이 중단되었습니다.','offset':[0,0],'unknown':'시뮬레이션 고장 이벤트이며 실제 하드웨어 고장 감지가 아닙니다.'},
  'crossing':{'title':'접근 선박 확인','summary':'우현 전방의 가상 선박이 접근 중입니다. 의도와 충돌 여부는 미확인입니다.','offset':[110,-90],'unknown':'실제 센서 탐지·충돌 예측은 연결되지 않았습니다.'},
  'debris':{'title':'항로 장애물 확인','summary':'전방에 가상 부유물이 보고되었습니다. 위치 확인이 필요합니다.','offset':[140,30],'unknown':'장애물 형상과 안전 우회 경로는 미검증입니다.'},
  'rescue':{'title':'해상 구조 지원','summary':'좌현에 가상 익수자 신고가 접수되었습니다. 추가 관측이 필요합니다.','offset':[50,100],'unknown':'실제 익수자 인식·구조 장비는 연결되지 않았습니다.'}}
@@ -18,10 +19,10 @@ def readiness(vehicle,elapsed_seconds=0):
             'task':'담당 위치 유지' if kind!='SHIP' else '함선 직진',
             'operational_state':'unavailable' if not vehicle['connected'] or kind!='SHIP' and not available else 'waiting' if kind=='UAV' else 'defending'}
 
-def options(vehicles,formation,scenario):
+def options(vehicles,formation,scenario,target_position=None):
     leader=next((v for v in vehicles if v['type']=='SHIP' and v['connected']),None)
     if not leader:return []
-    offset=SCENARIOS[scenario]['offset'];target=(leader['telemetry']['x']+offset[0],leader['telemetry']['y']+offset[1])
+    offset=SCENARIOS[scenario]['offset'];target=target_position or (leader['telemetry']['x']+offset[0],leader['telemetry']['y']+offset[1])
     def rank(kind):
         result=[]
         for v in vehicles:

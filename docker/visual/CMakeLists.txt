@@ -9,3 +9,6 @@ add_library(NavisWaveVisual SHARED vrx/WaveVisual.cc vrx/Wavefield.cc)
 target_link_libraries(NavisWaveVisual PRIVATE ignition-gazebo6::core ignition-plugin1::ignition-plugin1 ignition-rendering6::ignition-rendering6 Eigen3::Eigen)
 add_library(NavisMaritimeEscort SHARED MaritimeEscort.cc vrx/Wavefield.cc)
 target_link_libraries(NavisMaritimeEscort PRIVATE ignition-gazebo6::core ignition-plugin1::ignition-plugin1 Eigen3::Eigen)
+
+add_executable(NavisFaultPublisher FaultPublisher.cc)
+target_link_libraries(NavisFaultPublisher PRIVATE ignition-gazebo6::core)
