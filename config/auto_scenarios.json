@@ -12,7 +12,12 @@
     "patrol_contact",
     "fast_approach",
     "multi_approach",
-    "rear_approach"
+    "rear_approach",
+    "air_intrusion",
+    "combined_intrusion",
+    "suspicious_float",
+    "communication_interference",
+    "underwater_contact"
   ],
   "fault_types": [
     "payload",

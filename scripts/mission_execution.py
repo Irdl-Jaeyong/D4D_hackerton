@@ -15,7 +15,7 @@ class ObservationRun:
                                        'dwell_started':None,'distance_m':0.,'last_position':None,'completed_at':None}
             if self.defense:
                 task_data=self.tasks[name];task_data.update(role=task.get('role','screen' if marine else 'track'),contact_index=task.get('contact_index',0),role_slot=task.get('role_slot',0))
-                contact=initial_contacts[min(task_data['contact_index'],len(initial_contacts)-1)];task_data['target']=defense_goal('USV' if marine else 'UAV',(leader_x,0),(contact['x'],contact['y']),task_data['role_slot'])
+                contact=initial_contacts[min(task_data['contact_index'],len(initial_contacts)-1)];task_data['target']=defense_goal('USV' if marine else 'UAV',(leader_x,0),(contact['x'],contact['y']),task_data['role_slot'],contact.get('contact_type','surface'))
     def step(self,t,leader_x,homes,observations,available,cancel=False,target_world=None,contacts=None):
         self.cancelled=self.cancelled or cancel;overrides={}
         for id,task in self.tasks.items():
@@ -33,7 +33,7 @@ class ObservationRun:
                 continue
             if self.defense and contacts:
                 contact=contacts[min(task['contact_index'],len(contacts)-1)]
-                task['target']=defense_goal('USV' if id.startswith('USV') else 'UAV',(leader_x,0),(contact['x'],contact['y']),task['role_slot'])
+                task['target']=defense_goal('USV' if id.startswith('USV') else 'UAV',(leader_x,0),(contact['x'],contact['y']),task['role_slot'],contact.get('contact_type','surface'))
             elif target_world is not None:task['target']=(target_world[0]+task['offset'][0],target_world[1]+task['offset'][1],task['target'][2])
             target=task['target']
             if task['stage']=='outbound' and math.dist(p,target)<task['arrival_m']:

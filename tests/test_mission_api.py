@@ -45,6 +45,32 @@ class MissionAPI(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(api.formation,{'usv':'circle','uav':'hemisphere','revision':0})
         self.assertEqual(api.state()['scene']['situations'],[])
 
+    async def test_interference_affects_healthy_units_and_cancel_restores_links(self):
+        m=await api.start_scenario(api.ScenarioRequest(scenario='communication_interference'))
+        self.assertEqual(set(m['affected_vehicles']),{'UAV-01','USV-01'})
+        s=api.state()
+        for v in s['vehicles']:
+            if v['id'] in m['affected_vehicles']:self.assertFalse(v['connected'])
+        await api.refresh_plan(m['id'])
+        self.assertEqual(api.simulated_faults,{'UAV-01','USV-01'})
+        await api.cancel_plan(api.CancelRequest(mission_id=m['id']))
+        self.assertFalse(api.simulated_faults)
+        self.assertTrue(next(v for v in api.state()['vehicles'] if v['id']=='UAV-01')['connected'])
+
+    async def test_interference_cancel_does_not_release_a_new_operator_fault(self):
+        m=await api.start_scenario(api.ScenarioRequest(scenario='communication_interference'))
+        await api.set_simulated_fault('UAV-01',api.FaultRequest(unavailable=True,fault_type='communication'))
+        await api.cancel_plan(api.CancelRequest(mission_id=m['id']))
+        self.assertIn('UAV-01',api.simulated_faults);self.assertNotIn('USV-01',api.simulated_faults)
+
+    async def test_new_scenario_api_preserves_manual_formation_and_render_types(self):
+        expected={'air_intrusion':['air'],'combined_intrusion':['air','surface'],'suspicious_float':['floating'],'underwater_contact':['underwater']}
+        for kind,types in expected.items():
+            m=await api.start_scenario(api.ScenarioRequest(scenario=kind))
+            self.assertEqual([t['contact_type'] for t in m['threats']],types)
+            self.assertEqual(api.formation['usv'],'circle');self.assertEqual(api.formation['uav'],'hemisphere')
+            self.assertIsNone(api.mission)
+
     async def test_missing_human_confirmation_does_not_execute(self):
         m=await self.scenario()
         with self.assertRaises(HTTPException):

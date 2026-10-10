@@ -1,6 +1,178 @@
 {
-  "patrol_contact": {"title":"주변 미식별 선박 접촉","summary":"좌현 외곽에서 미식별 선박이 보호 구역으로 접근합니다. 공중 관측과 수상 경계를 분리해 운용합니다.","bearing_degrees":[40],"initial_range_m":260,"standoff_m":185,"closing_speed_mps":0.8,"formations":{"usv":"circle","uav":"rings"},"S":4,"U":3,"A":3},
-  "fast_approach": {"title":"전방 고속 소형정 접근","summary":"전방 소형정이 빠르게 접근합니다. 드론은 접촉을 추적하고 USV는 전방 경계선을 유지합니다.","bearing_degrees":[0],"initial_range_m":285,"standoff_m":175,"closing_speed_mps":4,"formations":{"usv":"fan","uav":"triangle"},"S":5,"U":4,"A":4},
-  "multi_approach": {"title":"양측 동시 접근","summary":"좌현과 우현에서 서로 다른 선박이 동시에 접근합니다. 관측 기체와 경계 USV를 양측에 나눠 배치합니다.","bearing_degrees":[72,-72],"initial_range_m":270,"standoff_m":185,"closing_speed_mps":2,"formations":{"usv":"columns","uav":"box"},"S":5,"U":4,"A":4},
-  "rear_approach": {"title":"후방 추적 선박 접근","summary":"후방 선박이 함선을 따라오며 간격을 좁힙니다. 공중 후방 관측과 수상 후방 경계를 유지합니다.","bearing_degrees":[180],"initial_range_m":260,"standoff_m":180,"closing_speed_mps":2.4,"formations":{"usv":"v","uav":"v"},"S":4,"U":4,"A":3}
+  "patrol_contact": {
+    "title": "주변 미식별 선박 접촉",
+    "summary": "좌현 외곽에서 미식별 선박이 보호 구역으로 접근합니다. 공중 관측과 수상 경계를 분리해 운용합니다.",
+    "bearing_degrees": [
+      40
+    ],
+    "initial_range_m": 260,
+    "standoff_m": 185,
+    "closing_speed_mps": 0.8,
+    "formations": {
+      "usv": "circle",
+      "uav": "rings"
+    },
+    "S": 4,
+    "U": 3,
+    "A": 3
+  },
+  "fast_approach": {
+    "title": "전방 고속 소형정 접근",
+    "summary": "전방 소형정이 빠르게 접근합니다. 드론은 접촉을 추적하고 USV는 전방 경계선을 유지합니다.",
+    "bearing_degrees": [
+      0
+    ],
+    "initial_range_m": 285,
+    "standoff_m": 175,
+    "closing_speed_mps": 4,
+    "formations": {
+      "usv": "fan",
+      "uav": "triangle"
+    },
+    "S": 5,
+    "U": 4,
+    "A": 4
+  },
+  "multi_approach": {
+    "title": "양측 동시 접근",
+    "summary": "좌현과 우현에서 서로 다른 선박이 동시에 접근합니다. 관측 기체와 경계 USV를 양측에 나눠 배치합니다.",
+    "bearing_degrees": [
+      72,
+      -72
+    ],
+    "initial_range_m": 270,
+    "standoff_m": 185,
+    "closing_speed_mps": 2,
+    "formations": {
+      "usv": "columns",
+      "uav": "box"
+    },
+    "S": 5,
+    "U": 4,
+    "A": 4
+  },
+  "rear_approach": {
+    "title": "후방 추적 선박 접근",
+    "summary": "후방 선박이 함선을 따라오며 간격을 좁힙니다. 공중 후방 관측과 수상 후방 경계를 유지합니다.",
+    "bearing_degrees": [
+      180
+    ],
+    "initial_range_m": 260,
+    "standoff_m": 180,
+    "closing_speed_mps": 2.4,
+    "formations": {
+      "usv": "v",
+      "uav": "v"
+    },
+    "S": 4,
+    "U": 4,
+    "A": 3
+  },
+  "air_intrusion": {
+    "title": "미식별 드론 접근",
+    "summary": "전방 공역에 미식별 드론이 접근합니다. 공중 관측을 강화하고 USV는 수상 경계를 유지합니다.",
+    "bearing_degrees": [
+      20
+    ],
+    "contact_types": [
+      "air"
+    ],
+    "initial_range_m": 270,
+    "standoff_m": 185,
+    "closing_speed_mps": 2,
+    "formations": {
+      "usv": "circle",
+      "uav": "rings"
+    },
+    "S": 4,
+    "U": 4,
+    "A": 3,
+    "unknown": "모의 상황입니다. 실제 탐지·적대 의도·위험 물질은 확인되지 않았습니다."
+  },
+  "combined_intrusion": {
+    "title": "공중·해상 동시 접근",
+    "summary": "미식별 드론과 소형정이 서로 다른 방향에서 접근합니다. 공중 관측과 수상 경계를 나눠 운용합니다.",
+    "bearing_degrees": [
+      35,
+      -65
+    ],
+    "contact_types": [
+      "air",
+      "surface"
+    ],
+    "initial_range_m": 270,
+    "standoff_m": 185,
+    "closing_speed_mps": 2,
+    "formations": {
+      "usv": "fan",
+      "uav": "box"
+    },
+    "S": 5,
+    "U": 4,
+    "A": 4,
+    "unknown": "모의 상황입니다. 실제 탐지·적대 의도·위험 물질은 확인되지 않았습니다."
+  },
+  "suspicious_float": {
+    "title": "미식별 부유물 유입",
+    "summary": "정체를 확인하지 못한 부유물이 보호 구역으로 유입됩니다. 드론 관측과 USV의 거리 유지·확인이 필요합니다.",
+    "bearing_degrees": [
+      -25
+    ],
+    "contact_types": [
+      "floating"
+    ],
+    "initial_range_m": 270,
+    "standoff_m": 185,
+    "closing_speed_mps": 2,
+    "formations": {
+      "usv": "fan",
+      "uav": "triangle"
+    },
+    "S": 4,
+    "U": 3,
+    "A": 3,
+    "unknown": "모의 상황입니다. 실제 탐지·적대 의도·위험 물질은 확인되지 않았습니다."
+  },
+  "communication_interference": {
+    "title": "통신 교란 의심",
+    "summary": "모의 교란 구역에서 가용 UAV·USV 각 최대 1대의 통신이 지연됩니다. 정상 기체로 관측 공백을 보완합니다.",
+    "bearing_degrees": [
+      100
+    ],
+    "contact_types": [
+      "interference"
+    ],
+    "initial_range_m": 270,
+    "standoff_m": 185,
+    "closing_speed_mps": 2,
+    "formations": {
+      "usv": "circle",
+      "uav": "rings"
+    },
+    "S": 4,
+    "U": 4,
+    "A": 4,
+    "unknown": "교란 구역은 시나리오 표시입니다. 실제 전파 측정·발신원 추정은 연결되지 않았습니다."
+  },
+  "underwater_contact": {
+    "title": "수중 접촉 의심",
+    "summary": "모의 수중 접촉 추정 구역입니다. 드론은 수면 징후를 관측하고 USV는 수중 센서 탑재를 가정해 구역을 확인합니다.",
+    "bearing_degrees": [
+      -90
+    ],
+    "contact_types": [
+      "underwater"
+    ],
+    "initial_range_m": 270,
+    "standoff_m": 185,
+    "closing_speed_mps": 2,
+    "formations": {
+      "usv": "columns",
+      "uav": "rings"
+    },
+    "S": 4,
+    "U": 3,
+    "A": 4,
+    "unknown": "모의 수중 접촉과 추정 구역입니다. 실제 소나·수중 센서·표적 분류는 연결되지 않았습니다."
+  }
 }

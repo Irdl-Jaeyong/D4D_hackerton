@@ -2,7 +2,7 @@
 from pathlib import Path
 import math
 ROOT=Path(__file__).resolve().parents[1]/'ros_ws/src/navis_sim/models/defense_contact/meshes'
-COLORS={'hull':(.24,.28,.3),'deck':(.32,.35,.35),'collar':(.045,.052,.055),'cabin':(.57,.61,.6),'glass':(.055,.13,.17),'canopy':(.43,.47,.48)}
+COLORS={'hull':(.24,.28,.3),'deck':(.32,.35,.35),'collar':(.045,.052,.055),'cabin':(.57,.61,.6),'glass':(.055,.13,.17),'canopy':(.43,.47,.48),'airframe':(.18,.22,.25)}
 def save(name,vertices,faces):
     # Explicit OBJ normals and materials prevent unlit white fallback meshes.
     triangles=[(f[0],f[i],f[i+1]) for f in faces for i in range(1,len(f)-1)]
@@ -46,4 +46,8 @@ def build():
     save('cabin',v,[(0,2,6,4),(1,5,7,3),(0,4,5,1),(4,6,7,5)])
     save('glass',v,[(2,3,7,6)])
     v=[(-1.85,-.92,2.65),(-1.85,.92,2.65),(1.0,-.88,2.42),(1.0,.88,2.42)];save('canopy',v,[(0,2,3,1)])
+    # Original tapered fixed-wing shell, 5 m wingspan, no armament.
+    v=[(.6,-.45,.08),(-.45,-2.5,.02),(-.9,-2.5,.02),(-.6,-.45,.08),(.6,.45,.08),(-.45,2.5,.02),(-.9,2.5,.02),(-.6,.45,.08)]
+    v += [(x,y,z-.13) for x,y,z in list(v)]
+    save('airframe',v,[(0,3,2,1),(4,5,6,7),(8,9,10,11),(12,15,14,13),(0,1,9,8),(1,2,10,9),(2,3,11,10),(4,12,13,5),(5,13,14,6),(6,14,15,7)])
 if __name__=='__main__':build()

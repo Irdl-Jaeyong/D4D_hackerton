@@ -24,7 +24,7 @@ class ScenarioGenerator:
         assigned={t['vehicle'] for t in (active or {}).get('approved',{}).get('tasks',[])}
         healthy=[v['id'] for v in state['vehicles'] if v['type'] in ('UAV','USV') and v['connected'] and not v.get('fault') and v.get('readiness',{}).get('available') and v['id'] not in assigned]
         can_fault=healthy and sum(bool(v.get('fault')) for v in state['vehicles'])<self.config['max_faulted_vehicles']
-        choices=[k for k in self.config['scenarios'] if counts[k]<self.config['max_per_scenario'] and (k!='fault' or can_fault)]
+        choices=[k for k in self.config['scenarios'] if counts[k]<self.config['max_per_scenario'] and (k not in ('fault','communication_interference') or can_fault)]
         if not choices:return None
         kind=self.rng.choice(choices);request={'scenario':kind}
         if kind=='fault':request.update(vehicle_id=self.rng.choice(healthy),fault_type=self.rng.choice(self.config['fault_types']))

@@ -61,6 +61,7 @@ def model_sdf(target):
     return f'<sdf version="1.8"><model name="{name}"><static>true</static><pose>{target["x"]} {target["y"]} {target["z"]} 0 0 {target["yaw"]}</pose><link name="object">'+''.join(pieces)+'</link></model></sdf>'
 
 def defense_model_sdf(t):
+    if t.get('contact_type','surface')!='surface':return domain_model_sdf(t)
     scale=t.get('scale',1);parts=[]
     def visual(name,geometry,pose,color,glow=False):
         roughness=.16 if name=='glass' else .9 if name=='collar' or name.startswith('seat') else .55
@@ -82,3 +83,32 @@ def defense_model_sdf(t):
     for side in [-1,1]:
         visual('wake_'+str(side),f'<mesh><uri>model://navis_ocean/meshes/usv_foam.obj</uri><scale>{max(.7,min(1.5,t.get("speed_mps",1.5)/2))} 1.1 1</scale></mesh>',f'-5 {side*.85} .06 0 0 {side*.12}','.83 .9 .9 .38')
     return f'<sdf version="1.8"><model name="{escape(t["name"])}"><static>true</static><pose>{t["x"]} {t["y"]} {t["z"]} {t.get("roll",0)} {t.get("pitch",0)} {t["yaw"]}</pose><link name="hull">'+''.join(parts)+'</link></model></sdf>'
+
+def domain_model_sdf(t):
+    """Visual contacts and explicitly synthetic area overlays; no sensor claims."""
+    parts=[];kind=t['contact_type']
+    def visual(name,geometry,pose,color):
+        parts.append(f'<visual name="{name}"><pose>{pose}</pose><geometry>{geometry}</geometry><material><ambient>{color}</ambient><diffuse>{color}</diffuse><specular>.18 .2 .22 1</specular></material><cast_shadows>true</cast_shadows></visual>')
+    def box(name,size,pose,color):visual(name,f'<box><size>{size}</size></box>',pose,color)
+    def cylinder(name,r,length,pose,color):visual(name,f'<cylinder><radius>{r}</radius><length>{length}</length></cylinder>',pose,color)
+    if kind=='air':
+        visual('airframe','<mesh><uri>model://defense_contact/meshes/airframe.obj</uri></mesh>','0 0 0 0 0 0','.18 .22 .25 1')
+        cylinder('fuselage',.16,2.7,'0 0 0 0 1.5708 0','.21 .25 .28 1')
+        box('tailplane','.5 1.4 .07','-1.2 0 .15 0 0 0','.2 .23 .25 1')
+        box('fin','.45 .08 .6','-1.2 0 .4 0 0 0','.2 .23 .25 1')
+        cylinder('propeller_disk',.3,.025,'1.4 0 0 0 1.5708 0','.1 .12 .15 .22')
+        visual('camera','<sphere><radius>.12</radius></sphere>','.7 0 -.2 0 0 0','.04 .06 .07 1')
+    elif kind=='floating':
+        box('floating_crate','4 2.8 1.1','0 0 .2 0 .07 .12','.22 .16 .09 1')
+        for x in [-1.4,1.4]:box(f'crate_band_{x}','.13 2.9 1.2',f'{x} 0 .2 0 .07 .12','.1 .12 .13 1')
+        cylinder('floating_drum',.5,1.5,'3.3 1.7 .05 0 1.4 .6','.22 .27 .25 1')
+    elif kind=='underwater':
+        cylinder('submerged_body',.7,6,'0 0 0 0 1.5708 0','.12 .16 .18 1')
+        # Surface ring denotes a assumed region, not a visible underwater target.
+        for i in range(16):
+            a=i*2*math.pi/16;box(f'uncertainty_{i}','1.8 .16 .035',f'{12*math.cos(a)} {12*math.sin(a)} 8.4 0 0 {a+math.pi/2}','.2 .7 .78 .65')
+    elif kind=='interference':
+        # A tactical area cue, not a physical jammer or measured RF source.
+        for i in range(24):
+            a=i*2*math.pi/24;box(f'zone_{i}','4 .2 .04',f'{32*math.cos(a)} {32*math.sin(a)} .4 0 0 {a+math.pi/2}','.82 .61 .27 .55')
+    return f'<sdf version="1.8"><model name="{escape(t["name"])}"><static>true</static><pose>{t["x"]} {t["y"]} {t["z"]} {t.get("roll",0)} {t.get("pitch",0)} {t["yaw"]}</pose><link name="contact">'+''.join(parts)+'</link></model></sdf>'

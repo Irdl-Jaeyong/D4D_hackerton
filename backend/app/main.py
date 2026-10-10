@@ -70,6 +70,7 @@ simulated_faults=set()
 automatic_returns=set()
 fault_status={}
 fault_kinds={}
+interference_owner={} # per-vehicle owning scenario; unrelated faults are never cleared
 fault_last_known={}
 FAULT_TYPES=json.loads((ROOT/"config/fault_types.json").read_text())
 charge_credit={}
@@ -254,7 +255,7 @@ async def report_formations(data: dict,x_bridge_token: str=Header(default='')):
 
 
 class ScenarioRequest(BaseModel):
-    scenario: Literal['crossing','debris','rescue','fault','patrol_contact','fast_approach','multi_approach','rear_approach']
+    scenario: Literal['crossing','debris','rescue','fault','patrol_contact','fast_approach','multi_approach','rear_approach','air_intrusion','combined_intrusion','suspicious_float','communication_interference','underwater_contact']
     vehicle_id: str | None = None
     fault_type: Literal['payload','propulsion','communication'] = 'propulsion'
 class ApprovalRequest(BaseModel):
@@ -289,6 +290,15 @@ async def start_scenario(data: ScenarioRequest,preserve_camera: bool=False):
           'execution_scope':'운용자 대형 선택으로 직접 대응합니다. 대응안 선택 시 지속 추적·경계도 실행할 수 있습니다.' if data.scenario in DEFENSE_SCENARIOS else '선택 시 대형 변경과 UAV·USV 출동·확인·복귀를 실행합니다.'}
     if data.scenario=='fault':item.update(vehicle_id=data.vehicle_id,fault_type=data.fault_type)
     missions[item['id']]=item
+    if data.scenario=='communication_interference':
+        item['affected_vehicles']=[]
+        candidates=state()['vehicles']
+        limit=json.loads((ROOT/'config/auto_scenarios.json').read_text())['max_faulted_vehicles']
+        for kind in ('UAV','USV'):
+            if len(simulated_faults)>=limit:break
+            v=next((v for v in candidates if v['type']==kind and v['readiness']['available'] and not v.get('fault')),None)
+            if v:
+                await set_simulated_fault(v['id'],FaultRequest(unavailable=True,fault_type='communication'));item['affected_vehicles'].append(v['id']);interference_owner[v['id']]=item['id']
     snapshot=state();item['options']=pending_plans(item,snapshot['vehicles'])
     return item
 
@@ -356,6 +366,8 @@ async def cancel_plan(data: CancelRequest | None = None):
     id=data.mission_id if data and data.mission_id is not None else (mission or next(iter(sorted((m for m in missions.values() if not m.get('approved')),key=sort_key)),{})).get('id')
     item=missions.get(id)
     if not item:raise HTTPException(404,'상황을 찾을 수 없습니다.')
+    for vehicle_id in item.get('affected_vehicles',[]):
+        if interference_owner.get(vehicle_id)==item['id'] and fault_kinds.get(vehicle_id)=='communication':await set_simulated_fault(vehicle_id,FaultRequest(unavailable=False))
     if item.get('approved') and item.get('execution',{}).get('status') not in ('completed','cancelled'):
         if item['scenario'] in DEFENSE_SCENARIOS and not item.get('cancel_requested') and not item.get('manual_takeover'):
             for group,mode in item.get('prior_formations',{}).items():
@@ -399,6 +411,7 @@ class FaultRequest(BaseModel):
 @app.post('/api/vehicles/{vehicle_id}/simulated-fault')
 async def set_simulated_fault(vehicle_id: str,data: FaultRequest):
     if vehicle_id not in IDS or vehicle_id.startswith('SHIP'):raise HTTPException(422,'지원 기체를 선택하세요.')
+    interference_owner.pop(vehicle_id,None)
     if data.unavailable:
         simulated_faults.add(vehicle_id);automatic_returns.discard(vehicle_id);fault_kinds[vehicle_id]=data.fault_type
         fault_last_known[vehicle_id]=dict(latest[vehicle_id]) if vehicle_id in latest else None
@@ -579,7 +592,7 @@ def restore_console():
         mission_counter=max(saved.get('mission_counter',0),max(missions,default=0))
         simulated_faults.update(id for id in saved.get('faults',[]) if id in IDS)
         battery_origin.update(saved.get('battery_origin',{}))
-        fault_kinds.update(saved.get('fault_kinds',{}));automatic_returns.update(saved.get('automatic_returns',set(saved.get('faults',[]))-set(saved.get('fault_kinds',{}))));fault_last_known.update(saved.get('fault_last_known',{}))
+        interference_owner.update(saved.get('interference_owner',{}));fault_kinds.update(saved.get('fault_kinds',{}));automatic_returns.update(saved.get('automatic_returns',set(saved.get('faults',[]))-set(saved.get('fault_kinds',{}))));fault_last_known.update(saved.get('fault_last_known',{}))
         fault_status.update(saved.get('fault_status',{}));charge_credit.update(saved.get('charge_credit',{}))
     except (OSError,ValueError,KeyError,TypeError):pass
 
@@ -589,12 +602,12 @@ def reset_demo_session():
     mission=None;missions.clear()
     formation.clear();formation.update(usv='circle',uav='hemisphere',revision=0)
     formation_status.clear();camera_view='wide'
-    for data in (simulated_faults,automatic_returns,fault_kinds,fault_status,fault_last_known,battery_origin,charge_credit):data.clear()
+    for data in (simulated_faults,automatic_returns,fault_kinds,fault_status,fault_last_known,battery_origin,charge_credit,interference_owner):data.clear()
     risk_cache['evaluated_at']=0
 
 def save_console():
     CONSOLE_SNAPSHOT.parent.mkdir(exist_ok=True)
-    data={'formation':formation,'mission':mission,'missions':list(missions.values()),'mission_counter':mission_counter,'faults':list(simulated_faults),'automatic_returns':list(automatic_returns),'battery_origin':battery_origin,'fault_status':fault_status,'charge_credit':charge_credit,'fault_kinds':fault_kinds,'fault_last_known':fault_last_known}
+    data={'formation':formation,'mission':mission,'missions':list(missions.values()),'mission_counter':mission_counter,'faults':list(simulated_faults),'automatic_returns':list(automatic_returns),'battery_origin':battery_origin,'fault_status':fault_status,'charge_credit':charge_credit,'fault_kinds':fault_kinds,'fault_last_known':fault_last_known,'interference_owner':interference_owner}
     temp=CONSOLE_SNAPSHOT.with_suffix('.tmp');temp.write_text(json.dumps(data,ensure_ascii=False));temp.replace(CONSOLE_SNAPSHOT)
 
 app.mount('/', StaticFiles(directory=ROOT/'frontend', html=True), name='frontend')

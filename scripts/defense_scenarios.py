@@ -13,22 +13,24 @@ def contacts(m,sim_time):
             a=math.radians(bearing)+.025*math.sin(.035*t+i)+slot*.075
             x=1.5*t+radius*math.cos(a);y=radius*math.sin(a)
             return o['x']+c*x-s*y,o['y']+s*x+c*y
+        contact_type=profile.get('contact_types',['surface']*len(profile['bearing_degrees']))[i]
+        altitude=95+12*math.sin(elapsed*.08+i) if contact_type=='air' else -8 if contact_type=='underwater' else .08*math.sin(elapsed*1.1+i)
         x,y=position(elapsed);xx,yy=position(elapsed+.1);heading=math.atan2(yy-y,xx-x)
         ship=(o['x']+c*1.5*elapsed,o['y']+s*1.5*elapsed)
         out.append({'mission_id':m['id'],'contact_index':i,'name':f"situation_{m['id']}"+(f'_{i}' if i else ''),'scenario':m['scenario'],
-          'priority':m.get('risk',{}).get('priority'),'x':x,'y':y,'z':.08*math.sin(elapsed*1.1+i),
+          'priority':m.get('risk',{}).get('priority'),'x':x,'y':y,'z':altitude,'contact_type':contact_type,'display_name':{'surface':'외부 선박','air':'미식별 드론','floating':'의심 부유물','interference':'통신 교란 구역','underwater':'수중 접촉 추정'}[contact_type],
           'roll':.012*math.sin(elapsed*.8+i),'pitch':.008*math.cos(elapsed*1.3+i),'yaw':heading,
           'range_m':round(math.hypot(x-ship[0],y-ship[1]),1),'speed_mps':round(math.hypot(xx-x,yy-y)/.1,2),
           'source':'scripted_contact','title':f"{profile['title']} · {'좌현' if y>ship[1] else '우현'} 접촉 {i+1}",
           'track_id':f"T{m['id']:03}-{i+1}",'scale':1.15 if m['scenario']=='patrol_contact' else 1.0})
     return out
 
-def defense_goal(kind,ship,contact,slot=0):
+def defense_goal(kind,ship,contact,slot=0,contact_type='surface'):
     dx,dy=contact[0]-ship[0],contact[1]-ship[1];distance=max(math.hypot(dx,dy),1);ux,uy=dx/distance,dy/distance
     lateral=(-1 if slot%2 else 1)*(18+12*(slot//2))
     if kind=='USV':
-        radius=min(145,max(115,distance*.52));return ship[0]+ux*radius-uy*lateral,ship[1]+uy*radius+ux*lateral,.7
-    return contact[0]-ux*35-uy*lateral,contact[1]-uy*35+ux*lateral,85+18*slot
+        radius=min(145,max(115,distance*(.72 if contact_type in ('floating','underwater') else .52)));return ship[0]+ux*radius-uy*lateral,ship[1]+uy*radius+ux*lateral,.7
+    return contact[0]-ux*35-uy*lateral,contact[1]-uy*35+ux*lateral,(135 if contact_type=='air' else 85)+18*slot
 
 def formation_goals(group,mode,points,scenario):
     if scenario not in DEFENSE_SCENARIOS:return points

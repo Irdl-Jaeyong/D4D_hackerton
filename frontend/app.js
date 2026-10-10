@@ -6,7 +6,7 @@ const bandColors=['#55e7ef','#7ebaff','#ae97ff','#ffb567','#88ed9d'];
 function contactLabel(t,ship){
   const a=Math.atan2(t.y-(ship?.y||0),t.x-(ship?.x||0))-(ship?.yaw||0),bearing=Math.atan2(Math.sin(a),Math.cos(a));
   const direction=Math.abs(bearing)<Math.PI/4?'전방':Math.abs(bearing)>3*Math.PI/4?'후방':bearing>0?'좌현':'우현';
-  return `외부 선박 · ${direction} · ${t.track_id}`;
+  return `${t.display_name||'외부 선박'} · ${direction} · ${t.track_id}`;
 }
 function map(state){
   const c=$('map'),pixelRatio=window.devicePixelRatio||1;const width=Math.round(c.clientWidth*pixelRatio),height=Math.round(c.clientHeight*pixelRatio);if(c.width!==width)c.width=width;if(c.height!==height)c.height=height;const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);mapPickables.length=0;
@@ -75,7 +75,7 @@ function cameraOverlay(state){
   }
   ctx.font='bold 18px system-ui';
   for(const t of state.scene.situations||[]){
-    if(t.source!=='scripted_contact')continue;const q=project(t.x-ship.x,t.y-ship.y,3);if(!q)continue;
+    if(t.source!=='scripted_contact')continue;const q=project(t.x-ship.x,t.y-ship.y,Math.max(3,t.z||0));if(!q)continue;
     const selected=t.mission_id===state.mission?.id,r=selected?19:13;
     ctx.strokeStyle='#ff7777';ctx.fillStyle='#ff77772a';ctx.lineWidth=selected?3:2;
     ctx.beginPath();ctx.moveTo(q[0],q[1]-r);ctx.lineTo(q[0]+r,q[1]);ctx.lineTo(q[0],q[1]+r);ctx.lineTo(q[0]-r,q[1]);ctx.closePath();ctx.fill();ctx.stroke();
@@ -290,6 +290,7 @@ function renderMission(s){
     if(!m){$('situationCard').append(element('p','가상 상황을 선택해 대응안 3개를 확인하세요.','muted'));}
     else{
       $('situationCard').append(element('strong',m.card.title),element('p',m.card.summary),element('p',m.threats?.length?`모의 외부 접촉 ${m.threats.length}개 · 대형 버튼으로 직접 대응 가능`:`함선 상대 위치 x ${m.card.offset[0]}m / y ${m.card.offset[1]}m`,'muted'),element('p',m.card.unknown,'scope-note'));
+      if(m.affected_vehicles)$('situationCard').append(element('p',m.affected_vehicles.length?`모의 통신 영향: ${m.affected_vehicles.join(', ')}`:'영향을 줄 가용 기체 없음 · 구역 표시만 생성','scope-note'));
       $('situationCard').append(element('p',`${priorityText(m)} · ${m.risk?.score==null?'평가 불가':m.risk.score+' / 100점'}`,'priority-badge queue-rank-'+((queueView?.items.findIndex(item=>item.id===m.id)??-1)+1)));
       if(!m.options.length)$('responseOptions').append(element('p','함선의 최신 위치가 없어 추천을 생성할 수 없습니다. 연결되면 자동 갱신됩니다.'));
       for(const [i,plan] of m.options.entries()){

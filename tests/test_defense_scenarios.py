@@ -14,7 +14,7 @@ class DefenseScenarios(unittest.TestCase):
  def test_four_directional_situations_with_continuous_safe_approach(self):
   for kind in DEFENSE_SCENARIOS:
    start=targets([self.mission(kind)],0);later=targets([self.mission(kind)],20)
-   self.assertEqual(len(start),2 if kind=='multi_approach' else 1)
+   self.assertEqual(len(start),len(DEFENSE_SCENARIOS[kind]['bearing_degrees']))
    for a,b in zip(start,later):
     self.assertLess(math.hypot(b['x']-30,b['y']),math.hypot(a['x'],a['y']))
     self.assertGreater(math.hypot(b['x']-30,b['y']),160)
@@ -55,3 +55,16 @@ class DefenseScenarios(unittest.TestCase):
    self.assertEqual(set(goals),set(homes));self.assertFalse(any(task['stage']=='returning' for task in r.tasks.values()))
   r.step(31,46.5,homes,{id:(31,task['target']) for id,task in r.tasks.items()},available,cancel=True)
   self.assertTrue(all(task['stage']=='returning' for task in r.tasks.values()))
+
+class ExtraDefenseContacts(unittest.TestCase):
+ def mission(self,kind):return {'id':20,'scenario':kind,'scene_origin':{'x':0,'y':0,'yaw':0,'sim_time':0},'risk':{'priority':'P1'}}
+ def test_air_and_combined_contacts_have_correct_domains_and_altitudes(self):
+  air=targets([self.mission('air_intrusion')],10);self.assertEqual(air[0]['contact_type'],'air');self.assertGreater(air[0]['z'],80)
+  mixed=targets([self.mission('combined_intrusion')],10);self.assertEqual([t['contact_type'] for t in mixed],['air','surface'])
+  self.assertGreater(mixed[0]['z'],80);self.assertLess(mixed[1]['z'],1)
+ def test_new_domains_render_distinct_models_not_boat_hulls(self):
+  for scenario,visual in [('air_intrusion','airframe'),('suspicious_float','floating_crate'),('communication_interference','zone_0'),('underwater_contact','submerged_body')]:
+   t=targets([self.mission(scenario)],0)[0];xml=ET.fromstring(model_sdf(t))
+   self.assertIsNotNone(xml.find(f'.//visual[@name="{visual}"]'))
+ def test_air_observers_keep_vertical_separation(self):
+  air=defense_goal('UAV',(0,0),(250,0),0,'air');self.assertGreater(air[2],120)
