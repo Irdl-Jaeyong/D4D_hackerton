@@ -2,6 +2,7 @@
 import math
 from xml.sax.saxutils import escape
 from mission_console import SCENARIOS
+from defense_scenarios import DEFENSE_SCENARIOS,contacts
 COLORS={'P0':'1 .12 .18 1','P1':'1 .42 .08 1','P2':'1 .82 .12 1','P3':'.2 .65 1 1',None:'1 .82 .12 1'}
 
 def targets(missions,sim_time):
@@ -10,6 +11,9 @@ def targets(missions,sim_time):
         if m['scenario']=='fault':continue
         o=m.get('scene_origin')
         if not o:continue
+        if m['scenario'] in DEFENSE_SCENARIOS:
+            if m.get('manual_takeover') or m.get('execution',{}).get('status') not in ('completed','cancelled'):result.extend(contacts(m,sim_time if sim_time is not None else m.get('scene_last_time',o['sim_time'])))
+            continue
         t=max(0,(sim_time if sim_time is not None else m.get('scene_last_time',o['sim_time']))-o['sim_time'])
         x,y=SCENARIOS[m['scenario']]['offset']
         slot=m.get('scene_slot',0);x+=40*slot;y+=8*(slot%3)
@@ -25,6 +29,7 @@ def targets(missions,sim_time):
     return result
 
 def model_sdf(target):
+    if target['scenario'] in DEFENSE_SCENARIOS:return defense_model_sdf(target)
     pieces=[]
     def visual(name,geom,pos,color,rotation='0 0 0'):
         glow=f'<emissive>{color}</emissive>' if name.startswith('marker_') or name=='priority_flag' else ''
@@ -54,3 +59,19 @@ def model_sdf(target):
         box('left_arm','1.2 .25 .25','-.6 0 .65','.85 .6 .4 1');box('right_arm','1.2 .25 .25','.6 0 .65','.85 .6 .4 1')
     name=escape(target['name'],{'"':'&quot;'})
     return f'<sdf version="1.8"><model name="{name}"><static>true</static><pose>{target["x"]} {target["y"]} {target["z"]} 0 0 {target["yaw"]}</pose><link name="object">'+''.join(pieces)+'</link></model></sdf>'
+
+def defense_model_sdf(t):
+    scale=t.get('scale',1);parts=[]
+    def visual(name,geometry,pose,color,glow=False):
+        parts.append(f'<visual name="{name}"><pose>{pose}</pose><geometry>{geometry}</geometry><material><ambient>{color}</ambient><diffuse>{color}</diffuse>'+ (f'<emissive>{color}</emissive>' if glow else '')+'</material><cast_shadows>true</cast_shadows></visual>')
+    for name,color in [('hull','.21 .25 .27 1'),('deck','.43 .46 .46 1'),('collar','.055 .067 .07 1'),('cabin','.61 .65 .65 1'),('glass','.09 .19 .22 1'),('canopy','.47 .53 .53 1')]:
+        visual(name,f'<mesh><uri>model://defense_contact/meshes/{name}.obj</uri><scale>{scale} {scale} {scale}</scale></mesh>','0 0 0 0 0 0',color)
+    for side in [-1,1]:
+        visual('outboard_'+str(side),'<box><size>.6 .5 1.2</size></box>',f'{-6.15*scale} {side*.7*scale} .5 0 0 0','.075 .085 .085 1')
+        color='.9 .08 .04 1' if side>0 else '.06 .85 .26 1'
+        visual('navigation_'+str(side),'<sphere><radius>.055</radius></sphere>',f'-.7 {side*.96*scale} 2.2 0 0 0',color,True)
+    visual('antenna','<cylinder><radius>.025</radius><length>1.6</length></cylinder>','-1.3 0 3.3 0 0 0','.2 .23 .24 1')
+    visual('stern_light','<sphere><radius>.055</radius></sphere>','-1.3 0 4.1 0 0 0','.95 .94 .8 1',True)
+    for side in [-1,1]:
+        visual('wake_'+str(side),'<mesh><uri>model://navis_ocean/meshes/usv_foam.obj</uri><scale>1.4 1.6 1</scale></mesh>',f'-5 {side*.85} .06 0 0 {side*.12}','.83 .9 .9 .38')
+    return f'<sdf version="1.8"><model name="{escape(t["name"])}"><static>true</static><pose>{t["x"]} {t["y"]} {t["z"]} {t.get("roll",0)} {t.get("pitch",0)} {t["yaw"]}</pose><link name="hull">'+''.join(parts)+'</link></model></sdf>'

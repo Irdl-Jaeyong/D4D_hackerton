@@ -7,7 +7,8 @@ function map(state){
   const c=$('map'),pixelRatio=window.devicePixelRatio||1;const width=Math.round(c.clientWidth*pixelRatio),height=Math.round(c.clientHeight*pixelRatio);if(c.width!==width)c.width=width;if(c.height!==height)c.height=height;const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);mapPickables.length=0;
   const live=state.vehicles.filter(v=>v.connected&&v.telemetry);
   const lead=live.find(v=>v.id==='SHIP-01'),ox=lead?.telemetry.x||0,oy=lead?.telemetry.y||0;
-  const extent=Math.max(185,...live.map(v=>Math.max(Math.abs(v.telemetry.x-ox),Math.abs(v.telemetry.y-oy))*1.15));
+  const contacts=(state.scene?.situations||[]).filter(t=>t.source==='scripted_contact');
+  const extent=Math.max(310,...contacts.map(t=>Math.max(Math.abs(t.x-ox),Math.abs(t.y-oy))*1.1),...live.map(v=>Math.max(Math.abs(v.telemetry.x-ox),Math.abs(v.telemetry.y-oy))*1.15));
   const left=36*pixelRatio,right=c.width-18*pixelRatio,top=18*pixelRatio,bottom=c.height-27*pixelRatio,steps=c.clientWidth<350?4:6;
   const point=(x,y)=>[left+(x-ox+extent)/(2*extent)*(right-left),bottom-(y-oy+extent)/(2*extent)*(bottom-top)];
   ctx.font=`${9*pixelRatio}px system-ui`;ctx.textAlign='center';ctx.fillStyle='#607f92';ctx.lineWidth=pixelRatio;
@@ -17,6 +18,9 @@ function map(state){
     ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(right,y);ctx.stroke();
     ctx.fillText(Math.round(value),x,bottom+17*pixelRatio);ctx.textAlign='right';ctx.fillText(Math.round(value),left-6*pixelRatio,y+3*pixelRatio);ctx.textAlign='center';
   }
+  ctx.strokeStyle='#71889c66';ctx.setLineDash([5*pixelRatio,5*pixelRatio]);ctx.beginPath();
+  for(let i=0;i<=80;i++){const a=i*Math.PI/40,[x,y]=point(ox+150*Math.cos(a),oy+150*Math.sin(a));i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();ctx.setLineDash([]);
+  for(const t of contacts){const [x,y]=point(t.x,t.y);ctx.strokeStyle='#e7ac67';ctx.fillStyle='#e7ac67';ctx.lineWidth=1.5*pixelRatio;ctx.strokeRect(x-5*pixelRatio,y-5*pixelRatio,10*pixelRatio,10*pixelRatio);ctx.textAlign='left';ctx.fillText(`${t.track_id} · ${Math.round(t.range_m)}m`,Math.min(x+9*pixelRatio,c.width-94*pixelRatio),Math.max(y-8*pixelRatio,12*pixelRatio));}
   for(const v of live){
     const t=v.telemetry,[x,y]=point(t.x,t.y),selected=v.id===selectedVehicle;
     const color=v.fault?'#fb8383':({UAV:'#63d8e3',USV:'#8fa9f7',SHIP:'#ead5a7'}[v.type]||'#fff');
@@ -59,6 +63,12 @@ function cameraOverlay(state){
       const a=sector*Math.PI/4;line(Array.from({length:31},(_,i)=>{const lat=i*Math.PI/60;return [m.hemisphere_radius*Math.cos(lat)*Math.cos(a),m.hemisphere_radius*Math.cos(lat)*Math.sin(a),m.hemisphere_center_height+m.hemisphere_radius*Math.sin(lat)];}),'#9ee9ff33');
     }
   }
+  ctx.font='12px system-ui';
+  for(const t of state.scene.situations||[]){
+    if(t.source!=='scripted_contact')continue;const q=project(t.x-ship.x,t.y-ship.y,3);if(!q)continue;
+    ctx.strokeStyle='#e7ac67';ctx.fillStyle='#e7ac67';ctx.lineWidth=1.5;ctx.strokeRect(q[0]-10,q[1]-8,20,16);
+    ctx.fillText(`${t.track_id} · ${Math.round(t.range_m)}m`,Math.max(3,Math.min(q[0]+14,c.width-120)),Math.max(16,q[1]-10));
+  }
   ctx.font='bold 13px system-ui';
   for(const v of state.vehicles){
     if(!v.connected)continue;const t=v.telemetry,q=project(t.x-ship.x,t.y-ship.y,t.z);if(!q)continue;
@@ -83,7 +93,7 @@ function formationControls(f){
         const button=document.createElement('button');button.type='button';button.innerHTML=formationIcon(group,mode);const title=document.createElement('span');title.textContent=label;button.append(title);button.dataset.mode=mode;
         button.addEventListener('click',async()=>{
           const buttons=[...container.children];buttons.forEach(b=>b.disabled=true);
-          try{const response=await fetch('/api/formations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group,mode})});
+          try{const response=await fetch('/api/formations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group,mode,scenario_id:lastState?.mission?.id})});
             if(!response.ok)throw Error('대형 선택 실패');formationControls(await response.json());event(`${group==='usv'?'USV':'드론'} ${label} 대형으로 이동 요청`);
           }catch(err){event(err.message);}finally{buttons.forEach(b=>b.disabled=false);}
         });container.append(button);
@@ -101,7 +111,7 @@ $('cameraView').addEventListener('change',async()=>{
   finally{select.disabled=false;}
 });
 $('showDome').addEventListener('change',()=>{if(lastState)cameraOverlay(lastState);});
-async function poll(){try{const r=await fetch('/api/state');if(!r.ok)throw Error();const s=reviewState(await r.json());lastState=s;if(!$('cameraView').disabled)$('cameraView').value=s.camera_view||'wide';renderVehicles(s);renderMission(s);$('connected').textContent=`${s.vehicles.filter(v=>v.connected).length} / ${s.vehicles.length} 연결`;$('cameraLive').textContent=s.camera_available?'● 실시간 수신':'영상 연결 대기';$('camera').style.display=s.camera_available?'block':'none';$('cameraEmpty').style.display=s.camera_available?'none':'block';if(s.camera_available)$('camera').src='/api/camera?t='+Date.now();map(s);cameraOverlay(s);formationControls(s.formations);for(const group of ['usv','uav'])for(const button of $(group+'Formation').children)button.disabled=!!s.mission?.approved;
+async function poll(){try{const r=await fetch('/api/state');if(!r.ok)throw Error();const s=reviewState(await r.json());lastState=s;if(!$('cameraView').disabled)$('cameraView').value=s.camera_view||'wide';renderVehicles(s);renderMission(s);$('connected').textContent=`${s.vehicles.filter(v=>v.connected).length} / ${s.vehicles.length} 연결`;$('cameraLive').textContent=s.camera_available?'● 실시간 수신':'영상 연결 대기';$('camera').style.display=s.camera_available?'block':'none';$('cameraEmpty').style.display=s.camera_available?'none':'block';if(s.camera_available)$('camera').src='/api/camera?t='+Date.now();map(s);cameraOverlay(s);formationControls(s.formations);for(const group of ['usv','uav'])for(const button of $(group+'Formation').children)button.disabled=!!s.active_mission?.approved&&!s.active_mission?.threats?.length;
 const lead=s.vehicles.find(v=>v.id==='SHIP-01'&&v.connected);
 if(lead&&s.scene.scenario){const t=lead.telemetry.x/s.scene.motion.ship_speed,phase=t%180;
 const stage=phase<18?0:phase<80?1:phase<170?2:3,key=`${Math.floor(t/180)}-${stage}`;
@@ -264,7 +274,7 @@ function renderMission(s){
     missionRenderKey=key;$('situationCard').replaceChildren();$('responseOptions').replaceChildren();
     if(!m){$('situationCard').append(element('p','가상 상황을 선택해 대응안 3개를 확인하세요.','muted'));}
     else{
-      $('situationCard').append(element('strong',m.card.title),element('p',m.card.summary),element('p',`함선 상대 위치 x ${m.card.offset[0]}m / y ${m.card.offset[1]}m · 관제 지도에 가상 표식 표시`,'muted'),element('p',m.card.unknown,'scope-note'));
+      $('situationCard').append(element('strong',m.card.title),element('p',m.card.summary),element('p',m.threats?.length?`모의 외부 접촉 ${m.threats.length}개 · 대형 버튼으로 직접 대응 가능`:`함선 상대 위치 x ${m.card.offset[0]}m / y ${m.card.offset[1]}m`,'muted'),element('p',m.card.unknown,'scope-note'));
       $('situationCard').append(element('p',`${priorityText(m)} · ${m.risk?.score==null?'평가 불가':m.risk.score+' / 100점'}`,'priority-badge queue-rank-'+((queueView?.items.findIndex(item=>item.id===m.id)??-1)+1)));
       if(!m.options.length)$('responseOptions').append(element('p','함선의 최신 위치가 없어 추천을 생성할 수 없습니다. 연결되면 자동 갱신됩니다.'));
       for(const [i,plan] of m.options.entries()){
@@ -273,7 +283,7 @@ function renderMission(s){
         const details=element('details'),summary=element('summary','배정 근거 · 예상 시간 · 검증');details.append(summary);
         for(const task of plan.tasks)details.append(element('small',`${task.vehicle}: ${task.reason} · 직선 이동 추정 ${task.eta_seconds}초`));
         details.append(element('p',plan.benefit),element('small',plan.tradeoff),element('small',plan.validation));card.append(details);
-        const current=s.formations;details.append(element('p',`승인 후: USV ${current.catalog.usv[current.usv]} → ${current.catalog.usv[plan.formations.usv]} / 드론 ${current.catalog.uav[current.uav]} → ${current.catalog.uav[plan.formations.uav]}`,'movement-summary'),element('small','현재와 같은 대형은 유지하고, 다른 대형은 현재 위치에서 점진적으로 이동합니다. UAV는 확인 지점 이동·5초 체류·복귀, USV는 추진력으로 현장 확인 후 복귀합니다.'));
+        const current=s.formations;details.append(element('p',`승인 후: USV ${current.catalog.usv[current.usv]} → ${current.catalog.usv[plan.formations.usv]} / 드론 ${current.catalog.uav[current.uav]} → ${current.catalog.uav[plan.formations.uav]}`,'movement-summary'),element('small',plan.persistent?'드론은 접촉을 지속 추적하고 USV는 함선과 접촉 사이의 경계선을 유지합니다. 대형 버튼으로 직접 조정하거나 상황을 종료할 수 있습니다.':'현재와 같은 대형은 유지합니다. UAV·USV는 확인 후 복귀합니다.'));
         const button=element('button',m.approved?(m.approved.id===plan.id?'실행된 대응안':'선택 종료'):'이 대응안 선택 · 즉시 실행');button.type='button';button.dataset.option=plan.id;button.disabled=missionRequestPending||!!m.approved;
         if(!plan.available)card.append(element('p','가용 기체 부족 · 검토는 가능하지만 승인할 수 없습니다.','response-availability'));
         button.addEventListener('click',()=>executeResponse(m,plan.id));card.append(button);$('responseOptions').append(card);
@@ -287,7 +297,7 @@ function renderMission(s){
   }else{
     const groups=['usv','uav'],matched=groups.every(g=>s.formations.status[g]?.mode===m.approved.formations[g]);
     const moving=!matched||groups.some(g=>s.formations.status[g]?.moving);
-    $('missionStage').textContent=`${s.vehicles.some(v=>!v.connected)?'Gazebo 상태 확인 필요':moving?'Gazebo 대형 전환 중':'Gazebo 대형 유지 중'} · UAV·USV 임무: ${m.execution?.status||'대기'}`;
+    $('missionStage').textContent=`${s.vehicles.some(v=>!v.connected)?'Gazebo 상태 확인 필요':moving?'Gazebo 대형 전환 중':'Gazebo 대형 유지 중'} · UAV·USV 임무: ${m.manual_takeover?'직접 대형 운용':m.execution?.status==='running'?'추적·경계 진행':m.execution?.status==='pending'?'출동 준비':m.execution?.status||'대기'}`;
   }
 }
 

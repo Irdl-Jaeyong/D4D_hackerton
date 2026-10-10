@@ -1,0 +1,6 @@
+{
+  "patrol_contact": {"title":"주변 미식별 선박 접촉","summary":"좌현 외곽에서 미식별 선박이 보호 구역으로 접근합니다. 공중 관측과 수상 경계를 분리해 운용합니다.","bearing_degrees":[40],"initial_range_m":260,"standoff_m":185,"closing_speed_mps":0.8,"formations":{"usv":"circle","uav":"rings"},"S":4,"U":3,"A":3},
+  "fast_approach": {"title":"전방 고속 소형정 접근","summary":"전방 소형정이 빠르게 접근합니다. 드론은 접촉을 추적하고 USV는 전방 경계선을 유지합니다.","bearing_degrees":[0],"initial_range_m":285,"standoff_m":175,"closing_speed_mps":4,"formations":{"usv":"fan","uav":"triangle"},"S":5,"U":4,"A":4},
+  "multi_approach": {"title":"양측 동시 접근","summary":"좌현과 우현에서 서로 다른 선박이 동시에 접근합니다. 관측 기체와 경계 USV를 양측에 나눠 배치합니다.","bearing_degrees":[72,-72],"initial_range_m":270,"standoff_m":185,"closing_speed_mps":2,"formations":{"usv":"columns","uav":"box"},"S":5,"U":4,"A":4},
+  "rear_approach": {"title":"후방 추적 선박 접근","summary":"후방 선박이 함선을 따라오며 간격을 좁힙니다. 공중 후방 관측과 수상 후방 경계를 유지합니다.","bearing_degrees":[180],"initial_range_m":260,"standoff_m":180,"closing_speed_mps":2.4,"formations":{"usv":"v","uav":"v"},"S":4,"U":4,"A":3}
+}

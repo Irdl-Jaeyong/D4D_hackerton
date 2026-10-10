@@ -24,7 +24,9 @@ class SceneBridge:
         for name,t in wanted.items():
             if name in self.known:
                 import math
-                poses.append('pose {name: %s position {x:%s y:%s z:%s} orientation {w:%s z:%s}}' % (json.dumps(name),t['x'],t['y'],t['z'],math.cos(t['yaw']/2),math.sin(t['yaw']/2)))
+                roll,pitch,yaw=(t.get('roll',0)/2,t.get('pitch',0)/2,t['yaw']/2);cr,sr=math.cos(roll),math.sin(roll);cp,sp=math.cos(pitch),math.sin(pitch);cy,sy=math.cos(yaw),math.sin(yaw)
+                q=(cr*cp*cy+sr*sp*sy,sr*cp*cy-cr*sp*sy,cr*sp*cy+sr*cp*sy,cr*cp*sy-sr*sp*cy)
+                poses.append('pose {name: %s position {x:%s y:%s z:%s} orientation {w:%s x:%s y:%s z:%s}}' % (json.dumps(name),t['x'],t['y'],t['z'],*q))
         if poses:service('/world/navis_prep/set_pose_vector','ignition.msgs.Pose_V',' '.join(poses))
 
 if __name__=='__main__':
@@ -32,7 +34,7 @@ if __name__=='__main__':
     # Reconcile existing objects, including ones left after a backend restart.
     try:
         p=subprocess.run(['ign','service','-s','/world/navis_prep/scene/info','--reqtype','ignition.msgs.Empty','--reptype','ignition.msgs.Scene','--timeout','3000','--req',''],capture_output=True,text=True,timeout=4)
-        for name in set(re.findall(r'name: "(situation_[0-9]+)"',p.stdout)):
+        for name in set(re.findall(r'name: "(situation_[0-9]+(?:_[0-9]+)?)"',p.stdout)):
             bridge.known[name]=('old',None)
     except subprocess.TimeoutExpired:pass
     while True:

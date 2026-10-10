@@ -1,10 +1,11 @@
 """Bounded random scenario scheduling; all requests use the normal scenario API path."""
 import random
 from collections import Counter
+from defense_scenarios import DEFENSE_SCENARIOS
 
 class ScenarioGenerator:
     def __init__(self,config,rng=None,now=0):
-        allowed={'crossing','debris','rescue','fault'}
+        allowed={'crossing','debris','rescue','fault'}|set(DEFENSE_SCENARIOS)
         if not config['scenarios'] or not set(config['scenarios'])<=allowed:raise ValueError('Unsupported automatic scenario')
         if not config['fault_types'] or not set(config['fault_types'])<={'payload','propulsion','communication'}:raise ValueError('Unsupported fault type')
         if not 0<config['interval_seconds'][0]<=config['interval_seconds'][1]:raise ValueError('Invalid automatic interval')

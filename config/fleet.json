@@ -28,13 +28,13 @@
   },
   "camera": {
     "offset": [
-      -210,
-      -270,
-      340
+      -290,
+      -370,
+      440
     ],
-    "pitch": 0.7823886869288589,
-    "yaw": 0.9097531579442097,
-    "horizontal_fov": 1.15
+    "pitch": 0.7523301645292618,
+    "yaw": 0.906021831977551,
+    "horizontal_fov": 1.25
   },
   "vessel_models": {
     "flagship": "NPS Arleigh Burke DDG-51 high detail",
@@ -46,13 +46,13 @@
   "camera_views": {
     "wide": {
       "offset": [
-        -210,
-        -270,
-        340
+        -290,
+        -370,
+        440
       ],
-      "pitch": 0.7823886869288589,
-      "yaw": 0.9097531579442097,
-      "horizontal_fov": 1.15
+      "pitch": 0.7523301645292618,
+      "yaw": 0.906021831977551,
+      "horizontal_fov": 1.25
     },
     "detail": {
       "offset": [

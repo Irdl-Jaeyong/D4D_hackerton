@@ -15,6 +15,26 @@ class MissionAPI(unittest.IsolatedAsyncioTestCase):
         return await api.start_scenario(api.ScenarioRequest(scenario='crossing'))
     async def approve(self,id,option='verify'):
         return await api.approve_plan(api.ApprovalRequest(mission_id=id,option_id=option,human_confirmed=True))
+    async def test_defense_contact_does_not_change_formation_and_manual_choice_works(self):
+        for kind in ('UAV','USV'):
+            for i in range(1,9):api.latest[f'{kind}-{i:02}']={'x':0,'y':0,'z':80 if kind=='UAV' else .7,'sim_time':0,'received_at':time.time()}
+        m=await api.start_scenario(api.ScenarioRequest(scenario='multi_approach'))
+        self.assertEqual(len(m['threats']),2)
+        self.assertEqual(api.formation['usv'],'circle');self.assertEqual(api.formation['uav'],'hemisphere')
+        self.assertIsNone(api.mission)
+        await api.set_formation(api.FormationRequest(group='usv',mode='columns',scenario_id=m['id']))
+        self.assertEqual((await api.get_formations())['scenario_context']['id'],m['id'])
+        await api.refresh_plan(m['id'])
+        api.formation['scenario_id']=999 # a previous situation must not orient the new approved plan
+        await api.approve_plan(api.ApprovalRequest(mission_id=m['id'],option_id='observe',human_confirmed=True,plan_revision=m['plan_revision']))
+        self.assertEqual(api.formation['scenario_id'],m['id'])
+        self.assertEqual({t['contact_index'] for t in m['approved']['tasks']},{0,1})
+        await api.set_formation(api.FormationRequest(group='uav',mode='box',scenario_id=m['id']))
+        self.assertTrue(m['manual_takeover']);self.assertTrue(m['cancel_requested'])
+        self.assertEqual(api.formation['uav'],'box')
+        m['execution']['status']='cancelled'
+        self.assertEqual(len(api.state()['scene']['situations']),2)
+
     async def test_missing_human_confirmation_does_not_execute(self):
         m=await self.scenario()
         with self.assertRaises(HTTPException):

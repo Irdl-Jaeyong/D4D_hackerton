@@ -22,6 +22,8 @@ sys.path.insert(0,str(ROOT/'scripts'))
 from formation_motion import CATALOG
 from mission_console import readiness, options, SCENARIOS
 from auto_scenarios import ScenarioGenerator
+from defense_scenarios import DEFENSE_SCENARIOS
+from mission_console import defense_options
 from risk_monitor import assess
 from fault_motion import deck_slot
 from scenario_scene import targets as scene_targets
@@ -146,7 +148,7 @@ def state():
                 v['readiness']['available']=False
                 execution=mission.get('execution',{}).get('tasks',{}).get(v['id'])
                 if execution:
-                    labels={'outbound':'출동 중','observing':'현장 확인 중','returning':'복귀 중','completed':'완료 · 대형 유지'}
+                    labels={'outbound':'출동 중','observing':'현장 확인 중','tracking':'접촉 지속 추적','screening':'외곽 경계선 유지','returning':'복귀 중','completed':'완료 · 대형 유지'}
                     v['readiness']['task']=task['task']+' · '+labels.get(execution['stage'],'확인 필요')
                     if execution.get('blocked'):v['readiness'].update(operational_state='unavailable',reason='임무 중 상태 확인 필요')
                     elif v['readiness']['operational_state']!='unavailable':
@@ -162,7 +164,12 @@ def state():
             if not origin or stamp<origin['sim_time']:item['scene_origin']={k:lead.get(k,0) for k in ('x','y','yaw','sim_time')}
             item['scene_last_time']=stamp
     situations=scene_targets([m for m in missions.values() if m.get('source')=='synthetic'],stamp)
-    for target in situations:missions[target['mission_id']]['target_world_current']=[target['x'],target['y']]
+    for item in missions.values():
+        if item['scenario'] in DEFENSE_SCENARIOS:item['threats']=[]
+    for target in situations:
+        item=missions[target['mission_id']]
+        if target.get('contact_index',0)==0:item['target_world_current']=[target['x'],target['y']]
+        if item['scenario'] in DEFENSE_SCENARIOS:item['threats'].append(target)
     reassess_missions(vehicles)
     queue=sorted((m for m in missions.values() if not m.get('approved')),key=sort_key)
     return {'auto_scenarios':{'enabled':auto_generator.config['enabled'],'next_in_seconds':max(0,round(auto_generator.next_at-time.monotonic())),'max_pending':auto_generator.config['max_pending']} if auto_generator else None,'mission':mission or next(iter(queue),None),'active_mission':mission,'approval_queue':queue,'scenario_catalog':SCENARIOS,'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'selected vehicle inspection camera' if camera_view=='inspect' else 'SHIP-01 stabilized overhead sensors', 'scene_mode': FLEET['motion']['uav_pattern'], 'camera_view':camera_view,'inspection_vehicle':inspection_vehicle, 'formations': {**formation, 'catalog':CATALOG,'status':formation_status}, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion'], 'scenario': None,'sim_time':stamp,'situations':situations}}
@@ -188,6 +195,12 @@ def reassess_missions(vehicles):
             else:
                 kind='separation' if current['kind'].startswith('separation') else current['kind']
                 signals={**RISK_CONFIG['risk_kinds'].get(kind,{}),'reason':current['evidence']}
+        elif item['scenario'] in DEFENSE_SCENARIOS:
+            threats=item.get('threats',[])
+            if threats and any(v['type']=='SHIP' and v['connected'] for v in vehicles):
+                distance=min(t['range_m'] for t in threats);base=RISK_CONFIG['scenarios'][item['scenario']]
+                signals={**base,'U':5 if distance<190 else 4 if distance<240 else base['U'],'collision_imminent':distance<110,'reason':f"모의 접촉 {len(threats)}개 · 최근접 {distance:.0f}m · 실제 적대 의도는 미확인"}
+            else:signals={}
         else:signals=RISK_CONFIG['scenarios'].get(item['scenario'],{})
         item['risk']=evaluate(signals);item['risk']['source']=item['source']
         if item['resolved']:item['risk']['reason']='원인 해소 · 상황 종료 가능'
@@ -202,18 +215,29 @@ def pending_plans(item,vehicles):
     else:offset=item['card']['offset']
     if item['scenario']=='fault' or item.get('risk_id'):item['card']['offset']=offset
     if lead:item['plan_target_world']=[lead['x']+offset[0],lead['y']+offset[1]]
+    if item['scenario'] in DEFENSE_SCENARIOS:
+        if not item.get('threats'):return []
+        return defense_options(vehicles,formation,item['scenario'],contacts=item['threats'])
     return options(vehicles,formation,'rescue' if item['scenario']=='fault' else item['scenario'],target_offset=offset)
 
 class FormationRequest(BaseModel):
     group: Literal['usv','uav']
     mode: str
+    scenario_id: int | None = None
 @app.get('/api/formations')
 async def get_formations():
-    return {**formation,'catalog':CATALOG,'status':formation_status,'mission':mission,'inspection_vehicle':inspection_vehicle,'faults':list(simulated_faults),'fault_modes':{id:fault_kinds.get(id,'payload') for id in simulated_faults},'fault_states':fault_status,'availability':{v['id']:v['connected'] and v['id'] not in simulated_faults and (v['type']=='SHIP' or v['readiness']['battery_percent']>=35) for v in state()['vehicles']}}
+    return {**formation,'catalog':CATALOG,'status':formation_status,'mission':mission,'scenario_context':missions.get(formation.get('scenario_id')),'inspection_vehicle':inspection_vehicle,'faults':list(simulated_faults),'fault_modes':{id:fault_kinds.get(id,'payload') for id in simulated_faults},'fault_states':fault_status,'availability':{v['id']:v['connected'] and v['id'] not in simulated_faults and (v['type']=='SHIP' or v['readiness']['battery_percent']>=35) for v in state()['vehicles']}}
 @app.post('/api/formations')
 async def set_formation(data: FormationRequest):
-    if mission and mission.get('approved'):raise HTTPException(409,'승인된 대응안을 종료한 뒤 대형을 변경하세요.')
     if data.mode not in CATALOG[data.group]:raise HTTPException(422,'Unknown formation')
+    if mission and mission.get('approved'):
+        if mission['scenario'] not in DEFENSE_SCENARIOS:raise HTTPException(409,'승인된 대응안을 종료한 뒤 대형을 변경하세요.')
+        mission['cancel_requested']=True;mission['manual_takeover']=True
+    previous_context=formation.get('scenario_id')
+    context=missions.get(data.scenario_id)
+    if context and context['scenario'] in DEFENSE_SCENARIOS:formation['scenario_id']=context['id']
+    elif data.scenario_id is not None:formation.pop('scenario_id',None)
+    if previous_context!=formation.get('scenario_id'):formation['revision']+=1
     if formation[data.group]!=data.mode:
         formation[data.group]=data.mode;formation['revision']+=1
     return await get_formations()
@@ -226,7 +250,7 @@ async def report_formations(data: dict,x_bridge_token: str=Header(default='')):
 
 
 class ScenarioRequest(BaseModel):
-    scenario: Literal['crossing','debris','rescue','fault']
+    scenario: Literal['crossing','debris','rescue','fault','patrol_contact','fast_approach','multi_approach','rear_approach']
     vehicle_id: str | None = None
     fault_type: Literal['payload','propulsion','communication'] = 'propulsion'
 class ApprovalRequest(BaseModel):
@@ -240,6 +264,9 @@ class ApprovalRequest(BaseModel):
 @app.post('/api/mission/scenario')
 async def start_scenario(data: ScenarioRequest,preserve_camera: bool=False):
     global mission_counter,camera_view,camera
+    if data.scenario in DEFENSE_SCENARIOS:
+        lead=latest.get('SHIP-01')
+        if not lead or time.time()-lead['received_at']>=5:raise HTTPException(409,'외부 접촉 생성에는 함선의 최신 위치가 필요합니다.')
     if data.scenario=='fault':
         if not data.vehicle_id:raise HTTPException(422,'고장 대상 기체를 선택하세요.')
         await set_simulated_fault(data.vehicle_id,FaultRequest(unavailable=True,fault_type=data.fault_type))
@@ -255,7 +282,7 @@ async def start_scenario(data: ScenarioRequest,preserve_camera: bool=False):
     item={'id':mission_counter,'scenario':data.scenario,'card':card,'created_at':now,'planned_at':now,'plan_revision':0,
           'basis_revision':formation['revision'],'options':[],'approved':None,'source':'synthetic','scene_origin':origin,
           'scene_slot':1+max((m.get('scene_slot',0) for m in missions.values() if m['scenario']==data.scenario),default=-1),
-          'execution_scope':'선택 시 대형 변경과 UAV·USV 출동·확인·복귀를 실행합니다.'}
+          'execution_scope':'운용자 대형 선택으로 직접 대응합니다. 대응안 선택 시 지속 추적·경계도 실행할 수 있습니다.' if data.scenario in DEFENSE_SCENARIOS else '선택 시 대형 변경과 UAV·USV 출동·확인·복귀를 실행합니다.'}
     if data.scenario=='fault':item.update(vehicle_id=data.vehicle_id,fault_type=data.fault_type)
     missions[item['id']]=item
     snapshot=state();item['options']=pending_plans(item,snapshot['vehicles'])
@@ -303,6 +330,9 @@ async def approve_plan(data: ApprovalRequest):
         if not v['readiness']['available']:raise HTTPException(409,'기체 가용 상태가 변경되었습니다. 다시 계산하세요.')
         eta=task['eta_seconds']
         if v['readiness']['endurance_minutes']*60<2*eta+300:raise HTTPException(409,'복귀 여유가 부족합니다. 다시 계산하세요.')
+    item['prior_formations']={g:formation[g] for g in ('usv','uav')}
+    if item['scenario'] in DEFENSE_SCENARIOS:formation['scenario_id']=item['id']
+    else:formation.pop('scenario_id',None)
     for group,mode in plan['formations'].items():
         if formation[group]!=mode:formation[group]=mode;formation['revision']+=1
     target=next((t for t in state()['scene']['situations'] if t['mission_id']==item['id']),None)
@@ -323,9 +353,14 @@ async def cancel_plan(data: CancelRequest | None = None):
     item=missions.get(id)
     if not item:raise HTTPException(404,'상황을 찾을 수 없습니다.')
     if item.get('approved') and item.get('execution',{}).get('status') not in ('completed','cancelled'):
+        if item['scenario'] in DEFENSE_SCENARIOS and not item.get('cancel_requested') and not item.get('manual_takeover'):
+            for group,mode in item.get('prior_formations',{}).items():
+                if formation[group]!=mode:formation[group]=mode;formation['revision']+=1
+        if not item.get('manual_takeover') and formation.get('scenario_id')==id:formation.pop('scenario_id',None)
         item['cancel_requested']=True
         return {'ok':True,'message':'취소 요청 · 출동한 UAV·USV가 대형으로 복귀합니다.'}
     missions.pop(id)
+    if formation.get('scenario_id')==id:formation.pop('scenario_id',None)
     if mission and mission['id']==id:mission=None
     return {'ok':True,'message':'선택한 상황 종료 · 나머지 상황과 현재 대형 유지'}
 
@@ -509,7 +544,7 @@ async def chat(data: Chat):
         offline_ids = [v['id'] for v in snapshot['vehicles'] if not v['connected']]
         system = ('당신은 NAVIS-AI 시뮬레이션 관제 보조입니다. 한국어로 짧고 명확하게 답하세요. '
                   '제공된 실제 상태만 사용하고 배터리, 위치, 연결상태를 추측하지 마세요. '
-                  '카메라는 함대 전체를 비스듬히 내려다보는 Gazebo 항공 관측 카메라입니다. 메인 함선은 직선 전진하고 USV와 드론은 선택된 함선 상대 대형을 유지합니다. USV는 추진력 기반, 드론은 위치 갱신 기반 시연입니다. 배터리는 시뮬레이션 추정값입니다. 상황과 대응안은 규칙 기반 시연이며 승인된 UAV 관측·복귀는 Gazebo에서 실행됩니다. 배정된 USV도 추진력으로 현장 확인 후 복귀합니다. 위험도와 우선순위는 제공된 규칙 계산 결과만 설명하고 재평가하거나 수정하지 마세요. S/U/A는 시연 기준이며 측정값과 구분하세요. 보이는 것만 설명하고 불확실하면 명시하세요. '
+                  '카메라는 함대 전체를 비스듬히 내려다보는 Gazebo 항공 관측 카메라입니다. 메인 함선은 직선 전진하고 USV와 드론은 선택된 함선 상대 대형을 유지합니다. USV는 추진력 기반, 드론은 위치 갱신 기반 시연입니다. 배터리는 시뮬레이션 추정값입니다. 상황과 대응안은 규칙 기반 시연이며 승인된 UAV 관측·복귀는 Gazebo에서 실행됩니다. 외부 접근 상황은 모의 접촉입니다. 운용자가 대형을 직접 선택할 수 있습니다. 방어 대응안 실행 시 드론은 지속 추적하고 USV는 경계선을 유지하며 운용자가 종료하면 복귀합니다. 위험도와 우선순위는 제공된 규칙 계산 결과만 설명하고 재평가하거나 수정하지 마세요. S/U/A는 시연 기준이며 측정값과 구분하세요. 보이는 것만 설명하고 불확실하면 명시하세요. '
                   '현재는 상태 조회와 이미지 설명만 가능하며 이동 명령 실행 기능은 없습니다. '
                   '명령을 실행했다고 주장하지 마세요. 상태가 없는 기체는 미연결입니다. '
                   '상태 요약에서 기체를 빠뜨리지 마세요. 연결 기체: '+', '.join(connected_ids)+

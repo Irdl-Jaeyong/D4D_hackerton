@@ -16,6 +16,7 @@ import os
 import urllib.request
 from formation_motion import Transition,targets
 from mission_execution import ObservationRun
+from defense_scenarios import formation_goals
 from fault_motion import FaultReturn
 from typed_fault_motion import FaultMotion
 import subprocess
@@ -241,12 +242,14 @@ def main():
                 except (OSError,ValueError,KeyError):pass
             dt=min(.25,max(0,t-(self.planner_time if self.planner_time is not None else t)))
             self.planner_time=t
-            reference=fleet_poses(t);points={};group_goals={};homes={}
+            reference=fleet_poses(t);points={};group_goals={};homes={};requested=self.selection.get('mission')
             for group,planner in self.planners.items():
                 mode=self.selection[group]
                 if group=='uav' and mode=='hemisphere':
                     goals=[(reference[f'UAV-{i+1:02}']['x']-MOTION['ship_speed']*t,reference[f'UAV-{i+1:02}']['y'],reference[f'UAV-{i+1:02}']['z']) for i in range(FLEET['uavs'])]
                 else:goals=targets(group,mode,t)
+                context=self.selection.get('scenario_context') or requested
+                if context:goals=formation_goals(group,mode,goals,context.get('scenario'))
                 if planner.assignment is None:planner.select(goals)
                 group_goals[group]=goals
                 kind='UAV' if group=='uav' else 'USV'
@@ -257,7 +260,7 @@ def main():
             if self.mission_run:
                 cancel=not requested or requested['id']!=self.mission_run.id or requested.get('cancel_requested',False)
                 availability=self.selection.get('availability',{})
-                overrides=self.mission_run.step(t,MOTION['ship_speed']*t,homes,self.vehicle_observations,availability,cancel,target_world=requested.get('target_world_current') if requested else None)
+                overrides=self.mission_run.step(t,MOTION['ship_speed']*t,homes,self.vehicle_observations,availability,cancel,target_world=requested.get('target_world_current') if requested else None,contacts=requested.get('threats') if requested else None)
                 for id,point in overrides.items():
                     group='uav' if id.startswith('UAV') else 'usv';planner=self.planners[group]
                     group_goals[group][planner.assignment[int(id.split('-')[1])-1]]=point
