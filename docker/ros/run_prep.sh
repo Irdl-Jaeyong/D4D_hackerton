@@ -36,4 +36,5 @@ for group in 0 1 2 3; do
   NAVIS_BRIDGE_GROUP=$group python3 /project/ros_ws/src/navis_bridge/telemetry_node.py & pids+=("$!")
 done
 python3 /project/scripts/convoy_motion.py & pids+=("$!")
+python3 /project/scripts/gazebo_status_bridge.py & pids+=("$!")
 wait -n "${pids[@]}"
