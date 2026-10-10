@@ -39,26 +39,6 @@
       "benefit": "접촉 방향에 UAV·USV를 추가 배치해 관측과 외곽 경계를 강화합니다.",
       "tradeoff": "접촉 방향에 기체가 집중되어 다른 방향의 예비 기체가 줄어듭니다.",
       "id": "verify"
-    },
-    {
-      "title": "함선 근접 보호",
-      "formations": {
-        "usv": "circle",
-        "uav": "hemisphere"
-      },
-      "allocation": {
-        "UAV": {
-          "count": 2,
-          "goal_policy": "standoff"
-        },
-        "USV": {
-          "count": 2,
-          "goal_policy": "protect"
-        }
-      },
-      "benefit": "UAV는 이격 관측하고 USV는 함선 주변의 가까운 경계 위치로 이동합니다.",
-      "tradeoff": "접촉에 가까이 접근해 식별하는 방식보다 세부 확인에 한계가 있습니다.",
-      "id": "prepare"
     }
   ],
   "fast_approach": [
@@ -81,26 +61,6 @@
       "benefit": "UAV 삼각 대형·USV 전방 부채꼴로 고속 접촉 방향의 감시를 강화합니다.",
       "tradeoff": "전방에 집중하므로 후방 감시는 잔여 기체가 담당합니다.",
       "id": "observe"
-    },
-    {
-      "title": "이격 유지",
-      "formations": {
-        "usv": "fan",
-        "uav": "triangle"
-      },
-      "allocation": {
-        "UAV": {
-          "count": 1,
-          "goal_policy": "standoff"
-        },
-        "USV": {
-          "count": 2,
-          "goal_policy": "standoff"
-        }
-      },
-      "benefit": "UAV·USV가 접촉과 거리를 유지하며 위치·접근 방향을 계속 확인합니다.",
-      "tradeoff": "함선의 감속·우회는 자동 실행하지 않습니다.",
-      "id": "verify"
     },
     {
       "title": "근접 보호 강화",
@@ -164,26 +124,6 @@
       "tradeoff": "현재 실측 거리 기준의 집중 배정이며 상대의 의도는 판단하지 않습니다.",
       "focus": "closest",
       "id": "verify"
-    },
-    {
-      "title": "중앙 보호 유지",
-      "formations": {
-        "usv": "circle",
-        "uav": "rings"
-      },
-      "allocation": {
-        "UAV": {
-          "count": 1,
-          "goal_policy": "standoff"
-        },
-        "USV": {
-          "count": 2,
-          "goal_policy": "protect"
-        }
-      },
-      "benefit": "UAV가 두 접촉을 이격 관측하고 USV는 함선 가까운 양측 경계에 배치됩니다.",
-      "tradeoff": "접촉 근처의 확인보다 함선 주변 관측 유지에 집중합니다.",
-      "id": "prepare"
     }
   ],
   "rear_approach": [
@@ -206,26 +146,6 @@
       "benefit": "UAV·USV 후방 V 대형으로 추적 선박 방향의 관측과 경계를 강화합니다.",
       "tradeoff": "후방 집중으로 전방 예비 기체가 줄어듭니다.",
       "id": "observe"
-    },
-    {
-      "title": "거리 유지 추적",
-      "formations": {
-        "usv": "v",
-        "uav": "v"
-      },
-      "allocation": {
-        "UAV": {
-          "count": 1,
-          "goal_policy": "standoff"
-        },
-        "USV": {
-          "count": 2,
-          "goal_policy": "standoff"
-        }
-      },
-      "benefit": "추적 선박과 거리를 두고 UAV 관측·USV 후방 동행을 유지합니다.",
-      "tradeoff": "선박 정지나 추적 중단은 자동으로 요구·판정하지 않습니다.",
-      "id": "verify"
     },
     {
       "title": "전방 감시 병행",
@@ -288,26 +208,6 @@
       "benefit": "UAV는 함선 주변 상공 관측 위치로, USV는 가까운 수상 경계로 이동합니다.",
       "tradeoff": "접촉 근처 추적보다 보호 구역의 관측 유지에 집중합니다.",
       "id": "verify"
-    },
-    {
-      "title": "복합 상황 대비",
-      "formations": {
-        "usv": "fan",
-        "uav": "box"
-      },
-      "allocation": {
-        "UAV": {
-          "count": 1,
-          "goal_policy": "standoff"
-        },
-        "USV": {
-          "count": 2,
-          "goal_policy": "screen"
-        }
-      },
-      "benefit": "일부 UAV가 드론을 이격 관측하고 USV는 접근 방향의 수상 경계를 강화합니다.",
-      "tradeoff": "추가 수상 접촉을 새로 탐지하는 센서는 연결되지 않았습니다.",
-      "id": "prepare"
     }
   ],
   "combined_intrusion": [
@@ -340,27 +240,6 @@
         }
       },
       "id": "observe"
-    },
-    {
-      "title": "위험도 우선 대응",
-      "formations": {
-        "usv": "fan",
-        "uav": "triangle"
-      },
-      "allocation": {
-        "UAV": {
-          "count": 1,
-          "goal_policy": "track"
-        },
-        "USV": {
-          "count": 1,
-          "goal_policy": "standoff"
-        }
-      },
-      "benefit": "현재 더 가까운 접촉에 UAV·USV를 추가 배정하고 다른 접촉의 관측도 유지합니다.",
-      "tradeoff": "접촉별 개별 위험도 데이터가 없어 현재 거리로 집중 대상을 정합니다.",
-      "focus": "closest",
-      "id": "verify"
     },
     {
       "title": "함선 중심 보호",
@@ -423,49 +302,9 @@
       "benefit": "UAV가 부유물 이동을 추적하고 USV가 추정 유입 경로 주변을 확인합니다.",
       "tradeoff": "추정 경로 관측이며 부유물을 물리적으로 이동시키지 않습니다.",
       "id": "verify"
-    },
-    {
-      "title": "접근 제한·호위 유지",
-      "formations": {
-        "usv": "circle",
-        "uav": "rings"
-      },
-      "allocation": {
-        "UAV": {
-          "count": 1,
-          "goal_policy": "standoff"
-        },
-        "USV": {
-          "count": 2,
-          "goal_policy": "protect"
-        }
-      },
-      "benefit": "UAV는 원거리 관측을 유지하고 USV는 함선 가까이 이동해 부유물과 이격합니다.",
-      "tradeoff": "주의 구역 표시는 모의 접촉 위치를 기준으로 하며 실제 안전 경로 인증은 아닙니다.",
-      "id": "prepare"
     }
   ],
   "communication_interference": [
-    {
-      "title": "정상 기체로 공백 보완",
-      "formations": {
-        "usv": "circle",
-        "uav": "rings"
-      },
-      "allocation": {
-        "UAV": {
-          "count": 2,
-          "goal_policy": "standoff"
-        },
-        "USV": {
-          "count": 2,
-          "goal_policy": "standoff"
-        }
-      },
-      "benefit": "통신이 정상인 UAV·USV를 교란 구역 외곽에 배정해 관측 공백을 보완합니다.",
-      "tradeoff": "통신 불능 기체는 배정에서 제외하고 기존 비상 행동을 유지합니다.",
-      "id": "observe"
-    },
     {
       "title": "교란 구역 이격",
       "formations": {
@@ -527,26 +366,6 @@
       "benefit": "USV가 수중 접촉 추정 구역 주변을 확인하고 UAV는 수면 징후를 관측합니다.",
       "tradeoff": "USV 수중 센서 탑재를 가정한 이동이며 실제 소나 탐지가 아닙니다.",
       "id": "observe"
-    },
-    {
-      "title": "이동 징후 추적",
-      "formations": {
-        "usv": "columns",
-        "uav": "triangle"
-      },
-      "allocation": {
-        "UAV": {
-          "count": 2,
-          "goal_policy": "standoff"
-        },
-        "USV": {
-          "count": 2,
-          "goal_policy": "screen"
-        }
-      },
-      "benefit": "USV가 갱신된 추정 위치 방향의 외곽 경계를 유지하고 UAV는 주변 수면을 관측합니다.",
-      "tradeoff": "수중 접촉 위치는 시나리오 값이며 표적 종류와 의도는 미확인입니다.",
-      "id": "verify"
     },
     {
       "title": "함선 주변 감시 강화",

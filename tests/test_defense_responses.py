@@ -18,14 +18,14 @@ class ScenarioResponses(unittest.TestCase):
     def mission(self,scenario):
         m={'id':1,'scenario':scenario,'scene_origin':{'x':0,'y':0,'sim_time':0},'card':{'offset':[260,0]}}
         m['threats']=contacts(m,0);return m
-    def test_all_nine_scenarios_have_three_distinct_titles_and_execution_signatures(self):
+    def test_all_nine_scenarios_have_two_distinct_titles_and_execution_signatures(self):
         all_titles=[]
         for scenario in DEFENSE_SCENARIOS:
             with self.subTest(scenario=scenario):
                 plans=defense_options(fleet(),{'usv':'circle','uav':'hemisphere'},scenario)
-                self.assertEqual(len(plans),3)
-                self.assertEqual([p['id'] for p in plans],['observe','verify','prepare'])
-                self.assertEqual(len({p['title'] for p in plans}),3)
+                self.assertEqual(len(plans),2)
+                self.assertEqual(len({p['id'] for p in plans}),2)
+                self.assertEqual(len({p['title'] for p in plans}),2)
                 self.assertTrue(all(p['available'] for p in plans))
                 signatures=[]
                 for p in plans:
@@ -37,11 +37,11 @@ class ScenarioResponses(unittest.TestCase):
                             self.assertTrue(abs(x)>=100 or abs(y)>=42,'Surface goal must stay outside flagship footprint')
                     self.assertEqual(len({tuple(t['target']) for t in run.tasks.values()}),len(run.tasks),'Tasks must not share one physical goal')
                     signatures.append(tuple(sorted((round(t['target'][0],2),round(t['target'][1],2),t['target'][2]) for t in run.tasks.values())))
-                self.assertEqual(len(set(signatures)),3,'Different labels must produce different actual targets')
+                self.assertEqual(len(set(signatures)),2,'Different labels must produce different actual targets')
                 all_titles.extend(p['title'] for p in plans)
-        self.assertEqual(len(set(all_titles)),27)
+        self.assertEqual(len(set(all_titles)),18)
     def test_protection_response_keeps_surface_units_near_ship_after_contact_moves(self):
-        m=self.mission('fast_approach');m['approved']=defense_options(fleet(),{'usv':'circle','uav':'hemisphere'},m['scenario'])[2]
+        m=self.mission('fast_approach');m['approved']=defense_options(fleet(),{'usv':'circle','uav':'hemisphere'},m['scenario'])[-1]
         r=ObservationRun(m,0,0)
         homes={id:(0,0,.7 if id.startswith('USV') else 80) for id in r.tasks}
         observations={id:(10,(0,0,.7 if id.startswith('USV') else 80)) for id in r.tasks}

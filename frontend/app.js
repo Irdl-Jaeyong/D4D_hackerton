@@ -186,7 +186,11 @@ function assignmentText(v,context){
   return '이번 안 미선택 · '+v.readiness.task;
 }
 function renderAssignment(s){
-  for(const option of $('assignmentPlan').options){const plan=s.mission?.options.find(p=>p.id===option.value);option.textContent=plan?.title||({'observe':'대응안 1','verify':'대응안 2','prepare':'대응안 3'}[option.value]);}
+  const select=$('assignmentPlan'),plans=s.mission?.approved?[s.mission.approved]:(s.mission?.options||[]),previous=select.value;
+  if([...select.options].map(o=>o.value).join('|')!==plans.map(p=>p.id).join('|')){
+    select.replaceChildren(...plans.map(p=>{const option=element('option',p.title);option.value=p.id;return option;}));
+    select.value=plans.some(p=>p.id===previous)?previous:(plans[0]?.id||'');
+  }else for(const option of select.options)option.textContent=plans.find(p=>p.id===option.value).title;
   const c=assignmentContext(s),m=c.mission,p=c.plan;
   $('assignmentPlan').disabled=!m||!!m.approved;
   if(m?.approved)$('assignmentPlan').value=m.approved.id;
@@ -292,7 +296,7 @@ function renderMission(s){
   renderMissionReview(s);$('cancelMission').disabled=missionRequestPending||!m;
   if(key!==missionRenderKey){
     missionRenderKey=key;$('situationCard').replaceChildren();$('responseOptions').replaceChildren();
-    if(!m){$('situationCard').append(element('p','가상 상황을 선택해 대응안 3개를 확인하세요.','muted'));}
+    if(!m){$('situationCard').append(element('p','가상 상황을 선택해 대응안 2개를 확인하세요.','muted'));}
     else{
       $('situationCard').append(element('strong',m.card.title),element('p',m.card.summary),element('p',m.threats?.length?`모의 외부 접촉 ${m.threats.length}개 · 대형 버튼으로 직접 대응 가능`:`함선 상대 위치 x ${m.card.offset[0]}m / y ${m.card.offset[1]}m`,'muted'),element('p',m.card.unknown,'scope-note'));
       if(m.affected_vehicles)$('situationCard').append(element('p',m.affected_vehicles.length?`모의 통신 영향: ${m.affected_vehicles.join(', ')}`:'영향을 줄 가용 기체 없음 · 구역 표시만 생성','scope-note'));
@@ -336,8 +340,8 @@ function renderHumanApproval(s){
 }
 $('finalApprove').addEventListener('click',()=>{if(selectedResponse)missionRequest('/api/mission/approve',{...selectedResponse,human_confirmed:true,decision_source:'captain_button'});});
 $('approvalCommandForm').addEventListener('submit',e=>{
-  e.preventDefault();const command=$('approvalCommand').value,match=command.match(/^\s*([123])\s*번\s*(?:최종\s*)?승인\s*$/),m=lastState?.mission;
-  if(!match||!m){$('missionFeedback').textContent='1번 승인, 2번 승인, 3번 승인 중 하나를 정확히 입력하세요.';return;}
+  e.preventDefault();const command=$('approvalCommand').value,match=command.match(/^\s*([12])\s*번\s*(?:최종\s*)?승인\s*$/),m=lastState?.mission;
+  if(!match||!m){$('missionFeedback').textContent='1번 승인, 2번 승인 중 하나를 정확히 입력하세요.';return;}
   const plan=m.options[Number(match[1])-1];if(!plan){$('missionFeedback').textContent='선택할 수 있는 대응안이 없습니다.';return;}
   selectedResponse={mission_id:m.id,option_id:plan.id,plan_revision:m.plan_revision||0};missionRequest('/api/mission/approve',{...selectedResponse,human_confirmed:true,decision_source:'captain_text',operator_command:command});
 });
@@ -363,7 +367,7 @@ async function missionRequest(url,data={}){
   if(missionRequestPending)return;missionRequestPending=true;
   const buttons=[...document.querySelectorAll('.mission-console button')];buttons.forEach(b=>b.disabled=true);$('missionFeedback').textContent='처리 중…';
   try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),result=await r.json();if(!r.ok)throw Error(result.detail||'요청 실패');if(result.id!==undefined){reviewMissionId=result.id;}
-    const response=await fetch('/api/state');if(!response.ok)throw Error('상태 갱신 실패');queueView=null;lastState=reviewState(await response.json());missionRenderKey='';renderMission(lastState);renderVehicles(lastState);formationControls(lastState.formations);$('missionFeedback').textContent=url.endsWith('random-attack')?`공격 발생 · ${result.card.title} · 대응안을 선택하세요.`:url.endsWith('approve')?'✓ 출동 명령 전달 완료 · Gazebo 반영 중':url.endsWith('cancel')?'계획 종료 · 현재 대형 유지':url.endsWith('simulated-fault')?'기체 배정 상태 시연 갱신':'상황 생성 완료 · 대응안 3개를 검토하세요.';$('missionFeedback').dataset.state='success';event($('missionFeedback').textContent);return result;
+    const response=await fetch('/api/state');if(!response.ok)throw Error('상태 갱신 실패');queueView=null;lastState=reviewState(await response.json());missionRenderKey='';renderMission(lastState);renderVehicles(lastState);formationControls(lastState.formations);$('missionFeedback').textContent=url.endsWith('random-attack')?`공격 발생 · ${result.card.title} · 대응안을 선택하세요.`:url.endsWith('approve')?'✓ 출동 명령 전달 완료 · Gazebo 반영 중':url.endsWith('cancel')?'계획 종료 · 현재 대형 유지':url.endsWith('simulated-fault')?'기체 배정 상태 시연 갱신':'상황 생성 완료 · 대응안 2개를 검토하세요.';$('missionFeedback').dataset.state='success';event($('missionFeedback').textContent);return result;
   }catch(error){$('missionFeedback').textContent='실행 불가 · '+error.message;$('missionFeedback').dataset.state='error';event(error.message);}
   finally{missionRequestPending=false;if(lastState)renderMission(lastState);}
 }

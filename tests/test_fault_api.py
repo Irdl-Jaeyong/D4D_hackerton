@@ -71,7 +71,7 @@ class FaultAPI(unittest.IsolatedAsyncioTestCase):
     async def test_risk_recommendations_exclude_faulted_vehicle_and_need_human_approval(self):
         api.simulated_faults.add('UAV-01')
         m=await api.risk_plan('UAV-01:fault')
-        self.assertEqual(len(m['options']),3)
+        self.assertEqual(len(m['options']),2)
         self.assertIsNone(m['approved'])
         self.assertTrue(all(t['vehicle']!='UAV-01' for p in m['options'] for t in p['tasks']))
         with self.assertRaises(HTTPException):await api.approve_plan(api.ApprovalRequest(mission_id=m['id'],option_id='observe'))

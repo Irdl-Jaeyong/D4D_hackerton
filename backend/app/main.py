@@ -22,7 +22,7 @@ sys.path.insert(0,str(ROOT/'scripts'))
 from formation_motion import CATALOG
 from mission_console import readiness, options, SCENARIOS
 from auto_scenarios import ScenarioGenerator
-from defense_scenarios import DEFENSE_SCENARIOS
+from defense_scenarios import DEFENSE_SCENARIOS,DEFENSE_RESPONSES
 from mission_console import defense_options
 from risk_monitor import assess
 from fault_motion import deck_slot
@@ -363,8 +363,8 @@ async def approve_plan(data: ApprovalRequest):
     if not plan or not plan['available']:raise HTTPException(409,'가용 기체가 부족합니다.')
     if data.decision_source=='captain_text':
         import re
-        match=re.fullmatch(r'\s*([123])\s*번\s*(?:최종\s*)?승인\s*',data.operator_command)
-        if not match or int(match[1])!=item['options'].index(plan)+1:raise HTTPException(422,'선택안과 일치하는 1번 승인 / 2번 승인 / 3번 승인을 입력하세요.')
+        match=re.fullmatch(r'\s*([12])\s*번\s*(?:최종\s*)?승인\s*',data.operator_command)
+        if not match or int(match[1])!=item['options'].index(plan)+1:raise HTTPException(422,'선택안과 일치하는 1번 승인 / 2번 승인을 입력하세요.')
     if formation['revision']!=item['basis_revision']:raise HTTPException(409,'대형이 변경되었습니다. 대응안을 다시 계산하세요.')
     current={v['id']:v for v in state()['vehicles']}
     if not any(v['type']=='SHIP' and v['connected'] for v in current.values()):raise HTTPException(409,'함선의 최신 상태가 없습니다. 다시 확인하세요.')
@@ -604,6 +604,7 @@ async def chat(data: Chat):
         offline_ids = [v['id'] for v in snapshot['vehicles'] if not v['connected']]
         system = ('당신은 NAVIS-AI 시뮬레이션 관제 보조입니다. 한국어로 짧고 명확하게 답하세요. '
                   '제공된 실제 상태만 사용하고 배터리, 위치, 연결상태를 추측하지 마세요. '
+                  '대응책을 설명할 때는 현재 상황에 제공된 두 대응안만 비교하고 추가 대응안을 만들지 마세요. '
                   '카메라는 전체 편대·함선 근접·선택 기체 전방 1인칭 중 선택된 Gazebo 카메라입니다. 메인 함선은 직선 전진하고 USV와 드론은 선택된 함선 상대 대형을 유지합니다. USV는 추진력 기반, 드론은 위치 갱신 기반 시연입니다. 배터리는 시뮬레이션 추정값입니다. 상황과 대응안은 규칙 기반 시연이며 승인된 UAV 관측·복귀는 Gazebo에서 실행됩니다. 외부 접근 상황은 모의 접촉입니다. 운용자가 대형을 직접 선택할 수 있습니다. 방어 대응안 실행 시 드론은 지속 추적하고 USV는 경계선을 유지하며 운용자가 종료하면 복귀합니다. 위험도와 우선순위는 제공된 규칙 계산 결과만 설명하고 재평가하거나 수정하지 마세요. S/U/A는 시연 기준이며 측정값과 구분하세요. 보이는 것만 설명하고 불확실하면 명시하세요. '
                   '현재는 상태 조회와 이미지 설명만 가능하며 이동 명령 실행 기능은 없습니다. '
                   '명령을 실행했다고 주장하지 마세요. 상태가 없는 기체는 미연결입니다. '
@@ -630,6 +631,12 @@ def restore_console():
         if any(saved['formation'][g] not in CATALOG[g] for g in ('usv','uav')):return
         formation.update(saved['formation']);mission=None
         cards=saved.get('missions') or ([saved['mission']] if saved.get('mission') else [])
+        for item in cards:
+            allowed={p['id'] for p in DEFENSE_RESPONSES[item['scenario']]} if item['scenario'] in DEFENSE_RESPONSES else {'observe','verify'}
+            previous=item.get('options',[])
+            item['options']=[p for p in previous if p['id'] in allowed][:2]
+            if len(item['options'])!=len(previous):item['plan_revision']=item.get('plan_revision',0)+1
+            # Approved history and in-flight execution remain intact even if that choice was removed.
         missions.clear();missions.update({m['id']:m for m in cards})
         mission=next((m for m in cards if m.get('approved') and m.get('execution',{}).get('status') not in ('completed','cancelled')),None)
         mission_counter=max(saved.get('mission_counter',0),max(missions,default=0))
