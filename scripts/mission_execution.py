@@ -3,12 +3,12 @@ import math
 class ObservationRun:
     def __init__(self,mission,t,leader_x):
         self.id=mission['id'];self.approved_at=mission['approved'].get('approved_at');self.started=t;self.cancelled=False
-        offset=mission['card']['offset'];self.tasks={}
+        offset=mission['card']['offset'];target=mission.get('target_world',[leader_x+offset[0],offset[1]]);self.tasks={}
         for task in mission['approved']['tasks']:
             if not task['vehicle'].startswith('UAV-'):continue
-            self.tasks[task['vehicle']]={'stage':'outbound','target':(leader_x+offset[0],offset[1],60+12*len(self.tasks)),
+            self.tasks[task['vehicle']]={'stage':'outbound','target':(target[0],target[1],60+12*len(self.tasks)),
                                        'dwell_started':None,'distance_m':0.,'last_position':None,'completed_at':None}
-    def step(self,t,leader_x,homes,observations,available,cancel=False):
+    def step(self,t,leader_x,homes,observations,available,cancel=False,target_world=None):
         self.cancelled=self.cancelled or cancel;overrides={}
         for id,task in self.tasks.items():
             if task['stage']=='completed':continue
@@ -23,6 +23,7 @@ class ObservationRun:
                 # Keep current controller goal, but never claim observation/success.
                 if task['stage']=='observing':task['dwell_started']=None
                 continue
+            if target_world is not None:task['target']=(target_world[0],target_world[1],task['target'][2])
             target=task['target']
             if task['stage']=='outbound' and math.dist(p,target)<4:
                 task['stage']='observing';task['dwell_started']=t

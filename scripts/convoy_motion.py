@@ -17,6 +17,7 @@ import urllib.request
 from formation_motion import Transition,targets
 from mission_execution import ObservationRun
 from fault_motion import FaultReturn
+from typed_fault_motion import FaultMotion
 import subprocess
 from pathlib import Path
 
@@ -126,7 +127,7 @@ def pose_message(name,p):
 
 
 
-def poses(t, camera=None, history=None, formations=None, faults=None, inspection=None):
+def poses(t, camera=None, history=None, formations=None, faults=None, inspection=None, typed_motion=None, fault_modes=None):
     fleet=fleet_poses(t,camera)
     fleet.pop('CIV-01',None)
     if formations:
@@ -161,6 +162,8 @@ def poses(t, camera=None, history=None, formations=None, faults=None, inspection
             yaw=previous[3]+fraction*delta
             wake=fleet[f'wake_{name}_{segment:02}']
             wake.update(x=x-2.5*math.cos(yaw),y=y-2.5*math.sin(yaw),yaw=yaw,z=-.04 if stamp>=samples[0][0] else -2)
+    if typed_motion:
+        fleet=typed_motion.apply(fleet,t,{id:kind for id,kind in (fault_modes or {}).items() if kind in ('propulsion','communication')})
     if inspection:
         name=inspection['id'];target=fleet.get(name)
         if name.startswith('USV') and history and history.get(name):
@@ -189,7 +192,7 @@ def main():
             self.planners={group:Transition([(initial[f'{kind}-{i+1:02}']['x'],initial[f'{kind}-{i+1:02}']['y'],initial[f'{kind}-{i+1:02}']['z']) for i in range(FLEET[key])],speed,accel) for group,kind,key,speed,accel in [('usv','USV','usvs',3,1),('uav','UAV','uavs',10,4)]}
             self.checked=0;self.planner_time=None;self.initial_error={};self.formation_status={}
             self.physical_history={}
-            self.uav_observations={};self.mission_run=None;self.execution_report=None;self.fault_runs={};self.fault_report={}
+            self.uav_observations={};self.mission_run=None;self.execution_report=None;self.fault_runs={};self.fault_report={};self.typed_motion=FaultMotion()
             for i in range(FLEET['uavs']):
                 name=f'UAV-{i+1:02}'
                 self.create_subscription(Odometry,f'/navis/{name.replace("-","_")}/odometry',lambda msg,name=name:self.uav_odom(name,msg),qos_profile_sensor_data)
@@ -249,7 +252,7 @@ def main():
                     if self.mission_run:
                         cancel=not requested or requested['id']!=self.mission_run.id or requested.get('cancel_requested',False)
                         availability=self.selection.get('availability',{})
-                        overrides=self.mission_run.step(t,MOTION['ship_speed']*t,homes,self.uav_observations,availability,cancel)
+                        overrides=self.mission_run.step(t,MOTION['ship_speed']*t,homes,self.uav_observations,availability,cancel,target_world=requested.get('target_world_current') if requested else None)
                         for id,point in overrides.items():goals[planner.assignment[int(id.split('-')[1])-1]]=point
                         self.execution_report=self.mission_run.report(t,self.uav_observations,availability)
                 error=planner.step(goals,dt,marine=group=='usv');points[group]=planner.points
@@ -263,7 +266,9 @@ def main():
                             error=max(error,math.hypot(history[-1][1]-MOTION['ship_speed']*t-goal[0],history[-1][2]-goal[1]))
                 tolerance=10 if mode=='hemisphere' else 8 if mode=='circle' else 3
                 self.formation_status[group]={'mode':mode,'moving':error>tolerance,'remaining_m':round(error,1),'progress':round(max(0,min(100,100*(1-error/self.initial_error[group]))))}
-            active=set(self.selection.get('faults',[]))
+            modes=self.selection.get('fault_modes',{})
+            all_faults=set(self.selection.get('faults',[]))
+            active={id for id in all_faults if modes.get(id,'payload')=='payload'}
             for id in list(self.fault_runs):
                 if id not in active:
                     run=self.fault_runs.pop(id)
@@ -284,6 +289,10 @@ def main():
                     history=self.physical_history.get(id)
                     near=history and math.hypot(history[-1][1]-MOTION['ship_speed']*t+65,abs(history[-1][2])-30)<10
                     self.fault_report[id]={'phase':'moored' if near else 'returning','sim_time':t}
+            for id in all_faults-active:
+                kind=modes.get(id);pose=self.typed_motion.last.get(id,{})
+                phase=('ditched' if pose.get('z',10)<=.6 else 'emergency_descent') if kind=='propulsion' and id.startswith('UAV') else 'drifting' if id.startswith('USV') else 'failsafe_return'
+                self.fault_report[id]={'phase':phase,'sim_time':t,'fault_type':kind}
             if now-self.checked<.05:
                 try:
                     data=json.dumps(self.formation_status).encode()
@@ -296,7 +305,7 @@ def main():
                         with urllib.request.urlopen(req,timeout=.2) as response:response.read()
                 except (OSError,ValueError):pass
             try:
-                response=subprocess.run(['ign','service','-s','/world/navis_prep/set_pose_vector','--reqtype','ignition.msgs.Pose_V','--reptype','ignition.msgs.Boolean','--timeout','1200','--req',poses(t,history=self.physical_history,formations=points,faults=self.fault_runs,inspection={'id':self.selection.get('inspection_vehicle','UAV-01')})],capture_output=True,text=True,timeout=1.5)
+                response=subprocess.run(['ign','service','-s','/world/navis_prep/set_pose_vector','--reqtype','ignition.msgs.Pose_V','--reptype','ignition.msgs.Boolean','--timeout','1200','--req',poses(t,history=self.physical_history,formations=points,faults=self.fault_runs,inspection={'id':self.selection.get('inspection_vehicle','UAV-01')},typed_motion=self.typed_motion,fault_modes=modes)],capture_output=True,text=True,timeout=1.5)
                 if response.returncode or 'true' not in response.stdout:
                     self.failures+=1
                     if self.failures%10==1:self.get_logger().warning('Pose update failed: '+response.stderr[:160])

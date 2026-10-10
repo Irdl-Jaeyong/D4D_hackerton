@@ -13,7 +13,7 @@ function map(state){
   ctx.strokeStyle='#193b50';
   for(let x=0;x<c.width;x+=38){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke();}
   for(let y=0;y<c.height;y+=30){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke();}
-  const scenario=state.mission?.card;if(scenario&&lead){const [x,y]=point(ox+scenario.offset[0],oy+scenario.offset[1]);ctx.strokeStyle='#ffb567';ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#ffb567';}
+  for(const situation of state.scene?.situations||[]){const [x,y]=point(situation.x,situation.y);ctx.strokeStyle='#ffb567';ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#ffb567';ctx.fillText(situation.title,x+12,y-8);}
   ctx.font='12px sans-serif';ctx.fillStyle='#9cb7c9';
   if(state.formations?.usv==='circle'){ctx.strokeStyle='#2c6d77';ctx.setLineDash([5,6]);ctx.beginPath();ctx.ellipse(c.width/2,c.height/2,(motion?.escort_radii[0]||48)*sx,(motion?.escort_radii[1]||32)*sy,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
   if(lead&&motion&&state.scene.scenario){
@@ -24,7 +24,7 @@ function map(state){
     ctx.fillStyle='#ff982b';ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);ctx.fill();ctx.fillText('CIV-01 민간 배',x+10,y-8);
   }
   for(const v of state.vehicles){
-    if(!v.connected)continue;const t=v.telemetry,[x,y]=point(t.x,t.y);
+    if(!v.telemetry||(!v.connected&&v.source!=='last_known'))continue;const t=v.telemetry,[x,y]=point(t.x,t.y);
     const ring=(parseInt(v.id.split('-')[1],10)-1)%5;
     ctx.fillStyle=stateColors[v.readiness?.operational_state]||'#fff';
     ctx.save();ctx.translate(x,y);ctx.rotate(-t.yaw);
@@ -149,7 +149,8 @@ function vehicleDetails(s){
   $('cameraIdentity').textContent=s.camera_view==='inspect'?`${s.inspection_vehicle} · 실제 기체 근접 관측 · ${stateLabels[s.vehicles.find(v=>v.id===s.inspection_vehicle)?.readiness.operational_state]||'상태 확인 필요'}`:v?`선택: ${v.id} · ${v.type==='UAV'?'드론':v.type==='USV'?'무인 수상정':'메인 함선'} · 근접 관측으로 형상을 확인하세요.`:'기체나 목록을 클릭해 선택한 뒤 근접 관측으로 형상을 확인하세요.';
   if(!v)return;
   const r=v.readiness,p=v.telemetry;
-  $('faultToggle').disabled=v.type==='SHIP'||!!(v.fault&&v.type==='UAV'&&v.fault.phase!=='charging');$('faultToggle').textContent=v.fault?'정비 완료 · 고장 해제':'선택 기체 고장 주입';
+  $('faultToggle').hidden=!v.fault;
+  $('faultToggle').disabled=v.type==='SHIP'||!!(v.fault&&v.type==='UAV'&&v.fault_type!=='communication'&&!['charging','ditched'].includes(v.fault.phase));$('faultToggle').textContent=v.fault_type==='communication'?'통신 복구 시연':v.fault?.phase==='ditched'?'회수·정비 완료 시연':v.fault?'정비 완료 · 고장 해제':'선택 기체 고장 주입';
   $('vehicleDetails').textContent=`${v.id} · ${v.fault?.phase==='charging'?'갑판 충전·정비 중 · ':''}${r.battery_percent===null?'잔량 데이터 없음':`시뮬레이션 잔량 ${r.battery_percent}% / 잔여 ${r.endurance_minutes}분`} · 마지막 수신 ${v.age_seconds===null?'없음':v.age_seconds.toFixed(1)+'초 전'} · ${v.fault?'모의 고장 · '+r.task:r.reason} · ${r.task}`+(p&&v.connected?` · 위치 (${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${(p.z||0).toFixed(1)})m · 기울기 ${(Math.max(Math.abs(p.roll||0),Math.abs(p.pitch||0))*180/Math.PI).toFixed(1)}°`:' · 위치 확인 불가');
   const context=assignmentContext(s),task=context.plan?.tasks.find(t=>t.vehicle===v.id);
   $('vehicleDetails').append(element('strong',assignmentText(v,context),'vehicle-assignment-title'));
@@ -233,12 +234,12 @@ $('approvalCommandForm').addEventListener('submit',e=>{
 async function missionRequest(url,data={}){
   const buttons=[...document.querySelectorAll('.mission-console button')];buttons.forEach(b=>b.disabled=true);$('missionFeedback').textContent='처리 중…';
   try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),result=await r.json();if(!r.ok)throw Error(result.detail||'요청 실패');
-    const response=await fetch('/api/state');if(!response.ok)throw Error('상태 갱신 실패');lastState=await response.json();missionRenderKey='';renderMission(lastState);renderVehicles(lastState);formationControls(lastState.formations);$('missionFeedback').textContent=url.endsWith('approve')?'승인 완료 · 대형 적용 요청 / 임무 계획 등록':url.endsWith('cancel')?'계획 종료 · 현재 대형 유지':url.endsWith('simulated-fault')?'기체 배정 상태 시연 갱신':'상황 생성 완료 · 대응안 3개를 검토하세요.';event($('missionFeedback').textContent);
+    const response=await fetch('/api/state');if(!response.ok)throw Error('상태 갱신 실패');lastState=await response.json();missionRenderKey='';renderMission(lastState);renderVehicles(lastState);formationControls(lastState.formations);$('missionFeedback').textContent=url.endsWith('approve')?'승인 완료 · 대형 적용 요청 / 임무 계획 등록':url.endsWith('cancel')?'계획 종료 · 현재 대형 유지':url.endsWith('simulated-fault')?'기체 고장 상태 갱신':$('scenarioSelect').value==='fault'?'고장 반영 완료 · 기체 움직임과 위험 목록을 확인하세요.':'상황 생성 완료 · 대응안 3개를 검토하세요.';event($('missionFeedback').textContent);
   }catch(error){$('missionFeedback').textContent=error.message;event(error.message);}
   finally{if(lastState)renderMission(lastState);}
 }
 $('faultToggle').addEventListener('click',async()=>{const v=lastState?.vehicles.find(v=>v.id===selectedVehicle);if(!v)return;await missionRequest('/api/vehicles/'+v.id+'/simulated-fault',{unavailable:!v.fault});});
-$('startScenario').addEventListener('click',()=>missionRequest('/api/mission/scenario',{scenario:$('scenarioSelect').value}));
+$('startScenario').addEventListener('click',()=>missionRequest('/api/mission/scenario',{scenario:$('scenarioSelect').value,vehicle_id:selectedVehicle,fault_type:$('faultType').value}));
 $('cancelMission').addEventListener('click',()=>missionRequest('/api/mission/cancel'));
 $('assignmentPlan').addEventListener('change',()=>{if(lastState)renderVehicles(lastState);});
 $('vehicleFilter').addEventListener('change',()=>{if(lastState)renderVehicles(lastState);});
@@ -307,3 +308,6 @@ $('returnFleet').addEventListener('click',()=>{
  $('cameraView').value='wide';$('cameraView').dispatchEvent(new Event('change'));
  cameraZoom=1;cameraPan={x:0,y:0};transformCamera();
 });
+
+function faultSelector(){ $('faultType').hidden=$('scenarioSelect').value!=='fault'; }
+$('scenarioSelect').addEventListener('change',faultSelector);faultSelector();

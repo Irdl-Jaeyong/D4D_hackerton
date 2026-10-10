@@ -24,10 +24,10 @@ class FaultAPI(unittest.IsolatedAsyncioTestCase):
         api.fault_status['UAV-01']={'phase':'charging'}
         await api.set_simulated_fault('UAV-01',api.FaultRequest(unavailable=False))
         self.assertNotIn('UAV-01',api.simulated_faults)
-    async def test_airborne_emergency_return_is_not_labelled_parked_unavailable(self):
+    async def test_airborne_fault_is_red_but_keeps_return_phase(self):
         api.simulated_faults.add('UAV-01');api.fault_status['UAV-01']={'phase':'returning'}
         v=next(v for v in api.state()['vehicles'] if v['id']=='UAV-01')
-        self.assertEqual(v['readiness']['operational_state'],'waiting')
+        self.assertEqual(v['readiness']['operational_state'],'unavailable')
         self.assertFalse(v['readiness']['available'])
         self.assertIn('비상 복귀',v['readiness']['task'])
         api.fault_status['UAV-01']={'phase':'charging'}

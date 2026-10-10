@@ -1,6 +1,8 @@
 // Original NAVIS reduced-order surface-craft physics demonstration.
 #include "vrx/Wavefield.hh"
 #include <algorithm>
+#include <atomic>
+#include <ignition/msgs/stringmsg.pb.h>
 #include <cmath>
 #include <ignition/gazebo/System.hh>
 #include <ignition/gazebo/Model.hh>
@@ -22,6 +24,7 @@ class MaritimeEscort : public gazebo::System, public gazebo::ISystemConfigure,
   int recoveryStage=0;
   transport::Node node;
   transport::Node::Publisher diagnostics;
+  std::atomic<bool> propulsionFault{false};
   double left=0,right=0,lastReport=-1;
   double phase=0,speed=1.5,omega=.007,rx=115,ry=75;
   static double clip(double x,double limit){return std::clamp(x,-limit,limit);}
@@ -31,6 +34,10 @@ class MaritimeEscort : public gazebo::System, public gazebo::ISystemConfigure,
                  gazebo::EntityComponentManager &ecm,gazebo::EventManager &) override {
     link=gazebo::Link(gazebo::Model(entity).LinkByName(ecm,"base_link"));
     link.EnableVelocityChecks(ecm);
+    const std::string modelName=gazebo::Model(entity).Name(ecm);
+    node.Subscribe<msgs::StringMsg>("/navis/propulsion_faults",[this,modelName](const msgs::StringMsg &msg){
+      propulsionFault.store((","+msg.data()+",").find(","+modelName+",")!=std::string::npos);
+    });
     wavefield.Load(sdf);
     goalName=sdf->Get<std::string>("target_model");
     phase=sdf->Get<double>("phase");
@@ -81,6 +88,7 @@ class MaritimeEscort : public gazebo::System, public gazebo::ISystemConfigure,
     const double response=1-std::exp(-dt/.5);
     left+=(clip(surge/2-moment/1.4,750)-left)*response;
     right+=(clip(surge/2+moment/1.4,750)-right)*response;
+    if(propulsionFault.load()){left=0;right=0;}
     // Four waterplane samples: displaced-volume stiffness and positive-only
     // buoyancy, with vertical damping at each point. Equilibrium draft is .95m.
     for(double x:{-1.8,1.8})for(double y:{-.8,.8}){
@@ -94,7 +102,7 @@ class MaritimeEscort : public gazebo::System, public gazebo::ISystemConfigure,
     auto forward=pose.Rot().RotateVector(math::Vector3d(1,0,0));
     link.AddWorldForce(ecm,forward*left*(fault?.45:1),math::Vector3d(-1.8,.7,0));
     link.AddWorldForce(ecm,forward*right*(fault?.45:1),math::Vector3d(-1.8,-.7,0));
-    if(fault && error.Length()>10)link.AddWorldWrench(ecm,math::Vector3d(0,0,0),math::Vector3d(180*std::sin(t*3),60*std::sin(t*2),0));
+    if(fault && !propulsionFault.load() && error.Length()>10)link.AddWorldWrench(ecm,math::Vector3d(0,0,0),math::Vector3d(180*std::sin(t*3),60*std::sin(t*2),0));
     math::Vector3d drag(-80*bodyV.X()-25*bodyV.X()*std::abs(bodyV.X()),
                        -200*bodyV.Y()-100*bodyV.Y()*std::abs(bodyV.Y()),0);
     link.AddWorldWrench(ecm,pose.Rot().RotateVector(drag),

@@ -37,4 +37,6 @@ for group in 0 1 2 3; do
 done
 python3 /project/scripts/convoy_motion.py & pids+=("$!")
 python3 /project/scripts/gazebo_status_bridge.py & pids+=("$!")
+python3 /project/scripts/gazebo_scenario_bridge.py & pids+=("$!")
+python3 /project/scripts/gazebo_fault_bridge.py & pids+=("$!")
 wait -n "${pids[@]}"
