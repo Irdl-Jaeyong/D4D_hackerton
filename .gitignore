@@ -18,3 +18,6 @@ ros_ws/log/
 
 # Local inference test artifacts
 outputs/
+
+# Downloaded Gazebo Fuel airframe assets (install_uav_example.sh)
+ros_ws/src/navis_sim/models/x3_uav/
