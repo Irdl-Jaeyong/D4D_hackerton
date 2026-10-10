@@ -20,9 +20,8 @@ class ScenarioGenerator:
         queue=state.get('approval_queue',[])
         if len(queue)>=self.config['max_pending']:return None
         active=state.get('active_mission')
-        active=state.get('active_missions',([active] if active else []))
-        counts=Counter(m['scenario'] for m in queue+active)
-        assigned={t['vehicle'] for m in active for t in m.get('execution_tasks',m.get('approved',{}).get('tasks',[]))}
+        counts=Counter(m['scenario'] for m in queue+([active] if active else []))
+        assigned={t['vehicle'] for t in (active or {}).get('approved',{}).get('tasks',[])}
         healthy=[v['id'] for v in state['vehicles'] if v['type'] in ('UAV','USV') and v['connected'] and not v.get('fault') and v.get('readiness',{}).get('available') and v['id'] not in assigned]
         can_fault=healthy and sum(bool(v.get('fault')) for v in state['vehicles'])<self.config['max_faulted_vehicles']
         choices=[k for k in self.config['scenarios'] if (not manual or k in DEFENSE_SCENARIOS) and counts[k]<self.config['max_per_scenario'] and (k not in ('fault','communication_interference') or can_fault)]

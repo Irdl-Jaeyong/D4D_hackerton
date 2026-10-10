@@ -16,7 +16,7 @@ import time
 import os
 import urllib.request
 from formation_motion import Transition,targets
-from mission_execution import MultiMissionRuns
+from mission_execution import ObservationRun
 from first_person_camera import mounted_camera
 from defense_scenarios import formation_goals
 from fault_motion import FaultReturn
@@ -197,7 +197,7 @@ def main():
             self.planners={group:Transition([(initial[f'{kind}-{i+1:02}']['x'],initial[f'{kind}-{i+1:02}']['y'],initial[f'{kind}-{i+1:02}']['z']) for i in range(FLEET[key])],speed,accel) for group,kind,key,speed,accel in [('usv','USV','usvs',3,1),('uav','UAV','uavs',10,4)]}
             self.checked=0;self.planner_time=None;self.initial_error={};self.formation_status={}
             self.physical_history={}
-            self.vehicle_observations={};self.mission_runs=MultiMissionRuns();self.execution_reports=[];self.fault_runs={};self.fault_report={};self.typed_motion=FaultMotion()
+            self.vehicle_observations={};self.mission_run=None;self.execution_report=None;self.fault_runs={};self.fault_report={};self.typed_motion=FaultMotion()
             for i in range(FLEET['uavs']):
                 name=f'UAV-{i+1:02}'
                 self.create_subscription(Odometry,f'/navis/{name.replace("-","_")}/odometry',lambda msg,name=name:self.uav_odom(name,msg),qos_profile_sensor_data)
@@ -258,13 +258,17 @@ def main():
                 group_goals[group]=goals
                 kind='UAV' if group=='uav' else 'USV'
                 homes.update({f'{kind}-{i+1:02}':goals[planner.assignment[i]] for i in range(len(planner.points))})
-            requested=self.selection.get('missions')
-            if requested is None:requested=[self.selection['mission']] if self.selection.get('mission') else []
-            availability=self.selection.get('availability',{})
-            overrides,self.execution_reports=self.mission_runs.step(requested,t,MOTION['ship_speed']*t,homes,self.vehicle_observations,availability)
-            for id,point in overrides.items():
-                group='uav' if id.startswith('UAV') else 'usv';planner=self.planners[group]
-                group_goals[group][planner.assignment[int(id.split('-')[1])-1]]=point
+            requested=self.selection.get('mission')
+            if requested and requested.get('approved') and (self.mission_run is None or self.mission_run.id!=requested['id'] or self.mission_run.approved_at!=requested['approved'].get('approved_at')):
+                self.mission_run=ObservationRun(requested,t,MOTION['ship_speed']*t)
+            if self.mission_run:
+                cancel=not requested or requested['id']!=self.mission_run.id or requested.get('cancel_requested',False)
+                availability=self.selection.get('availability',{})
+                overrides=self.mission_run.step(t,MOTION['ship_speed']*t,homes,self.vehicle_observations,availability,cancel,target_world=requested.get('target_world_current') if requested else None,contacts=requested.get('threats') if requested else None)
+                for id,point in overrides.items():
+                    group='uav' if id.startswith('UAV') else 'usv';planner=self.planners[group]
+                    group_goals[group][planner.assignment[int(id.split('-')[1])-1]]=point
+                self.execution_report=self.mission_run.report(t,self.vehicle_observations,availability)
             for group,planner in self.planners.items():
                 mode=self.selection[group];goals=group_goals[group]
                 error=planner.step(goals,dt,marine=group=='usv');points[group]=planner.points
@@ -312,8 +316,8 @@ def main():
                     with urllib.request.urlopen(req,timeout=.2) as response:response.read()
                     req=urllib.request.Request(BACKEND_URL+'/api/internal/faults',data=json.dumps({'tasks':self.fault_report}).encode(),headers={'Content-Type':'application/json','X-Bridge-Token':os.environ.get('NAVIS_BRIDGE_TOKEN','')})
                     with urllib.request.urlopen(req,timeout=.2) as response:response.read()
-                    for report in self.execution_reports:
-                        req=urllib.request.Request(BACKEND_URL+'/api/internal/execution',data=json.dumps(report).encode(),headers={'Content-Type':'application/json','X-Bridge-Token':os.environ.get('NAVIS_BRIDGE_TOKEN','')})
+                    if self.execution_report:
+                        req=urllib.request.Request(BACKEND_URL+'/api/internal/execution',data=json.dumps(self.execution_report).encode(),headers={'Content-Type':'application/json','X-Bridge-Token':os.environ.get('NAVIS_BRIDGE_TOKEN','')})
                         with urllib.request.urlopen(req,timeout=.2) as response:response.read()
                 except (OSError,ValueError):pass
             try:

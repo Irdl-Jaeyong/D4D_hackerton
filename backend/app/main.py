@@ -28,7 +28,6 @@ from risk_monitor import assess
 from fault_motion import deck_slot
 from scenario_scene import targets as scene_targets
 from .ai_response import AIProposal,build_plan as build_ai_plan,input_summary as ai_input_summary,request_proposal as request_ai_proposal
-from .mission_scheduler import active_missions,execution_tasks,planning_pool,reconcile,replacements,commit_replacements,terminate_for_transfer,notices
 from .approval_risk import evaluate,sort_key,CONFIG as RISK_CONFIG
 mission=None # only the human-approved execution; pending cards live in missions
 missions={}
@@ -133,7 +132,6 @@ class Chat(BaseModel):
     history: list[Turn] = Field(default_factory=list, max_length=8)
 
 def state():
-    global mission
     now = time.time()
     vehicles = []
     for id in IDS:
@@ -165,20 +163,12 @@ def state():
                 v['readiness']['task']='통신 두절 · 설정된 비상 모드 시연'
         if not v.get('fault') and max(abs((v['telemetry'] or {}).get('roll',0)),abs((v['telemetry'] or {}).get('pitch',0)))>.22:
             v['readiness'].update(available=False,reason='자세 불안정 · 배정 보류',operational_state='unavailable')
-        v['readiness']['physical_available']=v['readiness']['available']
-    # Reassign failed roles from physically healthy, unreserved fleet capacity.
-    reconcile(missions,vehicles)
-    active=active_missions(missions)
-    mission=next(iter(active),None)
-    for v in vehicles:
-        owner=next((m for m in active if any(t['vehicle']==v['id'] for t in execution_tasks(m))),None)
-        if owner:
-            task=next((t for t in execution_tasks(owner) if t['vehicle']==v['id']),None)
+        if mission and mission.get('approved'):
+            task=next((t for t in mission['approved']['tasks'] if t['vehicle']==v['id']),None)
             if task and not v.get("fault"):
                 v['readiness']['task']=task['task']+' · 출동 준비'
                 v['readiness']['available']=False
-                v['readiness']['assigned_mission_id']=owner['id']
-                execution=owner.get('execution',{}).get('tasks',{}).get(v['id'])
+                execution=mission.get('execution',{}).get('tasks',{}).get(v['id'])
                 if execution:
                     labels={'outbound':'출동 중','observing':'현장 확인 중','tracking':'접촉 지속 추적','screening':'외곽 경계선 유지','returning':'복귀 중','completed':'완료 · 대형 유지'}
                     v['readiness']['task']=task['task']+' · '+labels.get(execution['stage'],'확인 필요')
@@ -204,7 +194,7 @@ def state():
         if item['scenario'] in DEFENSE_SCENARIOS:item['threats'].append(target)
     reassess_missions(vehicles)
     queue=sorted((m for m in missions.values() if not m.get('approved')),key=sort_key)
-    return {'auto_scenarios':{'enabled':auto_generator.config['enabled'],'next_in_seconds':max(0,round(auto_generator.next_at-time.monotonic())),'max_pending':auto_generator.config['max_pending']} if auto_generator else None,'mission':mission or next(iter(queue),None),'active_mission':mission,'active_missions':active,'operator_notices':notices(missions),'fleet_capacity':{kind:sum(v['type']==kind and v['readiness']['available'] for v in vehicles) for kind in ('UAV','USV')},'approval_queue':queue,'scenario_catalog':SCENARIOS,'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'selected vehicle forward first-person camera' if camera_view=='inspect' else 'SHIP-01 stabilized overhead sensors', 'scene_mode': FLEET['motion']['uav_pattern'], 'camera_view':camera_view,'inspection_vehicle':inspection_vehicle, 'formations': {**formation, 'catalog':CATALOG,'status':formation_status}, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion'], 'scenario': None,'sim_time':stamp,'situations':situations}}
+    return {'auto_scenarios':{'enabled':auto_generator.config['enabled'],'next_in_seconds':max(0,round(auto_generator.next_at-time.monotonic())),'max_pending':auto_generator.config['max_pending']} if auto_generator else None,'mission':mission or next(iter(queue),None),'active_mission':mission,'approval_queue':queue,'scenario_catalog':SCENARIOS,'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'selected vehicle forward first-person camera' if camera_view=='inspect' else 'SHIP-01 stabilized overhead sensors', 'scene_mode': FLEET['motion']['uav_pattern'], 'camera_view':camera_view,'inspection_vehicle':inspection_vehicle, 'formations': {**formation, 'catalog':CATALOG,'status':formation_status}, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion'], 'scenario': None,'sim_time':stamp,'situations':situations}}
 
 def fault_signals(vehicle_id):
     kind=fault_kinds.get(vehicle_id,'payload');criteria=FAULT_TYPES[kind]
@@ -237,8 +227,7 @@ def reassess_missions(vehicles):
         item['risk']=evaluate(signals);item['risk']['source']=item['source']
         if item['resolved']:item['risk']['reason']='원인 해소 · 상황 종료 가능'
 
-def pending_plans(item,vehicles,release_id=None):
-    vehicles=planning_pool(vehicles,missions,release_id)
+def pending_plans(item,vehicles):
     lead=latest.get('SHIP-01');target=item.get('target_world_current')
     if item['scenario']=='fault':
         target=fault_last_known.get(item['vehicle_id']) if fault_kinds.get(item['vehicle_id'])=='communication' else latest.get(item['vehicle_id'])
@@ -269,15 +258,13 @@ class FormationRequest(BaseModel):
     scenario_id: int | None = None
 @app.get('/api/formations')
 async def get_formations():
-    snapshot=state()
-    return {**formation,'catalog':CATALOG,'status':formation_status,'mission':mission,'missions':active_missions(missions),'scenario_context':missions.get(formation.get('scenario_id')),'inspection_vehicle':inspection_vehicle,'camera_revision':camera_revision,'camera_view':camera_view,'faults':list(simulated_faults),'fault_modes':{id:fault_kinds.get(id,'payload') for id in simulated_faults},'fault_states':fault_status,'availability':{v['id']:v['connected'] and v['id'] not in simulated_faults and (v['type']=='SHIP' or v['readiness']['battery_percent']>=35) for v in snapshot['vehicles']}}
+    return {**formation,'catalog':CATALOG,'status':formation_status,'mission':mission,'scenario_context':missions.get(formation.get('scenario_id')),'inspection_vehicle':inspection_vehicle,'camera_revision':camera_revision,'camera_view':camera_view,'faults':list(simulated_faults),'fault_modes':{id:fault_kinds.get(id,'payload') for id in simulated_faults},'fault_states':fault_status,'availability':{v['id']:v['connected'] and v['id'] not in simulated_faults and (v['type']=='SHIP' or v['readiness']['battery_percent']>=35) for v in state()['vehicles']}}
 @app.post('/api/formations')
 async def set_formation(data: FormationRequest):
     if data.mode not in CATALOG[data.group]:raise HTTPException(422,'Unknown formation')
-    active=active_missions(missions)
-    if any(m['scenario'] not in DEFENSE_SCENARIOS for m in active):raise HTTPException(409,'승인된 대응안을 종료한 뒤 대형을 변경하세요.')
-    for current in active:
-        current['cancel_requested']=True;current['manual_takeover']=True
+    if mission and mission.get('approved'):
+        if mission['scenario'] not in DEFENSE_SCENARIOS:raise HTTPException(409,'승인된 대응안을 종료한 뒤 대형을 변경하세요.')
+        mission['cancel_requested']=True;mission['manual_takeover']=True
     previous_context=formation.get('scenario_id')
     context=missions.get(data.scenario_id)
     if context and context['scenario'] in DEFENSE_SCENARIOS:formation['scenario_id']=context['id']
@@ -402,11 +389,8 @@ async def generate_ai_response(mission_id: int):
         raise HTTPException(502,'AI 생성·검증 실패. 모델 연결을 확인하거나 다시 생성하세요.') from error
     finally:ai_generating.discard(mission_id)
 
-class RefreshRequest(BaseModel):
-    release_mission_id: int | None = None
-
 @app.post('/api/mission/{mission_id}/refresh')
-async def refresh_plan(mission_id: int,data: RefreshRequest | None = None):
+async def refresh_plan(mission_id: int):
     item=missions.get(mission_id)
     if not item:raise HTTPException(404,'상황을 찾을 수 없습니다.')
     if item.get('approved'):raise HTTPException(409,'승인된 계획은 다시 계산할 수 없습니다.')
@@ -416,9 +400,7 @@ async def refresh_plan(mission_id: int,data: RefreshRequest | None = None):
         current=next((r for r in assess(snapshot['vehicles']) if r['id']==item['risk_id']),None)
         lead=latest.get('SHIP-01');p=current and current['telemetry']
         if p and lead:item['card']['offset']=[p['x']-lead['x'],p['y']-lead['y']]
-    release_id=data.release_mission_id if data else None
-    if release_id is not None and not any(m['id']==release_id and not m.get('cancel_requested') for m in active_missions(missions)):raise HTTPException(409,'선택한 기체 제공 임무가 변경되었습니다.')
-    item['options']=pending_plans(item,snapshot['vehicles'],release_id);item['resource_release_id']=release_id;item['basis_revision']=formation['revision']
+    item['options']=pending_plans(item,snapshot['vehicles']);item['basis_revision']=formation['revision']
     item['planned_at']=time.time();item['plan_revision']=item.get('plan_revision',0)+1
     return item
 
@@ -426,8 +408,8 @@ async def refresh_plan(mission_id: int,data: RefreshRequest | None = None):
 async def approve_plan(data: ApprovalRequest):
     global mission
     item=missions.get(data.mission_id)
-    donor=next((m for m in active_missions(missions) if m['id']==data.replace_active_id and not m.get('cancel_requested')),None)
-    if data.replace_active_id is not None and not donor:raise HTTPException(409,'기체 제공 임무가 변경되었습니다. 다시 선택하세요.')
+    if mission and data.replace_active_id!=mission['id']:raise HTTPException(409,'실행 중인 임무가 변경되었습니다. 현재 임무를 확인하고 다시 선택하세요.')
+    if not mission and data.replace_active_id is not None:raise HTTPException(409,'기존 임무가 종료되었습니다. 다시 선택하세요.')
     if not data.human_confirmed:raise HTTPException(409,'운용자의 명시적 최종 승인이 필요합니다.')
     if not item or item['id']!=data.mission_id:raise HTTPException(409,'상황 카드가 변경되었습니다.')
     if item.get('approved'):raise HTTPException(409,'이미 승인된 대응안입니다.')
@@ -444,27 +426,28 @@ async def approve_plan(data: ApprovalRequest):
         match=re.fullmatch(r'\s*([12])\s*번\s*(?:최종\s*)?승인\s*',data.operator_command)
         if not match or int(match[1])!=item['options'].index(plan)+1:raise HTTPException(422,'선택안과 일치하는 1번 승인 / 2번 승인을 입력하세요.')
     if formation['revision']!=item['basis_revision']:raise HTTPException(409,'대형이 변경되었습니다. 대응안을 다시 계산하세요.')
-    if item.get('resource_release_id')!=data.replace_active_id:raise HTTPException(409,'기체 우선 배정 대상이 변경되었습니다. 다시 검토하세요.')
-    current={v['id']:v for v in planning_pool(state()['vehicles'],missions,data.replace_active_id)}
+    current={v['id']:v for v in state()['vehicles']}
     if not any(v['type']=='SHIP' and v['connected'] for v in current.values()):raise HTTPException(409,'함선의 최신 상태가 없습니다. 다시 확인하세요.')
     for task in plan['tasks']:
         v=current[task['vehicle']]
         if not v['readiness']['available']:raise HTTPException(409,'기체 가용 상태가 변경되었습니다. 다시 계산하세요.')
         eta=task['eta_seconds']
         if v['readiness']['endurance_minutes']*60<2*eta+300:raise HTTPException(409,'복귀 여유가 부족합니다. 다시 계산하세요.')
-    if donor:terminate_for_transfer(donor,item['id'])
+    # Validate the new plan completely before transferring exclusive vehicle control.
+    if mission:
+        mission['cancel_requested']=True
+        mission['execution']={**mission.get('execution',{}),'status':'cancelled','ended_at':time.time(),'reason':'operator_switch'}
+        mission['replaced_by']=item['id']
     item['prior_formations']={g:formation[g] for g in ('usv','uav')}
-    if not active_missions(missions):
-        if item['scenario'] in DEFENSE_SCENARIOS:formation['scenario_id']=item['id']
-        else:formation.pop('scenario_id',None)
-        for group,mode in plan['formations'].items():
-            if formation[group]!=mode:formation[group]=mode;formation['revision']+=1
+    if item['scenario'] in DEFENSE_SCENARIOS:formation['scenario_id']=item['id']
+    else:formation.pop('scenario_id',None)
+    for group,mode in plan['formations'].items():
+        if formation[group]!=mode:formation[group]=mode;formation['revision']+=1
     target=next((t for t in state()['scene']['situations'] if t['mission_id']==item['id']),None)
     if target:item['target_world']=[target['x'],target['y']]
     elif item.get('plan_target_world'):item['target_world']=item['plan_target_world']
     item['approved']={**plan,'approved_at':time.time(),'formation_revision':formation['revision'],'decision_source':data.decision_source,'operator_command':data.operator_command,'human_confirmed':True}
     item['energy_at_start']={t['vehicle']:current[t['vehicle']]['readiness']['battery_percent'] for t in plan['tasks']}
-    item['execution_tasks']=json.loads(json.dumps(plan['tasks']));item['assignment_revision']=0;item['reassignments']=[];item['intervention']=None
     item['execution']={'status':'pending','tasks':{}}
     item['risk_at_approval']=json.loads(json.dumps(item['risk']));mission=item
     return item
@@ -480,10 +463,10 @@ async def cancel_plan(data: CancelRequest | None = None):
     for vehicle_id in item.get('affected_vehicles',[]):
         if interference_owner.get(vehicle_id)==item['id'] and fault_kinds.get(vehicle_id)=='communication':await set_simulated_fault(vehicle_id,FaultRequest(unavailable=False))
     if item.get('approved') and item.get('execution',{}).get('status') not in ('completed','cancelled'):
-        if len(active_missions(missions))==1 and item['scenario'] in DEFENSE_SCENARIOS and not item.get('cancel_requested') and not item.get('manual_takeover'):
+        if item['scenario'] in DEFENSE_SCENARIOS and not item.get('cancel_requested') and not item.get('manual_takeover'):
             for group,mode in item.get('prior_formations',{}).items():
                 if formation[group]!=mode:formation[group]=mode;formation['revision']+=1
-        if len(active_missions(missions))==1 and not item.get('manual_takeover') and formation.get('scenario_id')==id:formation.pop('scenario_id',None)
+        if not item.get('manual_takeover') and formation.get('scenario_id')==id:formation.pop('scenario_id',None)
         item['cancel_requested']=True
         return {'ok':True,'message':'취소 요청 · 출동한 UAV·USV가 대형으로 복귀합니다.'}
     missions.pop(id)
@@ -493,7 +476,6 @@ async def cancel_plan(data: CancelRequest | None = None):
 
 class ExecutionReport(BaseModel):
     mission_id: int
-    assignment_revision: int = Field(default=0,ge=0)
     sim_time: float = Field(ge=0,allow_inf_nan=False)
     elapsed_seconds: float = Field(ge=0,allow_inf_nan=False)
     tasks: dict
@@ -503,41 +485,19 @@ class ExecutionReport(BaseModel):
 async def report_execution(data: ExecutionReport,x_bridge_token: str=Header(default='')):
     global mission
     if not TOKEN or not hmac.compare_digest(TOKEN,x_bridge_token):raise HTTPException(403,'Bridge token required')
-    item=missions.get(data.mission_id)
-    if not item or not item.get('approved'):raise HTTPException(409,'Mission changed')
-    if data.assignment_revision!=item.get('assignment_revision',0):raise HTTPException(409,'Assignment changed')
-    previous=item.get('execution',{})
+    if not mission or mission['id']!=data.mission_id or not mission.get('approved'):raise HTTPException(409,'Mission changed')
+    previous=mission.get('execution',{})
     if previous.get('status') in ('completed','cancelled'):
         previous['received_at']=time.time()
         return {'ok':True}
-    item['execution']={**data.model_dump(),'received_at':time.time()}
-    for id,task in item['execution']['tasks'].items():
+    mission['execution']={**data.model_dump(),'received_at':time.time()}
+    for id,task in mission['execution']['tasks'].items():
         current=latest.get(id)
         if current:
             remaining=readiness({'id':id,'type':id.split('-')[0],'connected':True,'telemetry':current},max(0,current['sim_time']-battery_origin.get(id,0)))['battery_percent']
-            task['simulated_battery_used']=round(max(0,item['energy_at_start'].get(id,remaining)-remaining),1)
-    mission=next(iter(active_missions(missions)),None)
+            task['simulated_battery_used']=round(max(0,mission['energy_at_start'].get(id,remaining)-remaining),1)
+    if data.status in ('completed','cancelled'):mission=None
     return {'ok':True}
-
-class ReallocationRequest(BaseModel):
-    release_mission_id: int
-    human_confirmed: bool = False
-
-@app.post('/api/mission/{mission_id}/reallocate')
-async def reallocate_mission(mission_id: int,data: ReallocationRequest):
-    if not data.human_confirmed:raise HTTPException(409,'다른 임무 중단은 운용자 결정이 필요합니다.')
-    snapshot=state();item=missions.get(mission_id);donor=missions.get(data.release_mission_id)
-    active=active_missions(missions)
-    if item not in active or item.get('cancel_requested') or not item.get('intervention'):raise HTTPException(409,'대체 배정이 필요한 실행 임무를 선택하세요.')
-    if donor not in active or donor is item or donor.get('cancel_requested'):raise HTTPException(409,'기체를 제공할 다른 실행 임무를 선택하세요.')
-    pool=planning_pool(snapshot['vehicles'],missions,donor['id'])
-    tasks,changes,missing=replacements(item,pool)
-    if missing or not changes:raise HTTPException(409,'선택한 임무를 중단해도 대체 기체가 부족합니다. 기존 임무를 유지합니다.')
-    terminate_for_transfer(donor,item['id'])
-    commit_replacements(item,tasks,changes,missing)
-    item['resource_decision']={'source_mission_id':donor['id'],'at':time.time(),'human_confirmed':True}
-    save_console()
-    return item
 
 class FaultRequest(BaseModel):
     unavailable: bool
@@ -739,11 +699,6 @@ def restore_console():
         for item in cards:
             allowed={p['id'] for p in DEFENSE_RESPONSES[item['scenario']]} if item['scenario'] in DEFENSE_RESPONSES else {'observe','verify'}
             item['ai_supported']=item['scenario'] in DEFENSE_SCENARIOS
-            if item.get('approved'):
-                item.setdefault('execution_tasks',json.loads(json.dumps(item['approved']['tasks'])))
-                item.setdefault('assignment_revision',0)
-                item.setdefault('reassignments',[])
-                item.setdefault('intervention',None)
             item.pop('ai_spec',None);item.pop('ai_meta',None);item.pop('ai_status',None)
             previous=item.get('options',[])
             item['options']=[p for p in previous if p['id'] in allowed][:2]

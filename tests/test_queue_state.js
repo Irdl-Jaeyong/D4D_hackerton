@@ -81,7 +81,7 @@ test('response controls clearly distinguish ready, pending, confirmed and unavai
  assert.match(responseControlState({...m,approved:{id:'verify'}},'verify',null,null).label,/명령 전달/);
  assert.match(responseControlState(m,'observe',null,null).label,/기체 부족/);
  assert.equal(responseControlState(m,'verify',{id:2},null).disabled,false);
- assert.match(responseControlState(m,'verify',{id:2},null).label,/임무 추가/);
+ assert.match(responseControlState(m,'verify',{id:2},null).label,/전환/);
 });
 test('AI candidate has its own status and expires without changing two base choices',()=>{
  const {responseExecutionRequest,responseControlState}=require('../frontend/queue_state.js');
@@ -94,20 +94,4 @@ test('AI candidate has its own status and expires without changing two base choi
  assert.equal(responseControlState(m,'ai',null,null).disabled,true);
  assert.equal(responseControlState(m,'prepare',null,null).disabled,false);
  assert.notEqual(queueReviewKey(m),queueReviewKey({...m,ai_status:{state:'pending'}}));
-});
-test('only two base responses and one AI response are rendered',()=>{
- const {visibleResponsePlans}=require('../frontend/queue_state.js');
- const plans=[{id:'observe'},{id:'verify'},{id:'ai',title:'old'},{id:'ai',title:'latest'},{id:'prepare'}];
- assert.deepEqual(visibleResponsePlans(plans).map(p=>p.id),['observe','verify','ai']);
- assert.equal(visibleResponsePlans(plans)[2].title,'latest');
- const html=require('node:fs').readFileSync(require('node:path').join(__dirname,'../frontend/index.html'),'utf8');
- assert.equal((html.match(/id="aiResponseSlot"/g)||[]).length,1);
- assert.doesNotMatch(html,/<strong>AI 실시간 제안<\/strong>/);
-});
-
-test('each concurrent mission can be selected and assignment changes refresh the card',()=>{
- const {reviewedMission}=require('../frontend/queue_state.js');
- const a={id:1,approved:{id:'observe'}},b={id:2,approved:{id:'verify'}};
- assert.equal(reviewedMission({active_mission:a,active_missions:[a,b],approval_queue:[]},2),b);
- assert.notEqual(queueReviewKey({...card,assignment_revision:0}),queueReviewKey({...card,assignment_revision:1}));
 });
