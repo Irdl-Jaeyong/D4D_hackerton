@@ -35,7 +35,18 @@ function map(state){
 }
 function cameraOverlay(state){
   const c=$('cameraOverlay'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);cameraPickables.length=0;
-  if(state.camera_view==='inspect')return;
+  c.dataset.statusMarkers='0';
+  if(state.camera_view==='inspect'){
+    const vehicle=state.vehicles.find(v=>v.id===state.inspection_vehicle&&v.connected);
+    if(vehicle&&state.camera_available){
+      const color=stateColors[vehicle.readiness?.operational_state]||'#fff';
+      ctx.strokeStyle=color;ctx.lineWidth=3;ctx.strokeRect(2,2,c.width-4,c.height-4);
+      ctx.fillStyle=color;ctx.beginPath();ctx.arc(c.width-18,18,5,0,Math.PI*2);ctx.fill();
+      c.dataset.statusMarkers='1';c.dataset.inspectionStatus=vehicle.readiness.operational_state;
+    }else delete c.dataset.inspectionStatus;
+    return;
+  }
+  delete c.dataset.inspectionStatus;
   if(!state.camera_available||!state.scene)return;
   const lead=state.vehicles.find(v=>v.id==='SHIP-01'&&v.connected);if(!lead)return;
   const cam=state.scene.camera,m=state.scene.motion,ship=lead.telemetry;
@@ -70,7 +81,12 @@ function cameraOverlay(state){
     const ring=(parseInt(v.id.split('-')[1],10)-1)%5;
     const color=stateColors[v.readiness?.operational_state]||'#fff';
     cameraPickables.push({id:v.id,x:q[0],y:q[1]});
-    if(v.id===selectedVehicle){ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();ctx.arc(q[0],q[1],8,0,Math.PI*2);ctx.stroke();}
+    // Hollow markers show status without covering the hull or drone body.
+    const radius=v.id===selectedVehicle?8:5;
+    ctx.beginPath();ctx.arc(q[0],q[1],radius,0,Math.PI*2);
+    ctx.strokeStyle='#031521';ctx.lineWidth=4;ctx.stroke();
+    ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();
+    c.dataset.statusMarkers=String(Number(c.dataset.statusMarkers)+1);
   }
 
 }
