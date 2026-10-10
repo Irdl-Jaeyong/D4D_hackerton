@@ -109,17 +109,41 @@ if(key!==lastScenarioStage){event(['민간 배 접근: 충돌 예측 감시','�
 }catch{disconnectedDisplay();$('connected').textContent='백엔드 연결 끊김';document.querySelectorAll('.badge').forEach(b=>{b.className='badge';b.textContent='확인 불가';});$('fleetSummary').textContent='백엔드 연결 끊김 · 상태 확인 불가';document.querySelectorAll('#responseOptions button').forEach(b=>b.disabled=true);$('finalApprove').disabled=true;$('submitApprovalCommand').disabled=true;$('cards').replaceChildren();$('vehicleDetails').textContent='연결 끊김 · 마지막 상태를 사용할 수 없습니다.';$('assignmentSummary').textContent='연결 끊김 · 배정 결과 확인 불가';$('assignmentReasons').replaceChildren();$('assignmentPlan').disabled=true;$('map').getContext('2d').clearRect(0,0,$('map').width,$('map').height);$('camera').style.display='none';$('cameraEmpty').style.display='block';$('cameraEmpty').textContent='백엔드 연결 끊김';$('cameraOverlay').getContext('2d').clearRect(0,0,1280,720);}finally{setTimeout(poll,500);}}
 $('chatForm').addEventListener('submit',async e=>{e.preventDefault();const message=$('message').value.trim();if(!message)return;bubble(message,'user');$('message').value='';$('send').disabled=true;$('chatStatus').textContent='AI 분석 중 · 최초 요청은 로딩 시간이 걸릴 수 있습니다';try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,use_camera:$('useCamera').checked,history:history.slice(-8)})});const data=await r.json();if(!r.ok)throw Error(data.detail||'요청 실패');bubble(data.reply,'ai');history.push({role:'user',content:message},{role:'assistant',content:data.reply.slice(0,4000)});$('chatStatus').textContent=`${data.elapsed_seconds}초 · ${data.used_camera?'카메라 포함':'텍스트'} · 명령 실행 없음`;}catch(err){bubble(err.message,'ai error');$('chatStatus').textContent='요청 실패';}finally{$('send').disabled=false;}});
 
-let selectedVehicle=null,missionRenderKey='',selectedResponse=null,reviewMissionId=null,scenarioDraft=false,missionRequestPending=false;
+let selectedVehicle=null,missionRenderKey='',selectedResponse=null,reviewMissionId=null,scenarioDraft=false,missionRequestPending=false,queueView=null,plansRefreshing=false,responseExecuting=false,lastPlanRefresh=0;
 function reviewState(s){
-  const m=reviewedMission(s,reviewMissionId);reviewMissionId=m?.id??null;
-  return {...s,mission:m};
+  queueView=queueSnapshot(queueView,s.approval_queue||[],Date.now());
+  const ids=new Set(queueView.items.map(m=>m.id));
+  const m=reviewedMission({...s,approval_queue:(s.approval_queue||[]).filter(m=>ids.has(m.id))},reviewMissionId);
+  reviewMissionId=m?.id??null;return {...s,mission:m};
 }
+function selectSituation(id){
+  reviewMissionId=id;scenarioDraft=false;selectedResponse=null;missionRenderKey='';
+  if(lastState){lastState=reviewState(lastState);renderMission(lastState);renderVehicles(lastState);}
+}
+function priorityText(r){return r?.priority?`${r.priority} ${{P0:'긴급',P1:'높음',P2:'주의',P3:'정보'}[r.priority]}`:'평가 불가';}
 function renderMissionReview(s){
-  const items=s.active_mission?[s.active_mission,...(s.approval_queue||[])]:s.approval_queue||[];
-  const selector=$('missionReview');
-  const key=JSON.stringify(items.map(m=>[m.id,m.card.title,!!m.approved]));
-  if(selector.dataset.key!==key){selector.replaceChildren();for(const m of items){const option=element('option',`#${m.id} · ${m.card.title}${m.approved?' · 실행 중':''}`);option.value=String(m.id);selector.append(option);}selector.dataset.key=key;}
-  $('missionReviewRow').hidden=items.length<2;selector.value=String(s.mission?.id??'');selector.disabled=missionRequestPending;
+  queueView=queueSnapshot(queueView,s.approval_queue||[],Date.now());
+  const seconds=Math.max(0,Math.ceil((10000-Date.now()+queueView.updatedAt)/1000));
+  $('queueCount').textContent=`상위 ${queueView.items.length}건 / 전체 ${queueView.total}건`;
+  $('queueRefresh').textContent=`자동 갱신 ${seconds}초`;
+  $('activeMission').replaceChildren();$('approvalQueue').replaceChildren();
+  if(s.active_mission){const m=s.active_mission,b=element('button',`실행 ${m.execution?.status||'대기'} · #${m.id} ${m.card.title}`,'queue-active');b.type='button';b.disabled=missionRequestPending;b.addEventListener('click',()=>selectSituation(m.id));$('activeMission').append(b);}
+  const live=new Map((s.approval_queue||[]).map(m=>[m.id,m]));
+  for(const entry of queueView.items){const m=live.get(entry.id);if(!m)continue;
+    const b=element('button',undefined,'queue-item'+(reviewMissionId===m.id?' selected':''));b.type='button';b.disabled=missionRequestPending;b.setAttribute('aria-pressed',String(reviewMissionId===m.id));
+    b.append(element('span',priorityText(m.risk),'priority-badge '+(m.risk?.priority||'unknown')),element('strong',`#${m.id} ${m.card.title}`),element('small',`${m.resolved?'원인 해소':m.risk?.score==null?'평가 불가':m.risk.score+'점'} · ${new Date(m.created_at*1000).toLocaleTimeString('ko-KR')}`));
+    b.addEventListener('click',()=>selectSituation(m.id));$('approvalQueue').append(b);
+  }
+  if(!queueView.items.length)$('approvalQueue').append(element('p','대기 중인 상황이 없습니다.','muted'));
+  if(Date.now()-lastPlanRefresh>=10000)refreshQueuePlans(s);
+}
+async function refreshQueuePlans(s){
+  if(plansRefreshing||responseExecuting||missionRequestPending)return;
+  const ids=new Set(queueView?.items.map(m=>m.id)||[]);
+  const cards=(s.approval_queue||[]).filter(m=>ids.has(m.id)&&needsPlanRefresh(m,s.formations.revision,Date.now()/1000));
+  plansRefreshing=true;lastPlanRefresh=Date.now();
+  try{await Promise.allSettled(cards.map(async m=>{const r=await fetch('/api/mission/'+m.id+'/refresh',{method:'POST'});if(!r.ok)throw Error('자동 갱신 실패');}));}
+  finally{plansRefreshing=false;}
 }
 function element(tag,text,className){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(className)node.className=className;return node;}
 
@@ -232,7 +256,7 @@ function disconnectedDisplay(){
   $('selectedBatteryMeter').hidden=true;$('selectedConnection').textContent='● 연결 끊김';$('selectedConnection').className='offline';$('selectedTask').textContent='현재 상태를 확인할 수 없습니다.';$('cameraLive').textContent='영상 연결 끊김';$('inspectVehicle').disabled=true;$('faultToggle').disabled=true;mapPickables.length=0;cameraPickables.length=0;lastState=null;
 }
 function renderMission(s){
-  const m=s.mission,key=m?`${m.id}-${m.plan_revision||0}-${m.approved?.id||'pending'}`:'none';
+  const m=s.mission,key=queueReviewKey(m);
   renderMissionReview(s);$('cancelMission').disabled=missionRequestPending||!m;$('startScenario').disabled=missionRequestPending||!!m?.approved;
   if(key!==missionRenderKey){
     missionRenderKey=key;$('situationCard').replaceChildren();$('responseOptions').replaceChildren();
@@ -240,14 +264,15 @@ function renderMission(s){
     else{
       if(!scenarioDraft&&[...$('scenarioSelect').options].some(o=>o.value===m.scenario))$('scenarioSelect').value=m.scenario;
       $('situationCard').append(element('strong',m.card.title),element('p',m.card.summary),element('p',`함선 상대 위치 x ${m.card.offset[0]}m / y ${m.card.offset[1]}m · 관제 지도에 가상 표식 표시`,'muted'),element('p',m.card.unknown,'scope-note'));
-      if(!m.options.length)$('responseOptions').append(element('p','함선의 최신 위치가 없어 추천을 생성할 수 없습니다. 연결 후 재계산하세요.'));
+      $('situationCard').append(element('p',`${priorityText(m.risk)} · ${m.risk?.score==null?'평가 불가':m.risk.score+' / 100점'}`,'priority-badge '+(m.risk?.priority||'unknown')));
+      if(!m.options.length)$('responseOptions').append(element('p','함선의 최신 위치가 없어 추천을 생성할 수 없습니다. 연결되면 자동 갱신됩니다.'));
       for(const [i,plan] of m.options.entries()){
         const card=element('article',undefined,'response-card');card.append(element('h3',`${i+1}. ${plan.title}`),element('p',`USV: ${s.formations.catalog.usv[plan.formations.usv]} / 드론: ${s.formations.catalog.uav[plan.formations.uav]}`));
         for(const task of plan.tasks)card.append(element('p',`${task.vehicle} → ${task.task}`,'task-line'));
         const details=element('details'),summary=element('summary','배정 근거 · 예상 시간 · 검증');details.append(summary);
         for(const task of plan.tasks)details.append(element('small',`${task.vehicle}: ${task.reason} · 직선 이동 추정 ${task.eta_seconds}초`));
         details.append(element('p',plan.benefit),element('small',plan.tradeoff),element('small',plan.validation));card.append(details);
-        const current=s.formations;card.append(element('p',`승인 후: USV ${current.catalog.usv[current.usv]} → ${current.catalog.usv[plan.formations.usv]} / 드론 ${current.catalog.uav[current.uav]} → ${current.catalog.uav[plan.formations.uav]}`,'movement-summary'),element('small','현재와 같은 대형은 유지하고, 다른 대형은 현재 위치에서 점진적으로 이동합니다. UAV는 확인 지점 이동·5초 체류·복귀, USV는 추진력으로 현장 확인 후 복귀합니다.'));
+        const current=s.formations;details.append(element('p',`승인 후: USV ${current.catalog.usv[current.usv]} → ${current.catalog.usv[plan.formations.usv]} / 드론 ${current.catalog.uav[current.uav]} → ${current.catalog.uav[plan.formations.uav]}`,'movement-summary'),element('small','현재와 같은 대형은 유지하고, 다른 대형은 현재 위치에서 점진적으로 이동합니다. UAV는 확인 지점 이동·5초 체류·복귀, USV는 추진력으로 현장 확인 후 복귀합니다.'));
         const button=element('button',m.approved?(m.approved.id===plan.id?'실행된 대응안':'선택 종료'):'이 대응안 선택 · 즉시 실행');button.type='button';button.dataset.option=plan.id;button.disabled=missionRequestPending||!!m.approved;
         if(!plan.available)card.append(element('p','가용 기체 부족 · 검토는 가능하지만 승인할 수 없습니다.','response-availability'));
         button.addEventListener('click',()=>executeResponse(m,plan.id));card.append(button);$('responseOptions').append(card);
@@ -275,7 +300,7 @@ function renderHumanApproval(s){
   $('submitApprovalCommand').disabled=missionRequestPending||!m||!!m.approved||expired;
   $('approvalCommand').disabled=missionRequestPending||!m||!!m.approved||expired;
   for(const card of document.querySelectorAll('.response-card')){const button=card.querySelector('button');card.classList.toggle('selected-response',button.dataset.option===selectedResponse?.option_id);button.setAttribute('aria-pressed',String(button.dataset.option===selectedResponse?.option_id));}
-  $('approvalPreview').textContent=m?.approved?`운용자 최종 승인 기록 · ${m.approved.title} · ${m.approved.decision_source==='captain_text'?'직접 입력':'승인 버튼'} · ${new Date(m.approved.approved_at*1000).toLocaleTimeString('ko-KR')}`:plan?`선택: ${m.options.indexOf(plan)+1}번 ${plan.title} · ${expired?'추천 만료 · 상황 생성 / 추천 갱신을 눌러 재계산하세요.':!plan.available?'가용 기체 부족 · 기체 상태를 확인하고 추천을 갱신하세요.':s.formations.revision!==m.basis_revision?'대형 변경 · 추천을 갱신하세요.':`배정 ${plan.tasks.map(t=>t.vehicle).join(', ')} · 대응안 선택 시 즉시 실행됩니다.`}`:expired?'추천이 만료되었습니다. 상황 생성 / 추천 갱신을 눌러 재계산하세요.':'대응안을 선택해 검토하세요. 선택하면 즉시 실행됩니다.';
+  $('approvalPreview').textContent=m?.approved?`운용자 최종 승인 기록 · ${m.approved.title} · ${m.approved.decision_source==='captain_text'?'직접 입력':'승인 버튼'} · ${new Date(m.approved.approved_at*1000).toLocaleTimeString('ko-KR')}`:plan?`선택: ${m.options.indexOf(plan)+1}번 ${plan.title} · ${expired?'추천 만료 · 자동 갱신을 기다려 주세요.':!plan.available?'가용 기체 부족 · 기체 상태를 확인하고 자동 갱신을 기다려 주세요.':s.formations.revision!==m.basis_revision?'대형 변경 · 자동 갱신을 기다려 주세요.':`배정 ${plan.tasks.map(t=>t.vehicle).join(', ')} · 대응안 선택 시 즉시 실행됩니다.`}`:expired?'추천이 만료되었습니다. 자동 갱신을 기다려 주세요.':'대응안을 선택해 검토하세요. 선택하면 즉시 실행됩니다.';
 }
 $('finalApprove').addEventListener('click',()=>{if(selectedResponse)missionRequest('/api/mission/approve',{...selectedResponse,human_confirmed:true,decision_source:'captain_button'});});
 $('approvalCommandForm').addEventListener('submit',e=>{
@@ -285,23 +310,34 @@ $('approvalCommandForm').addEventListener('submit',e=>{
   selectedResponse={mission_id:m.id,option_id:plan.id,plan_revision:m.plan_revision||0};missionRequest('/api/mission/approve',{...selectedResponse,human_confirmed:true,decision_source:'captain_text',operator_command:command});
 });
 
+async function executeRiskResponse(riskId,optionId){
+  const created=await missionRequest('/api/risks/'+encodeURIComponent(riskId)+'/plan');
+  if(!created||created.risk_id!==riskId||created.approved)return;
+  await executeResponse(created,optionId);
+}
 async function executeResponse(m,optionId){
-  try{const request=responseExecutionRequest(m,optionId);selectedResponse=request;$('assignmentPlan').value=optionId;await missionRequest('/api/mission/approve',request);}
-  catch(error){$('missionFeedback').textContent=error.message;}
+  if(responseExecuting||missionRequestPending)return;responseExecuting=true;
+  try{
+    while(plansRefreshing)await new Promise(resolve=>setTimeout(resolve,30));
+    const r=await fetch('/api/mission/'+m.id+'/refresh',{method:'POST'}),fresh=await r.json();
+    if(!r.ok)throw Error(fresh.detail||'대응안 갱신 실패');
+    const request=responseExecutionRequest(fresh,optionId);selectedResponse=request;$('assignmentPlan').value=optionId;
+    await missionRequest('/api/mission/approve',request);
+  }catch(error){$('missionFeedback').textContent=error.message;}
+  finally{responseExecuting=false;}
 }
 async function missionRequest(url,data={}){
   if(missionRequestPending)return;missionRequestPending=true;
   const buttons=[...document.querySelectorAll('.mission-console button')];buttons.forEach(b=>b.disabled=true);$('missionFeedback').textContent='처리 중…';
   try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),result=await r.json();if(!r.ok)throw Error(result.detail||'요청 실패');if(result.id!==undefined){reviewMissionId=result.id;scenarioDraft=false;}
-    const response=await fetch('/api/state');if(!response.ok)throw Error('상태 갱신 실패');lastState=reviewState(await response.json());missionRenderKey='';renderMission(lastState);renderVehicles(lastState);formationControls(lastState.formations);$('missionFeedback').textContent=url.endsWith('approve')?'승인 완료 · 대형 적용 요청 / UAV·USV 출동 요청':url.endsWith('cancel')?'계획 종료 · 현재 대형 유지':url.endsWith('simulated-fault')?'기체 배정 상태 시연 갱신':'상황 생성 완료 · 대응안 3개를 검토하세요.';event($('missionFeedback').textContent);
+    const response=await fetch('/api/state');if(!response.ok)throw Error('상태 갱신 실패');queueView=null;lastState=reviewState(await response.json());missionRenderKey='';renderMission(lastState);renderVehicles(lastState);formationControls(lastState.formations);$('missionFeedback').textContent=url.endsWith('approve')?'승인 완료 · 대형 적용 요청 / UAV·USV 출동 요청':url.endsWith('cancel')?'계획 종료 · 현재 대형 유지':url.endsWith('simulated-fault')?'기체 배정 상태 시연 갱신':'상황 생성 완료 · 대응안 3개를 검토하세요.';event($('missionFeedback').textContent);return result;
   }catch(error){$('missionFeedback').textContent=error.message;event(error.message);}
   finally{missionRequestPending=false;if(lastState)renderMission(lastState);}
 }
 $('faultToggle').addEventListener('click',async()=>{const v=lastState?.vehicles.find(v=>v.id===selectedVehicle);if(!v)return;await missionRequest('/api/vehicles/'+v.id+'/simulated-fault',{unavailable:!v.fault});});
-$('startScenario').addEventListener('click',()=>{const m=lastState?.mission;if(m&&!m.approved&&m.scenario===$('scenarioSelect').value)missionRequest('/api/mission/'+m.id+'/refresh');else missionRequest('/api/mission/scenario',{scenario:$('scenarioSelect').value});});
+$('startScenario').addEventListener('click',()=>missionRequest('/api/mission/scenario',{scenario:$('scenarioSelect').value}));
 $('cancelMission').addEventListener('click',()=>missionRequest('/api/mission/cancel',{mission_id:lastState?.mission?.id}));
 $('scenarioSelect').addEventListener('change',()=>{scenarioDraft=true;});
-$('missionReview').addEventListener('change',()=>{reviewMissionId=Number($('missionReview').value);scenarioDraft=false;if(lastState){lastState=reviewState(lastState);renderMission(lastState);renderVehicles(lastState);}});
 $('assignmentPlan').addEventListener('change',()=>{const m=lastState?.mission;if(m&&!m.approved){selectedResponse={mission_id:m.id,option_id:$('assignmentPlan').value,plan_revision:m.plan_revision||0};renderHumanApproval(lastState);}if(lastState)renderVehicles(lastState);});
 $('vehicleFilter').addEventListener('change',()=>{if(lastState)renderVehicles(lastState);});
 function chooseVehicle(event){const row=event.target.closest('[data-vehicle]');if(row){selectedVehicle=row.dataset.vehicle;if(lastState){renderVehicles(lastState);map(lastState);cameraOverlay(lastState);}}}
@@ -342,9 +378,7 @@ async function refreshRisks(){
    const card=element('article',undefined,'risk-response');card.append(element('strong',`${i+1}. ${title}`),element('small',plan.tasks.map(t=>t.vehicle+' · '+t.task).join(' / ')||'가용 기체 없음'));
    const button=element('button','이 대응안 즉시 실행');button.type='button';button.disabled=!plan.available;
    button.addEventListener('click',async()=>{
-    await missionRequest('/api/risks/'+encodeURIComponent(top.id)+'/plan');
-    if(lastState?.mission?.risk_id!==top.id||lastState.mission.approved)return;
-    await executeResponse(lastState.mission,plan.id);
+    await executeRiskResponse(top.id,plan.id);
    });card.append(button);$('riskResponses').append(card);
   }
  }catch(error){$('riskRefresh').textContent='평가 연결 실패';$('riskList').textContent=error.message;$('riskResponses').replaceChildren();}

@@ -30,3 +30,45 @@ test('pending situations can be inspected during execution; default review is ac
   assert.equal(reviewedMission({mission:active,active_mission:active,approval_queue:[pending]},null),active);
   assert.equal(reviewedMission({mission:null,approval_queue:[]},pending.id),null);
 });
+
+test('queue shows only three ranked items and refreshes at ten seconds without losing backlog',()=>{
+ const {queueSnapshot}=require('../frontend/queue_state.js');
+ const make=(id,p,score,created)=>({id,created_at:created,risk:{priority:p,score}});
+ const queue=[make(1,'P3',20,9),make(2,'P1',90,1),make(3,'P0',10,1),make(4,'P2',60,2),make(5,'P1',90,3)];
+ const first=queueSnapshot(null,queue,0,'all');assert.deepEqual(first.items.map(m=>m.id),[3,5,2]);assert.equal(first.total,5);assert.equal(queue.length,5);
+ const next=[...queue,make(6,'P0',100,4)];assert.equal(queueSnapshot(first,next,9999,'all'),first);
+ assert.deepEqual(queueSnapshot(first,next,10000,'all').items.map(m=>m.id),[6,3,5]);
+ assert.deepEqual(queueSnapshot(first,next,1,'P2').items.map(m=>m.id),[4]);
+ assert.deepEqual(queueSnapshot(first,next,1,'all',true).items.map(m=>m.id),[6,3,5]);
+});
+test('automatic plan refresh skips execution and resolved situations and renews stale plans',()=>{
+ const {needsPlanRefresh}=require('../frontend/queue_state.js');
+ const m={planned_at:100,created_at:90,basis_revision:2};
+ assert.equal(needsPlanRefresh(m,2,109),false);
+ assert.equal(needsPlanRefresh(m,2,110),true);
+ assert.equal(needsPlanRefresh(m,3,101),true);
+ assert.equal(needsPlanRefresh({...m,approved:{id:'verify'}},3,200),false);
+ assert.equal(needsPlanRefresh({...m,resolved:true},3,200),false);
+});
+test('main dashboard renders three queue cards and clicks select their own situation',()=>{
+ const fs=require('node:fs'),vm=require('node:vm');
+ const source=fs.readFileSync(require('node:path').join(__dirname,'../frontend/app.js'),'utf8');
+ const {queueSnapshot}=require('../frontend/queue_state.js');
+ const dom={};const node=(tag,text,className)=>({tag,text,className,children:[],append(...items){this.children.push(...items)},replaceChildren(){this.children=[]},setAttribute(){},addEventListener(type,handler){this[type]=handler}});
+ const context={queueSnapshot,queueView:null,reviewMissionId:2,missionRequestPending:false,lastPlanRefresh:Date.now(),$:id=>dom[id]||(dom[id]=node('div')),element:node,selectSituation:id=>context.selected=id,Date,Map};
+ vm.createContext(context);vm.runInContext(source.slice(source.indexOf('function priorityText('),source.indexOf('async function refreshQueuePlans(')),context);
+ const approval_queue=Array.from({length:5},(_,i)=>({id:i+1,created_at:i,card:{title:'상황 '+i},risk:{priority:'P1',score:80}}));
+ context.renderMissionReview({approval_queue,active_mission:null});
+ assert.equal(dom.approvalQueue.children.length,3);assert.match(dom.queueCount.textContent,/전체 5건/);
+ dom.approvalQueue.children[0].click();assert.equal(context.selected,5);
+ const html=fs.readFileSync(require('node:path').join(__dirname,'../frontend/index.html'),'utf8');
+ assert.match(html,/id="approvalQueue"/);assert.doesNotMatch(html,/id="priorityFilter"|id="refreshMission"|id="missionReview"/);
+});
+test('risk response executes the API-created card even when it is outside the visible top three',async()=>{
+ const fs=require('node:fs'),vm=require('node:vm');const source=fs.readFileSync(require('node:path').join(__dirname,'../frontend/app.js'),'utf8');
+ const created={id:99,risk_id:'UAV-03:fault',approved:null};let executed;
+ const context={missionRequest:async()=>created,executeResponse:async(m,id)=>executed=[m.id,id],encodeURIComponent,lastState:{mission:{id:1,risk_id:'other'}}};
+ vm.createContext(context);const start=source.indexOf('async function executeRiskResponse(');assert.notEqual(start,-1);
+ vm.runInContext(source.slice(start,source.indexOf('async function executeResponse(',start)),context);
+ await context.executeRiskResponse('UAV-03:fault','verify');assert.deepEqual(executed,[99,'verify']);
+});

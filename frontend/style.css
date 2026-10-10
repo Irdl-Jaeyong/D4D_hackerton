@@ -91,3 +91,11 @@
   .position-panel .map-legend{flex-shrink:0}
   .right-column>.chat{height:auto;min-height:clamp(320px,34vh,480px);flex:1}
 }
+
+/* Compact risk-ranked approval queue in the main dashboard. */
+.approval-queue{padding:12px;margin-bottom:12px;border:1px solid #284454;border-radius:8px;background:#0b1b26}
+.queue-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}.queue-heading strong{font-size:13px}#queueRefresh{font-size:10px;color:#7cbebd;white-space:nowrap}#queueCount{font-size:10px;color:#8099a9;margin:5px 0 10px}
+#approvalQueue{display:grid;gap:7px}.queue-item{display:grid;grid-template-columns:auto 1fr;gap:4px 7px;align-items:center;width:100%;padding:10px;text-align:left;background:#112a39;border:1px solid #2a485b;border-radius:7px}.queue-item strong{font-size:11px;line-height:1.5}.queue-item small{grid-column:2;font-size:10px;color:#89a7b8}.queue-item.selected{border-color:#5ad9d5;box-shadow:inset 3px 0 #5ad9d5;background:#123440}.queue-item:disabled{opacity:.6}.queue-active{width:100%;text-align:left;margin:0 0 8px;padding:9px;background:#16463d;font-size:11px;border:1px solid #3d7a6e;border-radius:7px}
+.priority-badge{display:inline-block;padding:3px 6px;border-radius:5px;font-size:10px;background:#253847;color:#b9cbd7;white-space:nowrap}.priority-badge.P0{background:#bc283d;color:#fff}.priority-badge.P1{background:#61381e;color:#ffb36f}.priority-badge.P2{background:#55461d;color:#ffe28b}.priority-badge.P3{background:#1f405d;color:#a1ceff}
+.scenario-setup,.assignment-panel{border:1px solid #284454;border-radius:7px;margin-bottom:10px;background:#0c202e}.scenario-setup>summary,.assignment-panel>summary{padding:9px 10px;font-size:11px;color:#91acbe;cursor:pointer}.scenario-setup .scenario-tools{padding:0 10px 10px}.assignment-panel[open]{padding-bottom:10px}.assignment-panel>.assignment-heading,.assignment-panel>p,.assignment-panel>div,.assignment-panel>small{margin-left:10px;margin-right:10px}
+#missionFeedback:empty{display:none}.response-card details{margin-top:6px;font-size:10px;color:#8faabc}.response-card button{width:100%}.human-approval p{font-size:11px;line-height:1.5}
