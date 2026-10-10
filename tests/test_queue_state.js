@@ -15,3 +15,17 @@ test('response selection directly builds a confirmed execution request',()=>{
   assert.throws(()=>responseExecutionRequest({...m,approved:{id:'verify'}},'verify'));
   assert.throws(()=>responseExecutionRequest({...m,options:[{id:'verify',available:false}]},'verify'));
 });
+test('newly created lower priority situation stays selected across polling',()=>{
+  const {reviewedMission}=require('../frontend/queue_state.js');
+  const old={id:1,scenario:'crossing'},created={id:2,scenario:'rescue'};
+  const snapshot={mission:old,active_mission:null,approval_queue:[old,created]};
+  assert.equal(reviewedMission(snapshot,created.id),created);
+  assert.equal(reviewedMission({...snapshot,approval_queue:[{...old},{...created}]},created.id).id,created.id);
+});
+test('removed review falls back to the queue and active execution takes precedence',()=>{
+  const {reviewedMission}=require('../frontend/queue_state.js');
+  const pending={id:4},active={id:6,approved:{id:'observe'}};
+  assert.equal(reviewedMission({mission:pending,approval_queue:[pending]},99),pending);
+  assert.equal(reviewedMission({mission:active,active_mission:active,approval_queue:[pending]},pending.id),active);
+  assert.equal(reviewedMission({mission:null,approval_queue:[]},pending.id),null);
+});

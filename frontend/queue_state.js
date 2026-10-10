@@ -11,4 +11,10 @@ function responseExecutionRequest(m,optionId) {
   return {mission_id:m.id,option_id:optionId,plan_revision:m.plan_revision||0,
     human_confirmed:true,decision_source:'response_button'};
 }
-if(typeof module!=='undefined')module.exports={queueReviewKey,responseExecutionRequest};
+function reviewedMission(state, selectedId) {
+  const active=state.active_mission || (state.mission?.approved ? state.mission : null);
+  if(active)return active;
+  const queue=state.approval_queue || [];
+  return queue.find(m=>m.id===selectedId) || queue[0] || state.mission || null;
+}
+if(typeof module!=='undefined')module.exports={queueReviewKey,responseExecutionRequest,reviewedMission};
