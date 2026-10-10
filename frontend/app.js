@@ -90,7 +90,7 @@ function cameraOverlay(state){
     const ring=(parseInt(v.id.split('-')[1],10)-1)%5;
     const color=stateColors[v.readiness?.operational_state]||'#fff';
     cameraPickables.push({id:v.id,x:q[0],y:q[1]});
-    if(v.type==='UAV'){ctx.fillStyle=color;ctx.strokeStyle='#06121e';ctx.lineWidth=1;ctx.beginPath();ctx.arc(q[0],q[1],3.5,0,Math.PI*2);ctx.fill();ctx.stroke();}
+    if(v.type==='UAV'){ctx.fillStyle=color;ctx.strokeStyle='#06121e';ctx.lineWidth=1;ctx.beginPath();ctx.arc(q[0],q[1],v.fault?3.5:v.id===selectedVehicle?3:2,0,Math.PI*2);ctx.fill();ctx.stroke();}
     if(v.id===selectedVehicle){ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();ctx.arc(q[0],q[1],8,0,Math.PI*2);ctx.stroke();}
   }
 

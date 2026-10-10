@@ -2,7 +2,7 @@
 from pathlib import Path
 import math
 ROOT=Path(__file__).resolve().parents[1]/'ros_ws/src/navis_sim/models/defense_contact/meshes'
-COLORS={'hull':(.24,.28,.3),'deck':(.32,.35,.35),'collar':(.045,.052,.055),'cabin':(.57,.61,.6),'glass':(.055,.13,.17),'canopy':(.43,.47,.48),'airframe':(.18,.22,.25)}
+COLORS={'hull':(.24,.28,.3),'deck':(.32,.35,.35),'collar':(.045,.052,.055),'cabin':(.57,.61,.6),'glass':(.055,.13,.17),'canopy':(.43,.47,.48),'airframe':(.18,.22,.25),'escort_body':(.29,.33,.36)}
 def save(name,vertices,faces):
     # Explicit OBJ normals and materials prevent unlit white fallback meshes.
     triangles=[(f[0],f[i],f[i+1]) for f in faces for i in range(1,len(f)-1)]
@@ -46,6 +46,18 @@ def build():
     save('cabin',v,[(0,2,6,4),(1,5,7,3),(0,4,5,1),(4,6,7,5)])
     save('glass',v,[(2,3,7,6)])
     v=[(-1.85,-.92,2.65),(-1.85,.92,2.65),(1.0,-.88,2.42),(1.0,.88,2.42)];save('canopy',v,[(0,2,3,1)])
+    # Rounded carbon/composite multirotor shell; preserves the existing 1.5 m span.
+    v=[];faces=[];rings=10;segments=24
+    for i in range(rings+1):
+        latitude=-math.pi/2+math.pi*i/rings
+        for j in range(segments):
+            longitude=2*math.pi*j/segments
+            v.append((.39*math.cos(latitude)*math.cos(longitude),.235*math.cos(latitude)*math.sin(longitude),.13*math.sin(latitude)+.015))
+    for i in range(rings):
+        for j in range(segments):
+            a=i*segments+j;b=i*segments+(j+1)%segments
+            faces.extend([(a,b,b+segments),(a,b+segments,a+segments)])
+    save('escort_body',v,faces)
     # Original tapered fixed-wing shell, 5 m wingspan, no armament.
     v=[(.6,-.45,.08),(-.45,-2.5,.02),(-.9,-2.5,.02),(-.6,-.45,.08),(.6,.45,.08),(-.45,2.5,.02),(-.9,2.5,.02),(-.6,.45,.08)]
     v += [(x,y,z-.13) for x,y,z in list(v)]

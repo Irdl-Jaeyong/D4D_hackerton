@@ -77,7 +77,7 @@ class Bridge(Node):
             if channels:
                 array = np.frombuffer(img.data,dtype=np.uint8).reshape(img.height,img.step)[:,:img.width*channels].reshape(img.height,img.width,channels)
                 if img.encoding == 'rgb8': array = cv2.cvtColor(array,cv2.COLOR_RGB2BGR)
-                ok, encoded = cv2.imencode('.jpg', array, [cv2.IMWRITE_JPEG_QUALITY,85])
+                ok, encoded = cv2.imencode('.jpg', array, [cv2.IMWRITE_JPEG_QUALITY,92])
                 if ok: payload['camera_jpeg'] = base64.b64encode(encoded).decode()
         req = urllib.request.Request(os.environ.get('NAVIS_BACKEND_URL','http://127.0.0.1:18082')+'/api/internal/telemetry',data=json.dumps(payload).encode(),headers={'Content-Type':'application/json','X-Bridge-Token':os.environ['NAVIS_BRIDGE_TOKEN']})
         try:
