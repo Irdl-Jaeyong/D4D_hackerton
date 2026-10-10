@@ -25,6 +25,11 @@ OLLAMA = os.environ.get('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
 FLEET = json.loads((ROOT/'config/fleet.json').read_text())
 IDS = [f'{kind}-{i:02}' for kind, key in [('SHIP','ships'),('UAV','uavs'),('USV','usvs')] for i in range(1, FLEET[key]+1)]
 CAMERA_VEHICLE = FLEET['camera_vehicle']
+camera_view = 'wide'
+CAMERA_VIEWS = FLEET.get('camera_views', {'wide':FLEET['camera']})
+
+class CameraView(BaseModel):
+    mode: Literal['wide','detail']
 
 class Telemetry(BaseModel):
     vehicle_id: str = 'USV-01'
@@ -53,7 +58,7 @@ def state():
         value = latest.get(id)
         age = now - value['received_at'] if value else None
         vehicles.append({'id': id, 'type': id.split('-')[0], 'connected': age is not None and age < 5, 'age_seconds': age, 'source': 'gazebo_ros' if value else None, 'telemetry': value})
-    return {'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'fleet_observer', 'scene_mode': 'hemisphere_figure_eight', 'scene': {'camera':FLEET['camera'], 'motion':FLEET['motion']}}
+    return {'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'fleet_observer', 'scene_mode': 'hemisphere_figure_eight', 'camera_view':camera_view, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion']}}
 
 @app.get('/api/health')
 async def health():
@@ -68,6 +73,18 @@ async def health():
 @app.get('/api/state')
 async def get_state():
     return state()
+
+@app.get('/api/camera/view')
+async def get_camera_view():
+    return {'mode':camera_view, 'camera':CAMERA_VIEWS[camera_view]}
+
+@app.post('/api/camera/view')
+async def set_camera_view(data: CameraView):
+    global camera_view
+    if data.mode not in CAMERA_VIEWS:
+        raise HTTPException(422, 'Camera view unavailable')
+    camera_view = data.mode
+    return {'mode':camera_view, 'camera':CAMERA_VIEWS[camera_view]}
 
 @app.post('/api/internal/telemetry')
 async def telemetry(data: Telemetry, x_bridge_token: str = Header(default='')):

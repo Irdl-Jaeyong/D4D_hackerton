@@ -1,0 +1,533 @@
+[
+  {
+    "mesh": "part_00.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cylinder111_copy112"
+  },
+  {
+    "mesh": "part_01.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cylinder111_copy111"
+  },
+  {
+    "mesh": "part_02.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cylinder112"
+  },
+  {
+    "mesh": "part_03.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cylinder104_copy112"
+  },
+  {
+    "mesh": "part_04.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cylinder104_copy111"
+  },
+  {
+    "mesh": "part_05.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cylinder104_copy110"
+  },
+  {
+    "mesh": "part_06.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cylinder104_copy109"
+  },
+  {
+    "mesh": "part_07.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cylinder104_copy108"
+  },
+  {
+    "mesh": "part_08.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "sphere117_copy107"
+  },
+  {
+    "mesh": "part_09.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cylinder111_copy106"
+  },
+  {
+    "mesh": "part_10.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cylinder104"
+  },
+  {
+    "mesh": "part_11.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cube93_copy102"
+  },
+  {
+    "mesh": "part_12.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cube93_copy101"
+  },
+  {
+    "mesh": "part_13.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cube94_copy100"
+  },
+  {
+    "mesh": "part_14.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cube94_copy98"
+  },
+  {
+    "mesh": "part_15.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cube94_copy97"
+  },
+  {
+    "mesh": "part_16.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cube94_copy96"
+  },
+  {
+    "mesh": "part_17.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cube94_copy95"
+  },
+  {
+    "mesh": "part_18.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cube94"
+  },
+  {
+    "mesh": "part_19.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cube93"
+  },
+  {
+    "mesh": "part_20.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "vlsDDG51_sep91"
+  },
+  {
+    "mesh": "part_21.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "sphere117"
+  },
+  {
+    "mesh": "part_22.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cylinder111_copy116"
+  },
+  {
+    "mesh": "part_23.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cylinder111_sep115"
+  },
+  {
+    "mesh": "part_24.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cylinder111_copy113"
+  },
+  {
+    "mesh": "part_25.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "cylinder111"
+  },
+  {
+    "mesh": "part_26.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "lifeLine_copy62"
+  },
+  {
+    "mesh": "part_27.obj",
+    "color": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "source_name": "cube16_sep34"
+  },
+  {
+    "mesh": "part_28.obj",
+    "color": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "source_name": "cube16_copy31"
+  },
+  {
+    "mesh": "part_29.obj",
+    "color": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "source_name": "cube16_copy26"
+  },
+  {
+    "mesh": "part_30.obj",
+    "color": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "source_name": "cube16_copy23"
+  },
+  {
+    "mesh": "part_31.obj",
+    "color": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "source_name": "cube16_copy20"
+  },
+  {
+    "mesh": "part_32.obj",
+    "color": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "source_name": "cube16_extract17"
+  },
+  {
+    "mesh": "part_33.obj",
+    "color": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "source_name": "cylinder8_copy15"
+  },
+  {
+    "mesh": "part_34.obj",
+    "color": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "source_name": "cylinder8_copy13"
+  },
+  {
+    "mesh": "part_35.obj",
+    "color": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "source_name": "cylinder8_copy12"
+  },
+  {
+    "mesh": "part_36.obj",
+    "color": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "source_name": "cylinder8_copy11"
+  },
+  {
+    "mesh": "part_37.obj",
+    "color": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "source_name": "cylinder8_copy10"
+  },
+  {
+    "mesh": "part_38.obj",
+    "color": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "source_name": "cylinder8_copy9"
+  },
+  {
+    "mesh": "part_39.obj",
+    "color": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "source_name": "cylinder8"
+  },
+  {
+    "mesh": "part_40.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "aftStackDDG51"
+  },
+  {
+    "mesh": "part_41.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "vlsDDG51"
+  },
+  {
+    "mesh": "part_42.obj",
+    "color": [
+      0.10133,
+      0.10702,
+      0.38
+    ],
+    "source_name": "IndexedFaceSet10"
+  },
+  {
+    "mesh": "part_43.obj",
+    "color": [
+      0.2341,
+      0.2341,
+      0.2341
+    ],
+    "source_name": "IndexedFaceSet11"
+  },
+  {
+    "mesh": "part_44.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "IndexedFaceSet9"
+  },
+  {
+    "mesh": "part_45.obj",
+    "color": [
+      0.44,
+      0.07333,
+      0.0
+    ],
+    "source_name": "IndexedFaceSet12"
+  },
+  {
+    "mesh": "part_46.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "IndexedFaceSet13"
+  },
+  {
+    "mesh": "part_47.obj",
+    "color": [
+      0.2341,
+      0.2341,
+      0.2341
+    ],
+    "source_name": "IndexedFaceSet14"
+  },
+  {
+    "mesh": "part_48.obj",
+    "color": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "source_name": "IndexedFaceSet15"
+  },
+  {
+    "mesh": "part_49.obj",
+    "color": [
+      0.2341,
+      0.2341,
+      0.2341
+    ],
+    "source_name": "IndexedFaceSet6"
+  },
+  {
+    "mesh": "part_50.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "Cylinder1"
+  },
+  {
+    "mesh": "part_51.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "SweptSurface1"
+  },
+  {
+    "mesh": "part_52.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "Cylinder2"
+  },
+  {
+    "mesh": "part_53.obj",
+    "color": [
+      0.60706,
+      0.60706,
+      0.60706
+    ],
+    "source_name": "SweptSurface2"
+  },
+  {
+    "mesh": "part_54.obj",
+    "color": [
+      0.1,
+      0.1,
+      0.1
+    ],
+    "source_name": "Box2"
+  },
+  {
+    "mesh": "part_55.obj",
+    "color": [
+      0.1,
+      0.1,
+      0.1
+    ],
+    "source_name": "Cylinder3"
+  },
+  {
+    "mesh": "part_56.obj",
+    "color": [
+      1.0,
+      1.0,
+      0.0
+    ],
+    "source_name": "Cylinder4"
+  },
+  {
+    "mesh": "part_57.obj",
+    "color": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "source_name": "Cylinder5"
+  },
+  {
+    "mesh": "part_58.obj",
+    "color": [
+      0.1,
+      0.1,
+      0.1
+    ],
+    "source_name": "Cylinder6"
+  }
+]

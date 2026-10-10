@@ -12,7 +12,7 @@
       <real_time_factor>1</real_time_factor>
     </physics>
     <scene>
-      <ambient>.55 .60 .67 1</ambient>
+      <ambient>.28 .32 .38 1</ambient>
       <background>.58 .73 .84 1</background>
       <shadows>true</shadows>
     </scene>
@@ -28,7 +28,7 @@
       <pose>0 0 -.25 0 0 0</pose>
       <link name="base_link">
         <visual name="water">
-          <pose>0 0 0 0 0 0</pose>
+          <pose>0 0 -.35 0 0 0</pose>
           <geometry>
             <mesh>
               <uri>model://navis_ocean/meshes/waterlow.dae</uri>
@@ -49,265 +49,1678 @@
           </material>
           <cast_shadows>false</cast_shadows>
         </visual>
+        <visual name="near_water">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://navis_ocean/meshes/near_ocean.obj</uri>
+            </mesh>
+          </geometry>
+          <cast_shadows>false</cast_shadows>
+          <plugin filename="libNavisWaveVisual.so" name="vrx::WaveVisual">
+            <model_path>/project/ros_ws/src/navis_sim/models/navis_ocean/model.sdf</model_path>
+            <shader>
+              <vertex>materials/programs/GerstnerWaves_vs_330.glsl</vertex>
+              <fragment>materials/programs/GerstnerWaves_fs_330.glsl</fragment>
+              <parameters>
+                <rescale>.18</rescale>
+                <bumpScale>440 440</bumpScale>
+                <hdrMultiplier>.48</hdrMultiplier>
+                <fresnelPower>4</fresnelPower>
+                <shallowColor>.018 .12 .15 1</shallowColor>
+                <deepColor>.007 .037 .064 1</deepColor>
+              </parameters>
+            </shader>
+            <wavefield>
+              <topic>/navis/wavefield</topic>
+              <wave>
+                <model>CWR</model>
+                <number>3</number>
+                <amplitude>.055</amplitude>
+                <period>5.5</period>
+                <scale>1.4</scale>
+                <angle>.45</angle>
+                <steepness>.15</steepness>
+                <direction>.6435</direction>
+                <tau>2</tau>
+              </wave>
+            </wavefield>
+          </plugin>
+        </visual>
       </link>
     </model>
     <model name="SHIP-01">
       <static>true</static>
       <pose>0 0 2.4 0 0 0</pose>
       <link name="base_link">
-        <visual name="hull">
-          <pose>0 0 0 0 0 0</pose>
+        <visual name="ddg_part_0">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
             <mesh>
-              <uri>model://navis_vessels/meshes/ship.obj</uri>
-              <scale>4 4 3</scale>
+              <uri>model://arleigh_burke/meshes/part_00.obj</uri>
             </mesh>
           </geometry>
           <material>
-            <ambient>.32 .39 .44 1</ambient>
-            <diffuse>.32 .39 .44 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
             <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <visual name="deck">
-          <pose>-2 0 2.5 0 0 0</pose>
+        <visual name="ddg_part_1">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
-            <box>
-              <size>44 12 .3</size>
-            </box>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_01.obj</uri>
+            </mesh>
           </geometry>
           <material>
-            <ambient>.34 .39 .42 1</ambient>
-            <diffuse>.34 .39 .42 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
             <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <visual name="bridge">
-          <pose>8 0 5.2 0 0 0</pose>
+        <visual name="ddg_part_2">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
-            <box>
-              <size>10 7 5</size>
-            </box>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_02.obj</uri>
+            </mesh>
           </geometry>
           <material>
-            <ambient>.48 .53 .56 1</ambient>
-            <diffuse>.48 .53 .56 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
             <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <visual name="windows">
-          <pose>8 0 6.6 0 0 0</pose>
+        <visual name="ddg_part_3">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
-            <box>
-              <size>10.1 7.1 .9</size>
-            </box>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_03.obj</uri>
+            </mesh>
           </geometry>
           <material>
-            <ambient>.045 .12 .18 1</ambient>
-            <diffuse>.045 .12 .18 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
             <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <visual name="mast">
-          <pose>8 0 11 0 0 0</pose>
+        <visual name="ddg_part_4">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
-            <box>
-              <size>.3 .3 8</size>
-            </box>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_04.obj</uri>
+            </mesh>
           </geometry>
           <material>
-            <ambient>.48 .53 .56 1</ambient>
-            <diffuse>.48 .53 .56 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
             <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <visual name="radar">
-          <pose>8 0 14 0 0 0</pose>
+        <visual name="ddg_part_5">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
-            <box>
-              <size>4 .3 .6</size>
-            </box>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_05.obj</uri>
+            </mesh>
           </geometry>
           <material>
-            <ambient>.48 .53 .56 1</ambient>
-            <diffuse>.48 .53 .56 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
             <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <visual name="hangar">
-          <pose>-3 0 4.1 0 0 0</pose>
+        <visual name="ddg_part_6">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
-            <box>
-              <size>7 8 3</size>
-            </box>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_06.obj</uri>
+            </mesh>
           </geometry>
           <material>
-            <ambient>.48 .53 .56 1</ambient>
-            <diffuse>.48 .53 .56 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
             <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <visual name="rail-1">
-          <pose>-2 -5.8 3 0 0 0</pose>
+        <visual name="ddg_part_7">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
-            <box>
-              <size>42 .1 .6</size>
-            </box>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_07.obj</uri>
+            </mesh>
           </geometry>
           <material>
-            <ambient>.6 .64 .67 1</ambient>
-            <diffuse>.6 .64 .67 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
             <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <visual name="rail1">
-          <pose>-2 5.8 3 0 0 0</pose>
+        <visual name="ddg_part_8">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
-            <box>
-              <size>42 .1 .6</size>
-            </box>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_08.obj</uri>
+            </mesh>
           </geometry>
           <material>
-            <ambient>.6 .64 .67 1</ambient>
-            <diffuse>.6 .64 .67 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
             <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <visual name="pad-19_-1">
-          <pose>-19 -1.5 2.66 0 0 0</pose>
+        <visual name="ddg_part_9">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
-            <box>
-              <size>3 .13 .02</size>
-            </box>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_09.obj</uri>
+            </mesh>
           </geometry>
           <material>
-            <ambient>.9 .91 .82 1</ambient>
-            <diffuse>.9 .91 .82 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
             <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <visual name="pad-19_1">
-          <pose>-19 1.5 2.66 0 0 0</pose>
+        <visual name="ddg_part_10">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
-            <box>
-              <size>3 .13 .02</size>
-            </box>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_10.obj</uri>
+            </mesh>
           </geometry>
           <material>
-            <ambient>.9 .91 .82 1</ambient>
-            <diffuse>.9 .91 .82 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
             <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <visual name="padH-19">
-          <pose>-19 0 2.66 0 0 0</pose>
+        <visual name="ddg_part_11">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
-            <box>
-              <size>.15 3 .02</size>
-            </box>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_11.obj</uri>
+            </mesh>
           </geometry>
           <material>
-            <ambient>.9 .91 .82 1</ambient>
-            <diffuse>.9 .91 .82 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
             <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <visual name="pad-14_-1">
-          <pose>-14 -1.5 2.66 0 0 0</pose>
+        <visual name="ddg_part_12">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
-            <box>
-              <size>3 .13 .02</size>
-            </box>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_12.obj</uri>
+            </mesh>
           </geometry>
           <material>
-            <ambient>.9 .91 .82 1</ambient>
-            <diffuse>.9 .91 .82 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
             <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <visual name="pad-14_1">
-          <pose>-14 1.5 2.66 0 0 0</pose>
+        <visual name="ddg_part_13">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
-            <box>
-              <size>3 .13 .02</size>
-            </box>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_13.obj</uri>
+            </mesh>
           </geometry>
           <material>
-            <ambient>.9 .91 .82 1</ambient>
-            <diffuse>.9 .91 .82 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
             <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <visual name="padH-14">
-          <pose>-14 0 2.66 0 0 0</pose>
+        <visual name="ddg_part_14">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
-            <box>
-              <size>.15 3 .02</size>
-            </box>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_14.obj</uri>
+            </mesh>
           </geometry>
           <material>
-            <ambient>.9 .91 .82 1</ambient>
-            <diffuse>.9 .91 .82 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
             <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <visual name="pad-9_-1">
-          <pose>-9 -1.5 2.66 0 0 0</pose>
+        <visual name="ddg_part_15">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
-            <box>
-              <size>3 .13 .02</size>
-            </box>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_15.obj</uri>
+            </mesh>
           </geometry>
           <material>
-            <ambient>.9 .91 .82 1</ambient>
-            <diffuse>.9 .91 .82 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
             <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <visual name="pad-9_1">
-          <pose>-9 1.5 2.66 0 0 0</pose>
+        <visual name="ddg_part_16">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
-            <box>
-              <size>3 .13 .02</size>
-            </box>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_16.obj</uri>
+            </mesh>
           </geometry>
           <material>
-            <ambient>.9 .91 .82 1</ambient>
-            <diffuse>.9 .91 .82 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
             <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <visual name="padH-9">
-          <pose>-9 0 2.66 0 0 0</pose>
+        <visual name="ddg_part_17">
+          <pose>0 0 -2.65 0 0 0</pose>
           <geometry>
-            <box>
-              <size>.15 3 .02</size>
-            </box>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_17.obj</uri>
+            </mesh>
           </geometry>
           <material>
-            <ambient>.9 .91 .82 1</ambient>
-            <diffuse>.9 .91 .82 1</diffuse>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_18">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_18.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_19">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_19.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_20">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_20.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_21">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_21.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_22">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_22.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_23">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_23.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_24">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_24.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_25">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_25.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_26">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_26.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_27">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_27.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.001 0.001 0.001 1</ambient>
+            <diffuse>0.001 0.001 0.001 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.18</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_28">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_28.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.001 0.001 0.001 1</ambient>
+            <diffuse>0.001 0.001 0.001 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.18</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_29">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_29.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.001 0.001 0.001 1</ambient>
+            <diffuse>0.001 0.001 0.001 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.18</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_30">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_30.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.001 0.001 0.001 1</ambient>
+            <diffuse>0.001 0.001 0.001 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.18</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_31">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_31.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.001 0.001 0.001 1</ambient>
+            <diffuse>0.001 0.001 0.001 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.18</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_32">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_32.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.001 0.001 0.001 1</ambient>
+            <diffuse>0.001 0.001 0.001 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.18</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_33">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_33.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.001 0.001 0.001 1</ambient>
+            <diffuse>0.001 0.001 0.001 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.18</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_34">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_34.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.001 0.001 0.001 1</ambient>
+            <diffuse>0.001 0.001 0.001 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.18</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_35">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_35.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.001 0.001 0.001 1</ambient>
+            <diffuse>0.001 0.001 0.001 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.18</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_36">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_36.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.001 0.001 0.001 1</ambient>
+            <diffuse>0.001 0.001 0.001 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.18</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_37">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_37.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.001 0.001 0.001 1</ambient>
+            <diffuse>0.001 0.001 0.001 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.18</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_38">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_38.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.001 0.001 0.001 1</ambient>
+            <diffuse>0.001 0.001 0.001 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.18</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_39">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_39.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.001 0.001 0.001 1</ambient>
+            <diffuse>0.001 0.001 0.001 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.18</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_40">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_40.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_41">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_41.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_42">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_42.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.10133 0.10702 0.38 1</ambient>
+            <diffuse>0.10133 0.10702 0.38 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_43">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_43.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.2341 0.2341 0.2341 1</ambient>
+            <diffuse>0.2341 0.2341 0.2341 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_44">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_44.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_45">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_45.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.44 0.07333 0.0 1</ambient>
+            <diffuse>0.44 0.07333 0.0 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_46">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_46_sides.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_48">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_48.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.001 0.001 0.001 1</ambient>
+            <diffuse>0.001 0.001 0.001 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.18</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_49">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_49.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.2341 0.2341 0.2341 1</ambient>
+            <diffuse>0.2341 0.2341 0.2341 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_50">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_50.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_51">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_51.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_52">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_52.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_53">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_53.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.60706 0.60706 0.60706 1</ambient>
+            <diffuse>0.60706 0.60706 0.60706 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_54">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_54.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.1 0.1 0.1 1</ambient>
+            <diffuse>0.1 0.1 0.1 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.18</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_55">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_55.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.1 0.1 0.1 1</ambient>
+            <diffuse>0.1 0.1 0.1 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.18</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_56">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_56.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>1.0 1.0 0.0 1</ambient>
+            <diffuse>1.0 1.0 0.0 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_57">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_57.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.8</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="ddg_part_58">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/part_58.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.1 0.1 0.1 1</ambient>
+            <diffuse>0.1 0.1 0.1 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <roughness>.18</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="flight_deck">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/flight_deck.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>.65 .65 .65 1</ambient>
+            <diffuse>.65 .65 .65 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://arleigh_burke/materials/textures/nsflightdeck.jpg</albedo_map>
+                <roughness>.95</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="nonskid_deck">
+          <pose>0 0 -2.65 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://arleigh_burke/meshes/nonskid_deck.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>.65 .65 .65 1</ambient>
+            <diffuse>.65 .65 .65 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://arleigh_burke/materials/textures/nonskid.jpg</albedo_map>
+                <roughness>.95</roughness>
+                <metalness>0</metalness>
+              </metal>
+            </pbr>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="rail_port_3.65">
+          <pose>-65 -7.7 1.0 0 1.5707963267948966 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.025</radius>
+              <length>19</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
             <specular>.3 .35 .4 1</specular>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
+        <visual name="rail_port_4.05">
+          <pose>-65 -7.7 1.4 0 1.5707963267948966 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.025</radius>
+              <length>19</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_port_0">
+          <pose>-74.0 -7.7 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_port_1">
+          <pose>-72.2 -7.7 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_port_2">
+          <pose>-70.4 -7.7 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_port_3">
+          <pose>-68.6 -7.7 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_port_4">
+          <pose>-66.8 -7.7 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_port_5">
+          <pose>-65.0 -7.7 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_port_6">
+          <pose>-63.2 -7.7 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_port_7">
+          <pose>-61.4 -7.7 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_port_8">
+          <pose>-59.6 -7.7 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_port_9">
+          <pose>-57.8 -7.7 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_port_10">
+          <pose>-56.0 -7.7 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="rail_starboard_3.65">
+          <pose>-65 5.6 1.0 0 1.5707963267948966 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.025</radius>
+              <length>19</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="rail_starboard_4.05">
+          <pose>-65 5.6 1.4 0 1.5707963267948966 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.025</radius>
+              <length>19</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_starboard_0">
+          <pose>-74.0 5.6 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_starboard_1">
+          <pose>-72.2 5.6 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_starboard_2">
+          <pose>-70.4 5.6 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_starboard_3">
+          <pose>-68.6 5.6 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_starboard_4">
+          <pose>-66.8 5.6 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_starboard_5">
+          <pose>-65.0 5.6 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_starboard_6">
+          <pose>-63.2 5.6 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_starboard_7">
+          <pose>-61.4 5.6 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_starboard_8">
+          <pose>-59.6 5.6 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_starboard_9">
+          <pose>-57.8 5.6 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <visual name="post_starboard_10">
+          <pose>-56.0 5.6 1.0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>.03</radius>
+              <length>.9</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>.42 .46 .48 1</ambient>
+            <diffuse>.42 .46 .48 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>true</cast_shadows>
+        </visual>
+        <sensor name="fleet_camera_wide" type="camera">
+          <pose>-210 -270 337.6 0 0.7823886869288589 0.9097531579442097</pose>
+          <always_on>true</always_on>
+          <update_rate>5</update_rate>
+          <topic>/navis/camera/wide</topic>
+          <camera>
+            <horizontal_fov>1.15</horizontal_fov>
+            <image>
+              <width>1280</width>
+              <height>720</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>.1</near>
+              <far>1500</far>
+            </clip>
+          </camera>
+        </sensor>
+        <sensor name="fleet_camera_detail" type="camera">
+          <pose>-110 -160 107.6 0 0.515444662011788 0.9685089806599324</pose>
+          <always_on>true</always_on>
+          <update_rate>5</update_rate>
+          <topic>/navis/camera/detail</topic>
+          <camera>
+            <horizontal_fov>1.15</horizontal_fov>
+            <image>
+              <width>1280</width>
+              <height>720</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>.1</near>
+              <far>1500</far>
+            </clip>
+          </camera>
+        </sensor>
       </link>
       <plugin filename="ignition-gazebo-odometry-publisher-system" name="ignition::gazebo::systems::OdometryPublisher">
         <odom_frame>world</odom_frame>
@@ -319,7 +1732,7 @@
     </model>
     <model name="UAV-01">
       <static>true</static>
-      <pose>50.497896027709615 6.089002833586633 22.811407922523486 0 0 0.6970182842761165</pose>
+      <pose>126.24474006927404 15.222507083966581 39.028519806308715 0 0 1.296454457968216</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -462,7 +1875,7 @@
     </model>
     <model name="UAV-02">
       <static>true</static>
-      <pose>45.73561593808168 4.6288364189527735 36.30693950646328 0 0 -0.8583890154784812</pose>
+      <pose>114.3390398452042 11.572091047381933 72.76734876615822 0 0 -1.2607041596309283</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -605,7 +2018,7 @@
     </model>
     <model name="UAV-03">
       <static>true</static>
-      <pose>38.4060160142902 2.494597579456268 46.96791267471731 0 0 0.08856876214038163</pose>
+      <pose>96.0150400357255 6.23649394864067 99.41978168679327 0 0 0.20496018976897892</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -748,7 +2161,7 @@
     </model>
     <model name="UAV-04">
       <static>true</static>
-      <pose>29.363836408683014 1.0008714235238914 54.90411830765988 0 0 -0.47026715459454427</pose>
+      <pose>73.40959102170753 2.5021785588097285 119.26029576914969 0 0 -0.7775008478322949</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -891,7 +2304,7 @@
     </model>
     <model name="UAV-05">
       <static>true</static>
-      <pose>19.014118200212902 0.19675545904489689 60.39860118182826 0 0 0.09781451712166078</pose>
+      <pose>47.53529550053226 0.4918886476122422 132.99650295457064 0 0 0.18073352716469512</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -1034,7 +2447,7 @@
     </model>
     <model name="UAV-06">
       <static>true</static>
-      <pose>33.5794927411346 37.6109324540359 24.721455387888547 0 0 0.13613031762701286</pose>
+      <pose>83.9487318528365 94.02733113508974 43.80363846972136 0 0 0.3802082230617514</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -1177,7 +2590,7 @@
     </model>
     <model name="UAV-07">
       <static>true</static>
-      <pose>31.73666525193769 33.55061134458452 35.89854717532192 0 0 -0.31003229549170397</pose>
+      <pose>79.34166312984422 83.87652836146128 71.74636793830481 0 0 -0.4477720408255331</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -1320,7 +2733,7 @@
     </model>
     <model name="UAV-08">
       <static>true</static>
-      <pose>27.908288257791696 28.196464321794757 45.61676436348034 0 0 0.33577611117631373</pose>
+      <pose>69.77072064447924 70.4911608044869 96.04191090870086 0 0 0.7505184207931695</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -1463,7 +2876,7 @@
     </model>
     <model name="UAV-09">
       <static>true</static>
-      <pose>22.405352568881302 21.688885494545875 53.61240707131229 0 0 -0.17314181521236688</pose>
+      <pose>56.01338142220327 54.222213736364694 116.03101767828073 0 0 -0.27074799718123216</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -1606,7 +3019,7 @@
     </model>
     <model name="UAV-10">
       <static>true</static>
-      <pose>15.460162355998483 14.227505737009565 59.566390029405504 0 0 0.1899085500171599</pose>
+      <pose>38.6504058899962 35.568764342523906 130.91597507351378 0 0 0.401402089521284</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -1749,7 +3162,7 @@
     </model>
     <model name="UAV-11">
       <static>true</static>
-      <pose>3.114501853664028e-15 50.863675238157896 22.811407922523486 0 0 0.10206501350873146</pose>
+      <pose>7.786254634160069e-15 127.15918809539474 39.028519806308715 0 0 0.858429732051978</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -1892,7 +3305,7 @@
     </model>
     <model name="UAV-12">
       <static>true</static>
-      <pose>1.0310000552570766 47.1585384400261 33.88628088750211 0 0 0.053162159313879756</pose>
+      <pose>2.5775001381426916 117.89634610006526 66.71570221875527 0 0 0.07617139857289984</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -2035,7 +3448,7 @@
     </model>
     <model name="UAV-13">
       <static>true</static>
-      <pose>1.9982144780180358 40.93628259116703 44.0035608411932 0 0 0.14693347940979928</pose>
+      <pose>4.99553619504509 102.34070647791756 92.00890210298299 0 0 0.45719272728422405</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -2178,7 +3591,7 @@
     </model>
     <model name="UAV-14">
       <static>true</static>
-      <pose>2.682436398769696 32.075622387464755 52.840653562636895 0 0 -0.08390731975750168</pose>
+      <pose>6.70609099692424 80.18905596866188 114.10163390659223 0 0 -0.12570248412637444</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -2321,7 +3734,7 @@
     </model>
     <model name="UAV-15">
       <static>true</static>
-      <pose>2.335379541794075 20.229818187376058 59.84663476673651 0 0 -0.554736744384563</pose>
+      <pose>5.838448854485188 50.57454546844014 131.61658691684127 0 0 -1.188770940520106</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -2464,7 +3877,7 @@
     </model>
     <model name="UAV-16">
       <static>true</static>
-      <pose>-34.12244960931723 38.219074877511396 20.885986054838476 0 0 -0.0938124725093983</pose>
+      <pose>-85.30612402329307 95.54768719377849 34.214965137096186 0 0 -0.2935115412401071</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -2607,7 +4020,7 @@
     </model>
     <model name="UAV-17">
       <static>true</static>
-      <pose>-30.373634953399968 36.57551713852499 33.06356678644586 0 0 0.33487385492354044</pose>
+      <pose>-75.93408738349991 91.43879284631245 64.65891696611465 0 0 0.4649240083331318</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -2750,7 +4163,7 @@
     </model>
     <model name="UAV-18">
       <static>true</static>
-      <pose>-24.82952349367873 31.55378391300129 45.043206319128245 0 0 -0.5425223432501646</pose>
+      <pose>-62.07380873419683 78.88445978250323 94.60801579782061 0 0 -1.0388290259620776</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -2893,7 +4306,7 @@
     </model>
     <model name="UAV-19">
       <static>true</static>
-      <pose>-18.436107697051924 22.939217671946615 54.87076189644587 0 0 -0.15465233905300663</pose>
+      <pose>-46.0902692426298 57.348044179866534 119.17690474111467 0 0 -0.27589428739610117</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -3036,7 +4449,7 @@
     </model>
     <model name="UAV-20">
       <static>true</static>
-      <pose>-11.454729664598029 13.277734666392657 60.95396746372916 0 0 -0.40099327244025373</pose>
+      <pose>-28.636824161495074 33.194336665981645 134.3849186593229 0 0 -1.325121127701413</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -3179,7 +4592,7 @@
     </model>
     <model name="UAV-21">
       <static>true</static>
-      <pose>-50.497896027709615 6.089002833586644 22.811407922523486 0 0 -0.5798448201648586</pose>
+      <pose>-126.24474006927404 15.22250708396661 39.028519806308715 0 0 -0.989810561127631</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -3322,7 +4735,7 @@
     </model>
     <model name="UAV-22">
       <static>true</static>
-      <pose>-45.73561593808168 4.6288364189527815 36.30693950646328 0 0 0.09821733035804672</pose>
+      <pose>-114.3390398452042 11.572091047381953 72.76734876615822 0 0 0.19963930832420188</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -3465,7 +4878,7 @@
     </model>
     <model name="UAV-23">
       <static>true</static>
-      <pose>-38.406016014290195 2.4945975794562734 46.96791267471731 0 0 -0.8102180496253079</pose>
+      <pose>-96.01504003572549 6.236493948640684 99.41978168679327 0 0 -1.2727602099550246</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -3608,7 +5021,7 @@
     </model>
     <model name="UAV-24">
       <static>true</static>
-      <pose>-29.363836408683014 1.0008714235238887 54.90411830765988 0 0 0.1915085153115708</pose>
+      <pose>-73.40959102170753 2.502178558809722 119.26029576914969 0 0 0.6863919044358453</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -3751,7 +5164,7 @@
     </model>
     <model name="UAV-25">
       <static>true</static>
-      <pose>-19.014118200212902 0.19675545904490116 60.39860118182826 0 0 -0.497918461999762</pose>
+      <pose>-47.53529550053226 0.49188864761225287 132.99650295457064 0 0 -1.3163225547313882</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -3894,7 +5307,7 @@
     </model>
     <model name="UAV-26">
       <static>true</static>
-      <pose>-37.6109324540359 -33.5794927411346 24.721455387888547 0 0 -0.4773944983133821</pose>
+      <pose>-94.02733113508974 -83.9487318528365 43.80363846972136 0 0 -0.6639755545500508</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -4037,7 +5450,7 @@
     </model>
     <model name="UAV-27">
       <static>true</static>
-      <pose>-33.55061134458452 -31.736665251937684 35.89854717532192 0 0 0.12645650848856943</pose>
+      <pose>-83.8765283614613 -79.3416631298442 71.74636793830481 0 0 0.6173059791230716</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -4180,7 +5593,7 @@
     </model>
     <model name="UAV-28">
       <static>true</static>
-      <pose>-28.19646432179476 -27.90828825779169 45.61676436348034 0 0 -0.46700128778801786</pose>
+      <pose>-70.49116080448691 -69.77072064447923 96.04191090870086 0 0 -0.7204493659907789</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -4323,7 +5736,7 @@
     </model>
     <model name="UAV-29">
       <static>true</static>
-      <pose>-21.68888549454588 -22.4053525688813 53.61240707131229 0 0 -0.06358568576541074</pose>
+      <pose>-54.2222137363647 -56.01338142220325 116.03101767828073 0 0 -0.46907515796187416</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -4466,7 +5879,7 @@
     </model>
     <model name="UAV-30">
       <static>true</static>
-      <pose>-14.227505737009569 -15.46016235599848 59.566390029405504 0 0 -0.37725355146749207</pose>
+      <pose>-35.56876434252392 -38.65040588999619 130.91597507351378 0 0 -0.6695350030668515</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -4609,7 +6022,7 @@
     </model>
     <model name="UAV-31">
       <static>true</static>
-      <pose>-9.343505560992082e-15 -50.863675238157896 22.811407922523486 0 0 -0.03345136642203647</pose>
+      <pose>-2.3358763902480207e-14 -127.15918809539474 39.028519806308715 0 0 -0.047621563038793585</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -4752,7 +6165,7 @@
     </model>
     <model name="UAV-32">
       <static>true</static>
-      <pose>1.031000055257065 -47.1585384400261 33.88628088750211 0 0 -0.18156158646520026</pose>
+      <pose>2.5775001381426628 -117.89634610006526 66.71570221875527 0 0 -0.8195080921414998</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -4895,7 +6308,7 @@
     </model>
     <model name="UAV-33">
       <static>true</static>
-      <pose>1.9982144780180346 -40.93628259116703 44.0035608411932 0 0 -0.037792833029016676</pose>
+      <pose>4.995536195045086 -102.34070647791756 92.00890210298299 0 0 -0.054563853136075646</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -5038,7 +6451,7 @@
     </model>
     <model name="UAV-34">
       <static>true</static>
-      <pose>2.682436398769688 -32.075622387464755 52.840653562636895 0 0 0.08433827552886546</pose>
+      <pose>6.706090996924219 -80.18905596866188 114.10163390659223 0 0 0.23017031297425483</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -5181,7 +6594,7 @@
     </model>
     <model name="UAV-35">
       <static>true</static>
-      <pose>2.33537954179407 -20.229818187376058 59.84663476673651 0 0 0.394570629027282</pose>
+      <pose>5.838448854485176 -50.57454546844014 131.61658691684127 0 0 0.646562170356965</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -5324,7 +6737,7 @@
     </model>
     <model name="UAV-36">
       <static>true</static>
-      <pose>38.2190748775114 -34.12244960931722 20.885986054838476 0 0 0.453268445317399</pose>
+      <pose>95.5476871937785 -85.30612402329305 34.214965137096186 0 0 0.627369310678061</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -5467,7 +6880,7 @@
     </model>
     <model name="UAV-37">
       <static>true</static>
-      <pose>36.57551713852497 -30.37363495339998 33.06356678644586 0 0 -0.018580984565977596</pose>
+      <pose>91.43879284631244 -75.93408738349994 64.65891696611465 0 0 -0.05953808886757358</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -5610,7 +7023,7 @@
     </model>
     <model name="UAV-38">
       <static>true</static>
-      <pose>31.55378391300128 -24.829523493678742 45.043206319128245 0 0 0.6109584955036732</pose>
+      <pose>78.8844597825032 -62.07380873419685 94.60801579782061 0 0 0.9943721395265008</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -5753,7 +7166,7 @@
     </model>
     <model name="UAV-39">
       <static>true</static>
-      <pose>22.9392176719466 -18.436107697051938 54.87076189644587 0 0 -0.7442198729317717</pose>
+      <pose>57.3480441798665 -46.090269242629844 119.17690474111467 0 0 -2.3966872372668733</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -5896,7 +7309,7 @@
     </model>
     <model name="UAV-40">
       <static>true</static>
-      <pose>13.277734666392659 -11.454729664598027 60.95396746372916 0 0 0.024918739909752536</pose>
+      <pose>33.19433666598165 -28.63682416149507 134.3849186593229 0 0 0.06038637799459638</pose>
       <link name="base_link">
         <visual name="body">
           <pose>0 0 0 0 0 0</pose>
@@ -6039,49 +7452,27 @@
     </model>
     <model name="USV-01">
       <static>true</static>
-      <pose>48.0 0.0 0.7 0 0 0.48995732625372834</pose>
+      <pose>115.0 0.0 0.7 0 0 0.4636476090008061</pose>
       <link name="base_link">
-        <visual name="hull">
-          <pose>0 0 0 0 0 0</pose>
+        <visual name="wamv">
+          <pose>0 0 -1.1 0 0 0</pose>
           <geometry>
             <mesh>
-              <uri>model://navis_vessels/meshes/usv.obj</uri>
-              <scale>3 3 3</scale>
+              <uri>model://wamv_real/mesh/WAM-V-Base.dae</uri>
             </mesh>
           </geometry>
           <material>
-            <ambient>.16 .37 .41 1</ambient>
-            <diffuse>.16 .37 .41 1</diffuse>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
             <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="cabin">
-          <pose>-.5 0 1 0 0 0</pose>
-          <geometry>
-            <box>
-              <size>2 1.4 1</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>.5 .56 .6 1</ambient>
-            <diffuse>.5 .56 .6 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="sensor">
-          <pose>-.7 0 2 0 0 0</pose>
-          <geometry>
-            <cylinder>
-              <radius>.1</radius>
-              <length>1.5</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>.18 .23 .28 1</ambient>
-            <diffuse>.18 .23 .28 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://wamv_real/mesh/WAM-V_Albedo.png</albedo_map>
+                <normal_map>model://wamv_real/mesh/WAM-V_Normal.png</normal_map>
+                <roughness_map>model://wamv_real/mesh/WAM-V_Roughness.png</roughness_map>
+                <metalness_map>model://wamv_real/mesh/WAM-V_Metalness.png</metalness_map>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
@@ -6096,49 +7487,27 @@
     </model>
     <model name="USV-02">
       <static>true</static>
-      <pose>38.83281572999748 18.80912807335914 0.7 0 0 0.6834935285261954</pose>
+      <pose>93.03695435311896 44.083893921935484 0.7 0 0 0.6346886510459939</pose>
       <link name="base_link">
-        <visual name="hull">
-          <pose>0 0 0 0 0 0</pose>
+        <visual name="wamv">
+          <pose>0 0 -1.1 0 0 0</pose>
           <geometry>
             <mesh>
-              <uri>model://navis_vessels/meshes/usv.obj</uri>
-              <scale>3 3 3</scale>
+              <uri>model://wamv_real/mesh/WAM-V-Base.dae</uri>
             </mesh>
           </geometry>
           <material>
-            <ambient>.16 .37 .41 1</ambient>
-            <diffuse>.16 .37 .41 1</diffuse>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
             <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="cabin">
-          <pose>-.5 0 1 0 0 0</pose>
-          <geometry>
-            <box>
-              <size>2 1.4 1</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>.5 .56 .6 1</ambient>
-            <diffuse>.5 .56 .6 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="sensor">
-          <pose>-.7 0 2 0 0 0</pose>
-          <geometry>
-            <cylinder>
-              <radius>.1</radius>
-              <length>1.5</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>.18 .23 .28 1</ambient>
-            <diffuse>.18 .23 .28 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://wamv_real/mesh/WAM-V_Albedo.png</albedo_map>
+                <normal_map>model://wamv_real/mesh/WAM-V_Normal.png</normal_map>
+                <roughness_map>model://wamv_real/mesh/WAM-V_Roughness.png</roughness_map>
+                <metalness_map>model://wamv_real/mesh/WAM-V_Metalness.png</metalness_map>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
@@ -6153,49 +7522,27 @@
     </model>
     <model name="USV-03">
       <static>true</static>
-      <pose>14.832815729997478 30.433808521444913 0.7 0 0 0.6033942698781357</pose>
+      <pose>35.53695435311896 71.32923872213651 0.7 0 0 0.5184034014716565</pose>
       <link name="base_link">
-        <visual name="hull">
-          <pose>0 0 0 0 0 0</pose>
+        <visual name="wamv">
+          <pose>0 0 -1.1 0 0 0</pose>
           <geometry>
             <mesh>
-              <uri>model://navis_vessels/meshes/usv.obj</uri>
-              <scale>3 3 3</scale>
+              <uri>model://wamv_real/mesh/WAM-V-Base.dae</uri>
             </mesh>
           </geometry>
           <material>
-            <ambient>.16 .37 .41 1</ambient>
-            <diffuse>.16 .37 .41 1</diffuse>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
             <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="cabin">
-          <pose>-.5 0 1 0 0 0</pose>
-          <geometry>
-            <box>
-              <size>2 1.4 1</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>.5 .56 .6 1</ambient>
-            <diffuse>.5 .56 .6 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="sensor">
-          <pose>-.7 0 2 0 0 0</pose>
-          <geometry>
-            <cylinder>
-              <radius>.1</radius>
-              <length>1.5</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>.18 .23 .28 1</ambient>
-            <diffuse>.18 .23 .28 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://wamv_real/mesh/WAM-V_Albedo.png</albedo_map>
+                <normal_map>model://wamv_real/mesh/WAM-V_Normal.png</normal_map>
+                <roughness_map>model://wamv_real/mesh/WAM-V_Roughness.png</roughness_map>
+                <metalness_map>model://wamv_real/mesh/WAM-V_Metalness.png</metalness_map>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
@@ -6210,49 +7557,27 @@
     </model>
     <model name="USV-04">
       <static>true</static>
-      <pose>-14.832815729997472 30.433808521444917 0.7 0 0 -0.6033942698781356</pose>
+      <pose>-35.536954353118944 71.32923872213652 0.7 0 0 -0.5184034014716566</pose>
       <link name="base_link">
-        <visual name="hull">
-          <pose>0 0 0 0 0 0</pose>
+        <visual name="wamv">
+          <pose>0 0 -1.1 0 0 0</pose>
           <geometry>
             <mesh>
-              <uri>model://navis_vessels/meshes/usv.obj</uri>
-              <scale>3 3 3</scale>
+              <uri>model://wamv_real/mesh/WAM-V-Base.dae</uri>
             </mesh>
           </geometry>
           <material>
-            <ambient>.16 .37 .41 1</ambient>
-            <diffuse>.16 .37 .41 1</diffuse>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
             <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="cabin">
-          <pose>-.5 0 1 0 0 0</pose>
-          <geometry>
-            <box>
-              <size>2 1.4 1</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>.5 .56 .6 1</ambient>
-            <diffuse>.5 .56 .6 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="sensor">
-          <pose>-.7 0 2 0 0 0</pose>
-          <geometry>
-            <cylinder>
-              <radius>.1</radius>
-              <length>1.5</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>.18 .23 .28 1</ambient>
-            <diffuse>.18 .23 .28 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://wamv_real/mesh/WAM-V_Albedo.png</albedo_map>
+                <normal_map>model://wamv_real/mesh/WAM-V_Normal.png</normal_map>
+                <roughness_map>model://wamv_real/mesh/WAM-V_Roughness.png</roughness_map>
+                <metalness_map>model://wamv_real/mesh/WAM-V_Metalness.png</metalness_map>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
@@ -6267,49 +7592,27 @@
     </model>
     <model name="USV-05">
       <static>true</static>
-      <pose>-38.83281572999747 18.809128073359144 0.7 0 0 -0.6834935285261954</pose>
+      <pose>-93.03695435311894 44.08389392193549 0.7 0 0 -0.634688651045994</pose>
       <link name="base_link">
-        <visual name="hull">
-          <pose>0 0 0 0 0 0</pose>
+        <visual name="wamv">
+          <pose>0 0 -1.1 0 0 0</pose>
           <geometry>
             <mesh>
-              <uri>model://navis_vessels/meshes/usv.obj</uri>
-              <scale>3 3 3</scale>
+              <uri>model://wamv_real/mesh/WAM-V-Base.dae</uri>
             </mesh>
           </geometry>
           <material>
-            <ambient>.16 .37 .41 1</ambient>
-            <diffuse>.16 .37 .41 1</diffuse>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
             <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="cabin">
-          <pose>-.5 0 1 0 0 0</pose>
-          <geometry>
-            <box>
-              <size>2 1.4 1</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>.5 .56 .6 1</ambient>
-            <diffuse>.5 .56 .6 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="sensor">
-          <pose>-.7 0 2 0 0 0</pose>
-          <geometry>
-            <cylinder>
-              <radius>.1</radius>
-              <length>1.5</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>.18 .23 .28 1</ambient>
-            <diffuse>.18 .23 .28 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://wamv_real/mesh/WAM-V_Albedo.png</albedo_map>
+                <normal_map>model://wamv_real/mesh/WAM-V_Normal.png</normal_map>
+                <roughness_map>model://wamv_real/mesh/WAM-V_Roughness.png</roughness_map>
+                <metalness_map>model://wamv_real/mesh/WAM-V_Metalness.png</metalness_map>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
@@ -6324,49 +7627,27 @@
     </model>
     <model name="USV-06">
       <static>true</static>
-      <pose>-48.0 3.91886975727153e-15 0.7 0 0 -0.4899573262537284</pose>
+      <pose>-115.0 9.184850993605149e-15 0.7 0 0 -0.46364760900080615</pose>
       <link name="base_link">
-        <visual name="hull">
-          <pose>0 0 0 0 0 0</pose>
+        <visual name="wamv">
+          <pose>0 0 -1.1 0 0 0</pose>
           <geometry>
             <mesh>
-              <uri>model://navis_vessels/meshes/usv.obj</uri>
-              <scale>3 3 3</scale>
+              <uri>model://wamv_real/mesh/WAM-V-Base.dae</uri>
             </mesh>
           </geometry>
           <material>
-            <ambient>.16 .37 .41 1</ambient>
-            <diffuse>.16 .37 .41 1</diffuse>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
             <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="cabin">
-          <pose>-.5 0 1 0 0 0</pose>
-          <geometry>
-            <box>
-              <size>2 1.4 1</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>.5 .56 .6 1</ambient>
-            <diffuse>.5 .56 .6 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="sensor">
-          <pose>-.7 0 2 0 0 0</pose>
-          <geometry>
-            <cylinder>
-              <radius>.1</radius>
-              <length>1.5</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>.18 .23 .28 1</ambient>
-            <diffuse>.18 .23 .28 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://wamv_real/mesh/WAM-V_Albedo.png</albedo_map>
+                <normal_map>model://wamv_real/mesh/WAM-V_Normal.png</normal_map>
+                <roughness_map>model://wamv_real/mesh/WAM-V_Roughness.png</roughness_map>
+                <metalness_map>model://wamv_real/mesh/WAM-V_Metalness.png</metalness_map>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
@@ -6381,49 +7662,27 @@
     </model>
     <model name="USV-07">
       <static>true</static>
-      <pose>-38.832815729997485 -18.809128073359137 0.7 0 0 -0.28546017660599377</pose>
+      <pose>-93.03695435311897 -44.08389392193548 0.7 0 0 -0.27194124006662973</pose>
       <link name="base_link">
-        <visual name="hull">
-          <pose>0 0 0 0 0 0</pose>
+        <visual name="wamv">
+          <pose>0 0 -1.1 0 0 0</pose>
           <geometry>
             <mesh>
-              <uri>model://navis_vessels/meshes/usv.obj</uri>
-              <scale>3 3 3</scale>
+              <uri>model://wamv_real/mesh/WAM-V-Base.dae</uri>
             </mesh>
           </geometry>
           <material>
-            <ambient>.16 .37 .41 1</ambient>
-            <diffuse>.16 .37 .41 1</diffuse>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
             <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="cabin">
-          <pose>-.5 0 1 0 0 0</pose>
-          <geometry>
-            <box>
-              <size>2 1.4 1</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>.5 .56 .6 1</ambient>
-            <diffuse>.5 .56 .6 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="sensor">
-          <pose>-.7 0 2 0 0 0</pose>
-          <geometry>
-            <cylinder>
-              <radius>.1</radius>
-              <length>1.5</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>.18 .23 .28 1</ambient>
-            <diffuse>.18 .23 .28 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://wamv_real/mesh/WAM-V_Albedo.png</albedo_map>
+                <normal_map>model://wamv_real/mesh/WAM-V_Normal.png</normal_map>
+                <roughness_map>model://wamv_real/mesh/WAM-V_Roughness.png</roughness_map>
+                <metalness_map>model://wamv_real/mesh/WAM-V_Metalness.png</metalness_map>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
@@ -6438,49 +7697,27 @@
     </model>
     <model name="USV-08">
       <static>true</static>
-      <pose>-14.832815729997483 -30.433808521444913 0.7 0 0 -0.09332468092086481</pose>
+      <pose>-35.53695435311897 -71.32923872213651 0.7 0 0 -0.08911883345712328</pose>
       <link name="base_link">
-        <visual name="hull">
-          <pose>0 0 0 0 0 0</pose>
+        <visual name="wamv">
+          <pose>0 0 -1.1 0 0 0</pose>
           <geometry>
             <mesh>
-              <uri>model://navis_vessels/meshes/usv.obj</uri>
-              <scale>3 3 3</scale>
+              <uri>model://wamv_real/mesh/WAM-V-Base.dae</uri>
             </mesh>
           </geometry>
           <material>
-            <ambient>.16 .37 .41 1</ambient>
-            <diffuse>.16 .37 .41 1</diffuse>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
             <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="cabin">
-          <pose>-.5 0 1 0 0 0</pose>
-          <geometry>
-            <box>
-              <size>2 1.4 1</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>.5 .56 .6 1</ambient>
-            <diffuse>.5 .56 .6 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="sensor">
-          <pose>-.7 0 2 0 0 0</pose>
-          <geometry>
-            <cylinder>
-              <radius>.1</radius>
-              <length>1.5</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>.18 .23 .28 1</ambient>
-            <diffuse>.18 .23 .28 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://wamv_real/mesh/WAM-V_Albedo.png</albedo_map>
+                <normal_map>model://wamv_real/mesh/WAM-V_Normal.png</normal_map>
+                <roughness_map>model://wamv_real/mesh/WAM-V_Roughness.png</roughness_map>
+                <metalness_map>model://wamv_real/mesh/WAM-V_Metalness.png</metalness_map>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
@@ -6495,49 +7732,27 @@
     </model>
     <model name="USV-09">
       <static>true</static>
-      <pose>14.832815729997467 -30.433808521444917 0.7 0 0 0.09332468092086472</pose>
+      <pose>35.53695435311893 -71.32923872213652 0.7 0 0 0.08911883345712317</pose>
       <link name="base_link">
-        <visual name="hull">
-          <pose>0 0 0 0 0 0</pose>
+        <visual name="wamv">
+          <pose>0 0 -1.1 0 0 0</pose>
           <geometry>
             <mesh>
-              <uri>model://navis_vessels/meshes/usv.obj</uri>
-              <scale>3 3 3</scale>
+              <uri>model://wamv_real/mesh/WAM-V-Base.dae</uri>
             </mesh>
           </geometry>
           <material>
-            <ambient>.16 .37 .41 1</ambient>
-            <diffuse>.16 .37 .41 1</diffuse>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
             <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="cabin">
-          <pose>-.5 0 1 0 0 0</pose>
-          <geometry>
-            <box>
-              <size>2 1.4 1</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>.5 .56 .6 1</ambient>
-            <diffuse>.5 .56 .6 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="sensor">
-          <pose>-.7 0 2 0 0 0</pose>
-          <geometry>
-            <cylinder>
-              <radius>.1</radius>
-              <length>1.5</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>.18 .23 .28 1</ambient>
-            <diffuse>.18 .23 .28 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://wamv_real/mesh/WAM-V_Albedo.png</albedo_map>
+                <normal_map>model://wamv_real/mesh/WAM-V_Normal.png</normal_map>
+                <roughness_map>model://wamv_real/mesh/WAM-V_Roughness.png</roughness_map>
+                <metalness_map>model://wamv_real/mesh/WAM-V_Metalness.png</metalness_map>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
@@ -6552,49 +7767,27 @@
     </model>
     <model name="USV-10">
       <static>true</static>
-      <pose>38.83281572999747 -18.809128073359147 0.7 0 0 0.28546017660599365</pose>
+      <pose>93.03695435311894 -44.0838939219355 0.7 0 0 0.2719412400666296</pose>
       <link name="base_link">
-        <visual name="hull">
-          <pose>0 0 0 0 0 0</pose>
+        <visual name="wamv">
+          <pose>0 0 -1.1 0 0 0</pose>
           <geometry>
             <mesh>
-              <uri>model://navis_vessels/meshes/usv.obj</uri>
-              <scale>3 3 3</scale>
+              <uri>model://wamv_real/mesh/WAM-V-Base.dae</uri>
             </mesh>
           </geometry>
           <material>
-            <ambient>.16 .37 .41 1</ambient>
-            <diffuse>.16 .37 .41 1</diffuse>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
             <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="cabin">
-          <pose>-.5 0 1 0 0 0</pose>
-          <geometry>
-            <box>
-              <size>2 1.4 1</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>.5 .56 .6 1</ambient>
-            <diffuse>.5 .56 .6 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <visual name="sensor">
-          <pose>-.7 0 2 0 0 0</pose>
-          <geometry>
-            <cylinder>
-              <radius>.1</radius>
-              <length>1.5</length>
-            </cylinder>
-          </geometry>
-          <material>
-            <ambient>.18 .23 .28 1</ambient>
-            <diffuse>.18 .23 .28 1</diffuse>
-            <specular>.3 .35 .4 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://wamv_real/mesh/WAM-V_Albedo.png</albedo_map>
+                <normal_map>model://wamv_real/mesh/WAM-V_Normal.png</normal_map>
+                <roughness_map>model://wamv_real/mesh/WAM-V_Roughness.png</roughness_map>
+                <metalness_map>model://wamv_real/mesh/WAM-V_Metalness.png</metalness_map>
+              </metal>
+            </pbr>
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
@@ -6607,34 +7800,242 @@
         <odom_topic>/navis/USV_10/odometry</odom_topic>
       </plugin>
     </model>
-    <model name="fleet_observer">
+    <model name="wake_SHIP-01">
       <static>true</static>
-      <pose>-85 -110 145 0 0.8064700758285163 0.9129077216126865</pose>
+      <pose>0.0 0 -.06 0 0 0</pose>
       <link name="base_link">
-        <sensor name="fleet_camera" type="camera">
-          <always_on>true</always_on>
-          <update_rate>5</update_rate>
-          <topic>/navis/camera</topic>
-          <camera>
-            <horizontal_fov>1.15</horizontal_fov>
-            <image>
-              <width>1280</width>
-              <height>720</height>
-              <format>R8G8B8</format>
-            </image>
-            <clip>
-              <near>.1</near>
-              <far>1500</far>
-            </clip>
-          </camera>
-        </sensor>
+        <visual name="foam">
+          <pose>-77 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://navis_ocean/meshes/ship_foam.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>.68 .78 .78 1</ambient>
+            <diffuse>.68 .78 .78 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>false</cast_shadows>
+          <transparency>.45</transparency>
+        </visual>
+      </link>
+    </model>
+    <model name="wake_USV-01">
+      <static>true</static>
+      <pose>115.0 0.0 -.06 0 0 0.4636476090008061</pose>
+      <link name="base_link">
+        <visual name="foam">
+          <pose>-2.5 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://navis_ocean/meshes/usv_foam.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>.68 .78 .78 1</ambient>
+            <diffuse>.68 .78 .78 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>false</cast_shadows>
+          <transparency>.45</transparency>
+        </visual>
+      </link>
+    </model>
+    <model name="wake_USV-02">
+      <static>true</static>
+      <pose>93.03695435311896 44.083893921935484 -.06 0 0 0.6346886510459939</pose>
+      <link name="base_link">
+        <visual name="foam">
+          <pose>-2.5 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://navis_ocean/meshes/usv_foam.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>.68 .78 .78 1</ambient>
+            <diffuse>.68 .78 .78 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>false</cast_shadows>
+          <transparency>.45</transparency>
+        </visual>
+      </link>
+    </model>
+    <model name="wake_USV-03">
+      <static>true</static>
+      <pose>35.53695435311896 71.32923872213651 -.06 0 0 0.5184034014716565</pose>
+      <link name="base_link">
+        <visual name="foam">
+          <pose>-2.5 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://navis_ocean/meshes/usv_foam.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>.68 .78 .78 1</ambient>
+            <diffuse>.68 .78 .78 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>false</cast_shadows>
+          <transparency>.45</transparency>
+        </visual>
+      </link>
+    </model>
+    <model name="wake_USV-04">
+      <static>true</static>
+      <pose>-35.536954353118944 71.32923872213652 -.06 0 0 -0.5184034014716566</pose>
+      <link name="base_link">
+        <visual name="foam">
+          <pose>-2.5 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://navis_ocean/meshes/usv_foam.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>.68 .78 .78 1</ambient>
+            <diffuse>.68 .78 .78 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>false</cast_shadows>
+          <transparency>.45</transparency>
+        </visual>
+      </link>
+    </model>
+    <model name="wake_USV-05">
+      <static>true</static>
+      <pose>-93.03695435311894 44.08389392193549 -.06 0 0 -0.634688651045994</pose>
+      <link name="base_link">
+        <visual name="foam">
+          <pose>-2.5 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://navis_ocean/meshes/usv_foam.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>.68 .78 .78 1</ambient>
+            <diffuse>.68 .78 .78 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>false</cast_shadows>
+          <transparency>.45</transparency>
+        </visual>
+      </link>
+    </model>
+    <model name="wake_USV-06">
+      <static>true</static>
+      <pose>-115.0 9.184850993605149e-15 -.06 0 0 -0.46364760900080615</pose>
+      <link name="base_link">
+        <visual name="foam">
+          <pose>-2.5 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://navis_ocean/meshes/usv_foam.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>.68 .78 .78 1</ambient>
+            <diffuse>.68 .78 .78 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>false</cast_shadows>
+          <transparency>.45</transparency>
+        </visual>
+      </link>
+    </model>
+    <model name="wake_USV-07">
+      <static>true</static>
+      <pose>-93.03695435311897 -44.08389392193548 -.06 0 0 -0.27194124006662973</pose>
+      <link name="base_link">
+        <visual name="foam">
+          <pose>-2.5 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://navis_ocean/meshes/usv_foam.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>.68 .78 .78 1</ambient>
+            <diffuse>.68 .78 .78 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>false</cast_shadows>
+          <transparency>.45</transparency>
+        </visual>
+      </link>
+    </model>
+    <model name="wake_USV-08">
+      <static>true</static>
+      <pose>-35.53695435311897 -71.32923872213651 -.06 0 0 -0.08911883345712328</pose>
+      <link name="base_link">
+        <visual name="foam">
+          <pose>-2.5 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://navis_ocean/meshes/usv_foam.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>.68 .78 .78 1</ambient>
+            <diffuse>.68 .78 .78 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>false</cast_shadows>
+          <transparency>.45</transparency>
+        </visual>
+      </link>
+    </model>
+    <model name="wake_USV-09">
+      <static>true</static>
+      <pose>35.53695435311893 -71.32923872213652 -.06 0 0 0.08911883345712317</pose>
+      <link name="base_link">
+        <visual name="foam">
+          <pose>-2.5 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://navis_ocean/meshes/usv_foam.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>.68 .78 .78 1</ambient>
+            <diffuse>.68 .78 .78 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>false</cast_shadows>
+          <transparency>.45</transparency>
+        </visual>
+      </link>
+    </model>
+    <model name="wake_USV-10">
+      <static>true</static>
+      <pose>93.03695435311894 -44.0838939219355 -.06 0 0 0.2719412400666296</pose>
+      <link name="base_link">
+        <visual name="foam">
+          <pose>-2.5 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://navis_ocean/meshes/usv_foam.obj</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>.68 .78 .78 1</ambient>
+            <diffuse>.68 .78 .78 1</diffuse>
+            <specular>.3 .35 .4 1</specular>
+          </material>
+          <cast_shadows>false</cast_shadows>
+          <transparency>.45</transparency>
+        </visual>
       </link>
     </model>
     <gui fullscreen="0">
       <plugin filename="MinimalScene" name="3D View">
         <engine>ogre2</engine>
         <scene>scene</scene>
-        <camera_pose>-85 -110 145 0 0.8064700758285163 0.9129077216126865</camera_pose>
+        <camera_pose>-210 -270 340 0 0.7823886869288589 0.9097531579442097</camera_pose>
       </plugin>
       <plugin filename="GzSceneManager" name="GzSceneManager" />
       <plugin filename="InteractiveViewControl" name="InteractiveViewControl" />

@@ -30,7 +30,7 @@ class PatrolGeometry(unittest.TestCase):
             self.assertEqual(len(drones),40)
             for p in drones:
                 relative=(p['x']-lead['x'],p['y'],p['z']-convoy.MOTION['hemisphere_center_height'])
-                self.assertAlmostEqual(math.sqrt(sum(v*v for v in relative)),52,places=8)
+                self.assertAlmostEqual(math.sqrt(sum(v*v for v in relative)),convoy.MOTION['hemisphere_radius'],places=8)
                 self.assertGreater(p['z'],20)
             for a,b in itertools.combinations(drones,2):
                 d=math.sqrt(sum((a[k]-b[k])**2 for k in ('x','y','z')))
@@ -42,7 +42,7 @@ class PatrolGeometry(unittest.TestCase):
         for t in [step*.25 for step in range(610)]+[1000,5000,20000]:
             fleet=convoy.fleet_poses(t);camera=fleet['fleet_observer']
             for name,p in fleet.items():
-                if name.startswith('SHIP'):half=(29,8,14)
+                if name.startswith('SHIP'):half=(80,11,41)
                 elif name.startswith('USV'):half=(4,3,3)
                 elif name.startswith('UAV'):half=(1,1,1)
                 else:continue
@@ -65,6 +65,24 @@ class PatrolGeometry(unittest.TestCase):
         fleet=convoy.fleet_poses(10000)
         self.assertLess(fleet['ocean']['z'],.7-.45*3/2)
         self.assertEqual(fleet['ocean']['x'],fleet['SHIP-01']['x'])
+
+    def test_render_cameras_are_rigidly_attached_to_straight_flagship(self):
+        world=E.parse(ROOT/'ros_ws/src/navis_sim/worlds/prep.sdf')
+        sensors=world.findall(".//model[@name='SHIP-01']/link/sensor")
+        self.assertEqual(len(sensors),2)
+        self.assertIsNone(world.find(".//model[@name='fleet_observer']/link/sensor"))
+        for mode,view in convoy.FLEET['camera_views'].items():
+            sensor=next(s for s in sensors if s.get('name')=='fleet_camera_'+mode)
+            local=list(map(float,sensor.find('pose').text.split()))
+            self.assertEqual(local[:2],view['offset'][:2])
+            self.assertAlmostEqual(local[2]+2.4,view['offset'][2])
+            self.assertEqual(local[3:],[0,view['pitch'],view['yaw']])
+        initial=convoy.fleet_poses(0)
+        for t in [1,20,600,20000]:
+            fleet=convoy.fleet_poses(t);ship=fleet['SHIP-01']
+            self.assertEqual((ship['y'],ship['yaw'],ship['pitch']),(0,0,0))
+            self.assertAlmostEqual(ship['x'],convoy.MOTION['ship_speed']*t)
+            self.assertEqual(project(ship,fleet['fleet_observer']),project(initial['SHIP-01'],initial['fleet_observer']))
 
     def test_figure_eight_has_a_crossing_and_continuous_tangent(self):
         a=convoy.figure_eight(math.pi/2);b=convoy.figure_eight(3*math.pi/2)

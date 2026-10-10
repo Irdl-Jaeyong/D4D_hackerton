@@ -22,7 +22,9 @@ class Bridge(Node):
         group = int(os.environ.get('NAVIS_BRIDGE_GROUP','0'))
         super().__init__(f'navis_telemetry_{group}')
         self.odoms = {}
-        self.image = None
+        self.images = {}
+        self.camera_mode = "wide"
+        self.camera_checked = 0
         self.odom_at = {}
         self.measured_speeds = {}
         self.image_at = 0
@@ -39,7 +41,8 @@ class Bridge(Node):
         for vehicle in vehicles[group*13:(group+1)*13]:
             self.subscriptions_kept.append(self.create_subscription(Odometry, f'/navis/{vehicle.replace(chr(45),chr(95))}/odometry', lambda msg, vehicle=vehicle: self.on_odom(vehicle,msg), 10))
         if self.camera_vehicle in vehicles[group*13:(group+1)*13]:
-            self.create_subscription(Image, '/navis/camera', self.on_image, qos_profile_sensor_data)
+            for mode in ('wide','detail'):
+                self.subscriptions_kept.append(self.create_subscription(Image, '/navis/camera/'+mode, lambda msg, mode=mode: self.on_image(mode,msg), qos_profile_sensor_data))
         self.create_timer(0.2, self.send)
     def on_odom(self, vehicle, msg):
         old = self.odoms.get(vehicle)
@@ -50,9 +53,8 @@ class Bridge(Node):
                 self.measured_speeds[vehicle] = math.sqrt((p.x-previous.x)**2+(p.y-previous.y)**2+(p.z-previous.z)**2)/dt
         self.odoms[vehicle] = msg
         self.odom_at[vehicle] = time.monotonic()
-    def on_image(self, msg):
-        self.image = msg
-        self.image_at = time.monotonic()
+    def on_image(self, mode, msg):
+        self.images[mode] = (msg,time.monotonic())
     def send(self):
         for vehicle in list(self.odoms):
             if time.monotonic()-self.odom_at[vehicle] < 2:
@@ -63,8 +65,14 @@ class Bridge(Node):
         v = m.twist.twist.linear
         payload = {'vehicle_id':vehicle,'x':p.x,'y':p.y,'z':p.z,'yaw':math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),'speed':self.measured_speeds.get(vehicle,0), 'speed_source':'odometry_position_delta','sim_time':m.header.stamp.sec+m.header.stamp.nanosec/1e9}
         now = time.monotonic()
-        if vehicle == self.camera_vehicle and self.image is not None and now-self.image_at < 2 and now-self.sent_image_at >= 1:
-            img = self.image
+        if vehicle == self.camera_vehicle and now-self.camera_checked >= .5:
+            self.camera_checked=now
+            try:
+                with urllib.request.urlopen(os.environ.get('NAVIS_BACKEND_URL','http://127.0.0.1:8000')+'/api/camera/view',timeout=.2) as response:
+                    self.camera_mode=json.load(response)['mode']
+            except (OSError,ValueError,KeyError):pass
+        img,image_at=self.images.get(self.camera_mode,(None,0))
+        if vehicle == self.camera_vehicle and img is not None and now-image_at < 2 and now-self.sent_image_at >= .2:
             channels = 3 if img.encoding in ('rgb8','bgr8') else 0
             if channels:
                 array = np.frombuffer(img.data,dtype=np.uint8).reshape(img.height,img.step)[:,:img.width*channels].reshape(img.height,img.width,channels)

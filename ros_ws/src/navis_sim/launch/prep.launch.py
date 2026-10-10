@@ -19,7 +19,7 @@ def generate_launch_description():
         ExecuteProcess(cmd=['ign', 'gazebo', '-s', '-r', str(world)], output='screen'),
         TimerAction(period=8.0, actions=[Node(package='ros_gz_bridge', executable='parameter_bridge', arguments=[
             *[f'/navis/{v.replace(chr(45),chr(95))}/odometry@nav_msgs/msg/Odometry[ignition.msgs.Odometry' for v in ids],
-            '/clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock', '/navis/camera@sensor_msgs/msg/Image[ignition.msgs.Image'], output='screen')]),
+            '/world/navis_prep/clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock', '/navis/camera/wide@sensor_msgs/msg/Image[ignition.msgs.Image', '/navis/camera/detail@sensor_msgs/msg/Image[ignition.msgs.Image'], output='screen')]),
         TimerAction(period=9.0, actions=[ExecuteProcess(cmd=['python3',str(world.parent.parent/'scripts/convoy_motion.py')], output='screen')]),
         *[Node(package='navis_bridge', executable='telemetry_node.py', additional_env={'NAVIS_BRIDGE_GROUP':str(g)}, output='screen') for g in range(4)],
     ])

@@ -26,8 +26,9 @@ def figure_eight(angle):
             -s*(3-s*s)/(d*d), scale*(1-3*s*s)/(d*d))
 
 
-def fleet_poses(t):
+def fleet_poses(t, camera=None):
     """Pure trajectory function, with continuous positions and headings."""
+    camera=CAMERA if camera is None else camera
     forward=MOTION['ship_speed']*t
     result={}
     def add(name,x,y,z,yaw=0,pitch=0):
@@ -68,20 +69,24 @@ def fleet_poses(t):
         dx=MOTION['ship_speed']+radius*(-sl*dlat*cp-cl*sp*dlon)
         dy=radius*(-sl*dlat*sp+cl*cp*dlon)
         add(f'UAV-{i+1:02}',x,y,z,math.atan2(dy,dx))
-    ox,oy,oz=CAMERA['offset']
-    add('fleet_observer',forward+ox,oy,oz,CAMERA['yaw'],CAMERA['pitch'])
+    for name,p in list(result.items()):
+        if name.startswith(('SHIP-','USV-')):
+            add('wake_'+name,p['x'],p['y'],-.06,p['yaw'])
+    ox,oy,oz=camera['offset']
+    add('fleet_observer',forward+ox,oy,oz,camera['yaw'],camera['pitch'])
     # Recenter the purely visual, flat ocean so the demo never leaves it.
     add('ocean',forward,0,-.25)
     return result
 
 
-def poses(t):
-    rows=[]
-    for name,p in fleet_poses(t).items():
-        cy,sy=math.cos(p['yaw']/2),math.sin(p['yaw']/2)
-        cp,sp=math.cos(p['pitch']/2),math.sin(p['pitch']/2)
-        rows.append(f'pose {{name:"{name}" position {{x:{p["x"]:.5f} y:{p["y"]:.5f} z:{p["z"]:.5f}}} orientation {{w:{cy*cp:.7f} x:{-sy*sp:.7f} y:{cy*sp:.7f} z:{sy*cp:.7f}}}}}')
-    return ' '.join(rows)
+def pose_message(name,p):
+    cy,sy=math.cos(p['yaw']/2),math.sin(p['yaw']/2)
+    cp,sp=math.cos(p['pitch']/2),math.sin(p['pitch']/2)
+    return f'name:"{name}" position {{x:{p["x"]:.5f} y:{p["y"]:.5f} z:{p["z"]:.5f}}} orientation {{w:{cy*cp:.7f} x:{-sy*sp:.7f} y:{cy*sp:.7f} z:{sy*cp:.7f}}}'
+
+
+def poses(t, camera=None):
+    return ' '.join('pose {'+pose_message(name,p)+'}' for name,p in fleet_poses(t,camera).items() if name!='fleet_observer')
 
 
 def main():
@@ -94,12 +99,16 @@ def main():
         def __init__(self):
             super().__init__('navis_convoy')
             self.origin=None;self.elapsed=None;self.last_sent=None;self.failures=0
-            self.clock_subscription=self.create_subscription(Clock,'/clock',self.clock,qos_profile_sensor_data)
+            self.clock_stamp=None
+            self.clock_subscription=self.create_subscription(Clock,'/world/navis_prep/clock',self.clock,qos_profile_sensor_data)
             self.timer=self.create_timer(.1,self.update)
             self.get_logger().info('Simulation-time convoy: straight leader, continuous USV handover, 40 UAV hemispherical figure-eight patrols')
         def clock(self,msg):
             stamp=msg.clock.sec+msg.clock.nanosec/1e9
-            if self.origin is None or stamp<self.origin:self.origin=stamp
+            # A delayed clock packet must never move the convoy backwards.
+            if self.clock_stamp is not None and stamp<=self.clock_stamp:return
+            self.clock_stamp=stamp
+            if self.origin is None:self.origin=stamp
             self.elapsed=stamp-self.origin
         def update(self):
             if self.elapsed is None or self.elapsed==self.last_sent:return

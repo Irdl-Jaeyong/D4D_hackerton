@@ -2,8 +2,8 @@
 
 한 운용자가 여러 이기종 UxV를 관제하는 Gazebo 기반 웹 MVP.
 현재 **메인 함선 1척 + UAV 40대 + 호위 USV 10대**를 Gazebo 해상 월드에 호위 편대로 배치하고 실제 위치·높이·속도를 웹에 연결했다. 카메라는 전체 함대를 위에서 비스듬히 내려다보는 1280×720 Gazebo 관측 센서다.
-드론 40대 전부가 메인 함선 위 반지름 52m의 반구 대형을 이루고, 호위 USV 10대가 주변 경계를 따라 이동한다.
-로컬 선체 메시, 함교·마스트·레이더·갑판과 쿼드콥터 형상을 사용한다. 바다는 시각 표현이며 부력·파도 물리·비행·항해 제어·AI 행동 실행은 아직 구현 전이다. 사진 수준의 실사 환경은 아니다.
+드론 40대 전부가 메인 함선 위 반지름 130m의 반구 대형을 이루고, 호위 USV 10대가 주변 경계를 따라 이동한다.
+실제 함종의 공개 모델인 NPS Arleigh Burke급 구축함과 VRX WAM-V 16ft USV 메시·텍스처를 사용한다. 구축함은 원본 약 154m 크기이며 마스트·함교·갑판 형상을 가져온다. 바다는 움직이는 Gerstner 파도·하늘 반사·법선 텍스처와 배별 거품 항적을 사용하는 시각 표현이며 부력·파도 물리·비행·항해 제어·AI 행동 실행은 아직 구현 전이다. 사진 수준의 실사 환경은 아니다.
 
 ## 현재 기능
 
@@ -77,13 +77,13 @@ python3 scripts/build_fleet.py
 
 월드 생성기는 로컬 함선 에셋과 Apache-2.0 [VRX](https://github.com/osrf/vrx)의 바다 메시·법선 텍스처로 `prep.sdf`를 생성한다. 생성된 월드는 Git에 포함하므로 재생성 없이 실행 가능하다. UAV는 위치 갱신 기반 편대 시연용 모델이며 기존 X3 비행 예제와 다르다. GUI에서 마우스로 3D 시점을 조작할 수 있고, 웹은 함선을 추적하는 항공 카메라 스트림을 표시한다. GUI 시점 변경은 웹 카메라 시점에 적용되지 않는다.
 
-Gazebo 월드가 준비된 뒤 ROS 브릿지를 시작하며, 상태 수신기는 13대씩 분할한다. 카메라 영상은 `SHIP-01` 상태 업로드를 통해 전달되지만 실제 센서는 함정에 달린 카메라가 아닌 `fleet_observer`다. Ollama가 없으면 AI 대화는 사용할 수 없다.
+Gazebo 월드가 준비된 뒤 ROS 브릿지를 시작하며, 상태 수신기는 13대씩 분할한다. 카메라 영상은 `SHIP-01` 상태 업로드로 전달한다. 상공 관측 센서는 함선의 링크에 고정되어 함선과 동일한 렌더링 단계에서 이동한다. 각도·높이·거리·화각이 유지되어 별도 추적 지연이나 시점 회전이 발생하지 않는다. Ollama가 없으면 AI 대화는 사용할 수 없다.
 
 ## 직선 전진, 반구 대형과 8자 순찰
 
-`convoy_motion.py`는 ROS `/clock`의 시뮬레이션 시간을 기준으로 움직인다. 메인 함선은 1.5m/s로 직선 전진하고, USV는 함선 상대 x=48m/y=32m의 타원형 경계를 따라 연속적으로 호위 위치를 교대한다. 멈춤·급출발 없이 선행 함선 위치를 기준으로 이동한다.
+`convoy_motion.py`는 ROS `/world/navis_prep/clock`의 전용 시뮬레이션 시간을 기준으로 움직인다. 메인 함선은 1.5m/s로 직선 전진하고, USV는 함선 상대 x=115m/y=75m의 타원형 경계를 따라 연속적으로 호위 위치를 교대한다. 멈춤·급출발 없이 선행 함선 위치를 기준으로 이동한다.
 
-드론 40대는 반지름 52m, 중심 높이 12m인 반구 표면에 배치한다. 위도 12°/26°/40°/54°/68°의 다섯 고도 편대에 8대씩 속하며, 각 드론은 38초 주기의 작은 8자 경로를 반구 표면에서 비행한다. 고도 편대는 서로 다른 방향으로 천천히 교대한다. 갑판 대기 드론은 없다.
+드론 40대는 반지름 130m, 중심 높이 12m인 반구 표면에 배치한다. 위도 12°/26°/40°/54°/68°의 다섯 고도 편대에 8대씩 속하며, 각 드론은 38초 주기의 작은 8자 경로를 반구 표면에서 비행한다. 고도 편대는 서로 다른 방향으로 천천히 교대한다. 갑판 대기 드론은 없다.
 
 8자 경로는 [ModalAI VOXL의 실제 Offboard 예제](https://docs.modalai.com/voxl-figure-8/)와 [PX4 개발 키트 비행 튜토리얼](https://px4.io/first-flight-tutorial-for-the-voxl-2-based-px4-autonomy-developer-kit/)의 패턴을 참고했다. USV의 선행 함선 상대 오프셋은 [ArduPilot Follow Mode](https://ardupilot.org/rover/docs/follow-mode.html)를 참고했다. 반구 표면으로의 변환과 다중 기체 교대는 이 프로젝트의 시연 설계이며 실제 작전 대형이라고 주장하지 않는다.
 
@@ -97,3 +97,26 @@ python3 scripts/check_prep.py
 ```
 
 첫 검사는 반구 유지, 드론 간 거리, 카메라 경계, 수면 높이, 경로 연속성을 확인한다. 두 번째 검사는 실행 중인 웹·51대 상태·JPEG·API 입력 검증을 확인하며 Ollama 모델이 없으면 AI 응답 검사를 생략한다.
+
+## 실제 함종 에셋
+
+- 메인 함선: [NPS SAVAGE Arleigh Burke high detail](https://savage.nps.edu/Savage/ShipsMilitary/DDGArleighBurkeUnitedStates/), 제작 LT Patrick Sullivan, Web3D BSD 계열 라이선스. 원본 X3D와 변환 COLLADA를 보관한다. `python3 scripts/convert_ddg_model.py`로 변환 가능하며 NumPy가 필요하다.
+- 호위 USV: [Open Robotics VRX WAM-V](https://github.com/osrf/vrx/tree/7609d1bd90ce7edb29d040a082f949e8b089c864/vrx_urdf/wamv_description/models/WAM-V-Base), Apache-2.0. 원본 형상과 PBR 텍스처를 사용한다.
+
+각 모델 디렉터리에 `ATTRIBUTION.md`와 원본 라이선스를 포함한다. 공개 모델을 그대로 가져오는 것이며 실측 스캔·설계 도면 기반 디지털 트윈은 아니다. 구축함의 2005년 제작 모델은 최신 개장 형상과 다를 수 있다. 실제 크기에 맞춰 호위 간격과 반구/카메라 범위를 넓혔고, 1척/10척/40대 및 기존 이동 방식은 유지한다.
+
+## 바다와 근접 관측
+
+웹의 **카메라 시점**에서 전체 편대 / 함선 근접을 고른다. 함선에 고정된 두 Gazebo 센서의 영상 중 하나를 선택한다. 시점은 선택할 때만 변경하며 자동 회전·줌은 하지 않는다. 전체 편대 모드는 40대 반구 전체를 보여주고 근접 모드는 갑판·함교·항적을 살펴볼 수 있다.
+
+[VRX](https://github.com/osrf/vrx/tree/dc30ed8d17aa1083fd872edad9c77c69896d2b07/vrx_gz)의 Apache-2.0 WaveVisual/Wavefield와 Gerstner/Fresnel 셰이더를 Gazebo Fortress에 맞게 포팅했다. `docker/visual`에 소스·라이선스·변경 내역을 보관하며 시뮬레이션 시작 때 빌드한다. Docker 이미지에 CMake, C++17 컴파일러, ignition-gazebo6 / rendering6 / plugin1 개발 패키지와 Eigen3가 필요하다.
+
+수면은 2.4km 근거리 그리드에 3개 파도 성분을 합성하고 움직이는 법선 맵·반사 큐브맵을 적용한다. 더 먼 수면은 아래쪽 평면으로 이어진다. 파고 성분 합은 약 17cm로 작게 제한했다. 함선과 USV는 선미 뒤 거품 항적을 남긴다. 항적은 진행 방향에 정렬된 시각 메시이며 유체역학 계산은 아니다. 갑판의 원본 NPS non-skid/비행갑판 표식 텍스처와 근사 난간을 추가했다.
+
+시각 메시 재생성 순서:
+
+```bash
+python3 scripts/convert_ddg_model.py
+python3 scripts/build_maritime_visuals.py
+python3 scripts/build_fleet.py
+```
