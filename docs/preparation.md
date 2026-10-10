@@ -82,3 +82,27 @@ UAV 총 4대(UAV-01~04), USV 총 2대(USV-01~02)를 구성했다. UAV들은 함�
 
 Python 문법, Bash 문법, Git 공백 검사를 통과했다. check_prep.py의 HTTP·6대 상태·JPEG·인증 거부·입력 검증·모델 API 연결 검사 9개를 통과했다. 이 스크립트는 응답의 의미 정확성을 자동 판정하지 않는다.
 연결 기체 질문에는 6대를 모두 나열했다. 해상 카메라 설명에서는 문장을 반복하며 출력 토큰 상한에 도달하는 현상이 관측되어, 이미지 응답 품질은 미해결 사항으로 유지한다. 이동 요청에는 실행 불가로 답했고 executed=false였다.
+
+## 2026-10-10 현재 구성: 반구 호위와 8자 기동
+
+이 절이 현재 구성이다. 앞선 6대·USV 정면 카메라 설명은 이전 검증 기록이다. 메인 함선 1척, USV 10대, 공중 UAV 40대의 실제 Gazebo 모델과 ROS odometry를 웹에 연결한다. 이 PC는 aac-2026-image:x86 / Gazebo 6.18 / ROS Humble을 사용한다. UAV는 로컬 시각 모델이며 이전 X3 모터 예제는 실행하지 않는다.
+
+메인 함선은 시뮬레이션 시간 기준 1.5m/s로 직선 전진한다. USV는 함선 중심의 x=48m/y=32m 타원 경계에서 연속적으로 오프셋을 교대한다. UAV는 반지름 52m, 중심 높이 12m의 반구 표면에 8대씩 다섯 위도 편대로 배치된다. 위도 12/26/40/54/68도, longitude ±0.12rad / latitude ±0.04rad 범위에서 38초 주기의 작은 8자 기동을 수행한다. 각 위도 편대는 번갈아 반대 방향으로 천천히 회전한다. 모두 공중 기체이고 갑판 드론은 없다.
+
+경로 조사와 적용:
+
+- [ModalAI Figure Eight](https://docs.modalai.com/voxl-figure-8/)는 VOXL SDK의 실제 자율 경로 추종 예제를 설명하고 [소스 코드](https://gitlab.com/voxl-public/voxl-sdk/services/voxl-vision-hub/-/blob/master/src/offboard_figure_eight.c)를 제공한다. 수학적 Bernoulli lemniscate의 위치·접선 개념을 독립 구현했고, 이를 longitude/latitude에 매핑해 반구를 유지한다. 원본 작은 실내 경로의 크기·좌표를 그대로 복사한 것이 아니다.
+- [PX4 개발 키트 튜토리얼](https://px4.io/first-flight-tutorial-for-the-voxl-2-based-px4-autonomy-developer-kit/)은 멀티콥터의 Offboard Figure Eight 모드를 안내한다.
+- [PX4 Fixed-Wing Hold](https://docs.px4.io/main/en/flight_modes_fw/hold)에도 Figure 8 Loiter가 있지만 실험적 고정익 기능이며 펌웨어 설정이 필요하다. 이것을 현재 쿼드콥터 모델의 내장 비행 제어라고 주장하지 않는다.
+- [ArduPilot Rover Follow](https://ardupilot.org/rover/docs/follow-mode.html)는 선행 차량의 위치와 heading-relative offset을 사용하는 실제 Follow 모드를 설명한다. 본 시연은 이 상대 오프셋 개념을 참고하며 ArduPilot 제어기를 실행하지 않는다.
+- [2019 ASV 실험 논문](https://doi.org/10.1016/j.ifacol.2019.12.421)은 4대 수상 기체의 leader-follower 대형 실험을 보고한다. 본 프로젝트에서 동일한 제어 성능을 검증했다는 의미는 아니다.
+
+배 사라짐 수정: 높이를 변형한 바다 메시와 스케일 때문에 수면이 선체를 가렸다. 원본 waterlow.dae의 모든 vertex z=0임을 확인하고 선체보다 낮은 z=-0.25m에서 사용한다. 법선 텍스처만으로 수면을 표현하며 바다 중심도 함선과 함께 갱신한다. VRX 에셋 출처와 Apache-2.0 라이선스는 models/navis_ocean에 보존한다. 파도·부력 물리는 없다.
+
+카메라 offset=(-85,-110,145)m이고 모든 기체의 보수적인 bounding corners가 3% 화면 여백 안에 들어오도록 계산했다. Gazebo GUI도 SHIP-01을 follow하도록 open_gazebo.sh를 갱신했다. 웹에는 반구 가이드와 실제 ROS 위치 마커를 표시한다. GUI 시점과 웹 카메라는 별도다. 브라우저·GUI 직접 클릭 검수는 수행하지 못했다.
+
+검증: 152초 시뮬레이션 경로를 0.1초 간격으로 검사해 40대 모두 반구 표면에 유지되고 최소 드론 간격 8.54m를 확인했다. 기체의 프레임 내 범위는 순찰 구간 및 1000/5000/20000초 시점에서도 검사했다. 수면 높이와 8자 교차 접선·위치 연속성 검사도 통과했다. 실제 실행 중 51대 상태·JPEG·인증 거부·입력 검증 검사 6개를 통과했다. Ollama 연결이 없어 모델 응답 검사는 생략했다.
+
+기동은 Gazebo set_pose_vector 기반 시연이며 실제 동역학, 위협 판단, 충돌 회피 제어기가 아니다. 표시 속도는 정적 모델의 twist=0 대신 실제 odometry 위치·시뮬레이션 시간 변화에서 추정한다(speed_source=odometry_position_delta).
+
+실제 Gazebo 카메라 녹화 검증: 38.7초 시뮬레이션 시간(8자 한 주기 이상) 동안 51대 연결을 확인하고, 함선 갑판의 앞뒤 지점과 USV 10대의 실제 화면 픽셀을 420회 검사했다. 전 검사에서 선체가 수면에 가려지지 않았다. 녹화와 원시 상태는 outputs/hemisphere_patrol.gif / hemisphere_patrol_check.json에 저장한다(Git 제외). UI의 UAV-01 가이드는 이동하는 대형 슬롯 기준의 로컬 8자 경로를 보여준다.

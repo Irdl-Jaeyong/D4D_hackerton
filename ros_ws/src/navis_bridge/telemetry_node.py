@@ -5,6 +5,7 @@ import json
 import math
 import os
 import time
+from pathlib import Path
 import urllib.request
 
 import cv2
@@ -18,18 +19,35 @@ from sensor_msgs.msg import Image
 
 class Bridge(Node):
     def __init__(self):
-        super().__init__('navis_telemetry')
+        group = int(os.environ.get('NAVIS_BRIDGE_GROUP','0'))
+        super().__init__(f'navis_telemetry_{group}')
         self.odoms = {}
         self.image = None
         self.odom_at = {}
+        self.measured_speeds = {}
         self.image_at = 0
         self.sent_image_at = 0
         self.last_error = 0
-        for vehicle in ['UAV-01','UAV-02','UAV-03','UAV-04','USV-01','USV-02']:
-            self.create_subscription(Odometry, f'/navis/{vehicle.replace(chr(45),chr(95))}/odometry', lambda msg, vehicle=vehicle: self.on_odom(vehicle,msg), 10)
-        self.create_subscription(Image, '/navis/camera', self.on_image, qos_profile_sensor_data)
+        self.subscriptions_kept = []
+        config = Path(os.environ.get('NAVIS_FLEET_CONFIG', str(Path(__file__).resolve().parents[3]/'config/fleet.json')))
+        if not config.exists():
+            from ament_index_python.packages import get_package_share_directory
+            config = Path(get_package_share_directory('navis_sim'))/'config/fleet.json'
+        fleet = json.loads(config.read_text())
+        self.camera_vehicle = fleet['camera_vehicle']
+        vehicles = [f'{kind}-{i:02}' for kind,key in [('SHIP','ships'),('UAV','uavs'),('USV','usvs')] for i in range(1,fleet[key]+1)]
+        for vehicle in vehicles[group*13:(group+1)*13]:
+            self.subscriptions_kept.append(self.create_subscription(Odometry, f'/navis/{vehicle.replace(chr(45),chr(95))}/odometry', lambda msg, vehicle=vehicle: self.on_odom(vehicle,msg), 10))
+        if self.camera_vehicle in vehicles[group*13:(group+1)*13]:
+            self.create_subscription(Image, '/navis/camera', self.on_image, qos_profile_sensor_data)
         self.create_timer(0.2, self.send)
     def on_odom(self, vehicle, msg):
+        old = self.odoms.get(vehicle)
+        if old is not None:
+            dt = (msg.header.stamp.sec-old.header.stamp.sec)+(msg.header.stamp.nanosec-old.header.stamp.nanosec)/1e9
+            if dt > 0:
+                p, previous = msg.pose.pose.position, old.pose.pose.position
+                self.measured_speeds[vehicle] = math.sqrt((p.x-previous.x)**2+(p.y-previous.y)**2+(p.z-previous.z)**2)/dt
         self.odoms[vehicle] = msg
         self.odom_at[vehicle] = time.monotonic()
     def on_image(self, msg):
@@ -43,9 +61,9 @@ class Bridge(Node):
         m = self.odoms[vehicle]
         p, q = m.pose.pose.position, m.pose.pose.orientation
         v = m.twist.twist.linear
-        payload = {'vehicle_id':vehicle,'x':p.x,'y':p.y,'z':p.z,'yaw':math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),'speed':math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z),'sim_time':m.header.stamp.sec+m.header.stamp.nanosec/1e9}
+        payload = {'vehicle_id':vehicle,'x':p.x,'y':p.y,'z':p.z,'yaw':math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),'speed':self.measured_speeds.get(vehicle,0), 'speed_source':'odometry_position_delta','sim_time':m.header.stamp.sec+m.header.stamp.nanosec/1e9}
         now = time.monotonic()
-        if vehicle == 'USV-01' and self.image is not None and now-self.image_at < 2 and now-self.sent_image_at >= 1:
+        if vehicle == self.camera_vehicle and self.image is not None and now-self.image_at < 2 and now-self.sent_image_at >= 1:
             img = self.image
             channels = 3 if img.encoding in ('rgb8','bgr8') else 0
             if channels:

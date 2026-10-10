@@ -1,0 +1,39 @@
+{
+  "ships": 1,
+  "uavs": 40,
+  "usvs": 10,
+  "camera_vehicle": "SHIP-01",
+  "motion": {
+    "ship_speed": 1.5,
+    "escort_angular_speed": 0.025,
+    "escort_radii": [
+      48,
+      32
+    ],
+    "uav_pattern": "hemisphere_figure_eight",
+    "deck_uavs": 0,
+    "hemisphere_radius": 52,
+    "hemisphere_center_height": 12,
+    "hemisphere_latitudes_deg": [
+      12,
+      26,
+      40,
+      54,
+      68
+    ],
+    "hemisphere_rotation_rate": 0.02,
+    "figure_eight_period": 38,
+    "figure_eight_longitude_amplitude": 0.12,
+    "figure_eight_latitude_amplitude": 0.04
+  },
+  "camera": {
+    "offset": [
+      -85,
+      -110,
+      145
+    ],
+    "pitch": 0.8064700758285163,
+    "yaw": 0.9129077216126865,
+    "horizontal_fov": 1.15
+  }
+}
