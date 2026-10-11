@@ -27,7 +27,7 @@
   <div class="center-column">
     <section class="formation-settings"><div class="title"><h2>대형 설정</h2></div><div class="formation-panel"><div class="formation-group"><h3>USV 호위 대형</h3><div id="usvFormation" class="formation-options"></div><p id="usvProgress" class="note">원형 호위 준비 중</p></div><div class="formation-group"><h3>드론 대형</h3><div id="uavFormation" class="formation-options"></div><p id="uavProgress" class="note">반구 대형 준비 중</p></div><p class="note formation-description">평시: 함선 기준 담당 위치 유지 · 대형 변경 시 재배치. 반구·박스 등은 사용자 설정 대형입니다.</p></div></section>
     <section class="scene">
-      <div class="title"><h2>Gazebo 시뮬레이션</h2><div class="scene-status"><span id="cameraLive">영상 연결 대기</span><span class="last-received" title="선택 기체의 마지막 텔레메트리 수신 기준">마지막 수신 <strong id="selectedAge">—</strong></span></div></div>
+      <div class="title"><h2>함대 실시간 관측</h2><div class="scene-status"><span id="cameraLive">영상 연결 대기</span><span class="last-received" title="선택 기체의 마지막 텔레메트리 수신 기준">마지막 수신 <strong id="selectedAge">—</strong></span></div></div>
       <div class="camera" id="cameraViewport"><img id="camera" alt="Gazebo 실시간 카메라 영상"><canvas id="cameraOverlay" width="1280" height="720" aria-hidden="true"></canvas><p id="cameraEmpty">카메라 연결 대기</p></div>
       <div class="camera-tools"><div class="camera-actions"><button id="returnFleet" type="button">전체 보기</button><button id="inspectVehicle" type="button" disabled>선택 기체 · 1인칭</button><label class="sr-only" for="cameraView">카메라 시점</label><select id="cameraView"><option value="wide">전체 편대</option><option value="detail">함선 근접</option><option value="inspect">기체 1인칭</option></select></div><div class="zoom-actions"><span id="zoomValue">1.0×</span><button id="resetCamera" type="button" aria-label="카메라 확대 및 이동 초기화">초기화</button></div></div>
       <div class="camera-footer"><span style="color:#ff9999;font-size:12px;white-space:nowrap">◇ 외부 접촉(모의) · ● 아군</span><p id="cameraIdentity">기체를 선택하면 상세 정보를 볼 수 있습니다.</p><label class="cameraGuide"><input id="showDome" type="checkbox"> 대형 가이드</label></div>
@@ -39,4 +39,4 @@
 
 
   </div>
-</main><script src="queue_state.js?v=top-two-20261011"></script><script src="app.js?v=automatic-return-20261011"></script></body></html>
+</main><script src="queue_state.js?v=ai-pending-20261011"></script><script src="app.js?v=automatic-return-20261011"></script></body></html>

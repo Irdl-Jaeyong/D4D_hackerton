@@ -22,12 +22,14 @@ test('newly created lower priority situation stays selected across polling',()=>
   assert.equal(reviewedMission(snapshot,created.id),created);
   assert.equal(reviewedMission({...snapshot,approval_queue:[{...old},{...created}]},created.id).id,created.id);
 });
-test('pending situations can be inspected during execution; default review is active',()=>{
+test('pending situations show AI choices by default while active execution remains selectable',()=>{
   const {reviewedMission}=require('../frontend/queue_state.js');
   const pending={id:4},active={id:6,approved:{id:'observe'}};
   assert.equal(reviewedMission({mission:pending,approval_queue:[pending]},99),pending);
   assert.equal(reviewedMission({mission:active,active_mission:active,approval_queue:[pending]},pending.id),pending);
-  assert.equal(reviewedMission({mission:active,active_mission:active,approval_queue:[pending]},null),active);
+  assert.equal(reviewedMission({mission:active,active_mission:active,approval_queue:[pending]},null),pending);
+  assert.equal(reviewedMission({mission:active,active_mission:active,approval_queue:[pending]},active.id),active);
+  assert.equal(reviewedMission({mission:active,active_mission:active,approval_queue:[]},null),active);
   assert.equal(reviewedMission({mission:null,approval_queue:[]},pending.id),null);
 });
 
