@@ -1,0 +1,7 @@
+{
+  "window_seconds": 32,
+  "event_interval_seconds": 8,
+  "virtual_loss_per_event": 8,
+  "maintained_stages": ["tracking", "screening", "observing", "completed"],
+  "label": "시연용 규칙 판정 · 실제 피해·방어 성능 아님"
+}

@@ -313,7 +313,7 @@ function renderMission(s){
   const attackFull=(s.approval_queue||[]).length>=(s.auto_scenarios?.max_pending||4),shipReady=s.vehicles.some(v=>v.type==='SHIP'&&v.connected);
   $('randomAttack').disabled=missionRequestPending||attackFull||!shipReady;
   $('randomAttack').title=attackFull?'대기열이 가득 찼습니다. 기존 상황을 종료하세요.':!shipReady?'함선 연결을 기다리는 중입니다.':'9개 시나리오 중 하나를 무작위로 발생시킵니다.';
-  const m=s.mission,key=queueReviewKey(m)+JSON.stringify(m?.interaction||[]);
+  const m=s.mission,key=queueReviewKey(m)+JSON.stringify([m?.interaction,m?.demo_assessment]);
   $('situationSummary').textContent=m?`${priorityText(m)} · ${m.card.title} · 상세`:'선택 상황 상세';
   renderMissionReview(s);$('cancelMission').disabled=missionRequestPending||!m;
   if(key!==missionRenderKey){
@@ -322,6 +322,13 @@ function renderMission(s){
     else{
       $('situationCard').append(element('strong',m.card.title),element('p',m.card.summary),element('p',m.threats?.length?`모의 외부 접촉 ${m.threats.length}개 · 대형 버튼으로 직접 대응 가능`:`함선 상대 위치 x ${m.card.offset[0]}m / y ${m.card.offset[1]}m`,'muted'),element('p',m.card.unknown,'scope-note'));
       for(const cue of m.interaction||[])$('situationCard').append(element('p',`모의 공격 표적 ${cue.target} · ${cue.status} · ${cue.outcome}`,'scope-note'));
+      if(m.demo_assessment){
+        const a=m.demo_assessment,box=element('div',undefined,'demo-assessment');
+        box.append(element('strong',a.result),element('p',`가상 상태 ${a.virtual_state??'—'} / 100 · 모의 이벤트 ${a.events}회 · ${a.remaining_seconds==null?'시간 확인 필요':a.remaining_seconds>0?'평가까지 '+a.remaining_seconds+'초':'현재 상태 기준 판정'}`),element('p',`배정 ${a.assigned}대 · 임무 유지 ${a.maintained}대 · 중단 ${a.interrupted}대 · 복귀 완료 ${a.returned}대`),element('small',a.label));
+        const details=element('details');details.append(element('summary','판정 근거'));
+        for(const line of [...a.basis,...a.missing.map(x=>'누락: '+x)])details.append(element('p',line));
+        box.append(details);$('situationCard').append(box);
+      }
       if(m.affected_vehicles)$('situationCard').append(element('p',m.affected_vehicles.length?`모의 통신 영향: ${m.affected_vehicles.join(', ')}`:'영향을 줄 가용 기체 없음 · 구역 표시만 생성','scope-note'));
       $('situationCard').append(element('p',`${priorityText(m)} · ${m.risk?.score==null?'평가 불가':m.risk.score+' / 100점'}`,'priority-badge queue-rank-'+((queueView?.items.findIndex(item=>item.id===m.id)??-1)+1)));
       if(!m.options.length)$('responseOptions').append(element('p','함선의 최신 위치가 없어 추천을 생성할 수 없습니다. 연결되면 자동 갱신됩니다.'));
