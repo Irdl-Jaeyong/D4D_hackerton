@@ -7,7 +7,7 @@ CHECKS={
  'unstable':('기울기 계측과 수신 시각을 확인하고 제어·센서 기록을 비교하세요.','원인 확인 전 새 배정 보류를 검토하고 운용자가 임무 지속 가능성을 판단하세요.'),
  'separation':('두 기체의 최신 위치·시간 동기화·목표 경로 겹침을 확인하세요.','검증된 안전 경로를 확인한 뒤 운용자가 추가 이동 가능 여부를 판단하세요.')}
 def attach(result,query,snapshot):
- if result.get('answer_type')=='interface_help':return result
+ if result.get('answer_type') in ('interface_help','civilian_safety'):return result
  kind=None
  ids=re.findall(r'(?:UAV|USV|SHIP)-\d{2}',query.upper())
  if result.get('queue_reference'):

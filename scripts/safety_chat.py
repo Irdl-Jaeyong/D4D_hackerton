@@ -1,5 +1,6 @@
 """Read-only reference retrieval. Never builds tactical assignments or commands."""
 import json,re
+from civilian_safety_chat import briefing as civilian_briefing
 from queue_chat import briefing as queue_briefing
 from interface_chat import briefing as interface_briefing
 from fault_explanation import explain,is_reason_question
@@ -18,6 +19,8 @@ def answer(message,snapshot,previous=None):
  if screen:return screen
  queued=queue_briefing(query,snapshot)
  if queued:return queued
+ civilian=civilian_briefing(query)
+ if civilian:return civilian
  routed=five_route(message,snapshot,previous)
  if routed:return routed
  if is_reason_question(query) or (re.search(r'(?:UAV|USV)-\d{2}',query,re.I) and any(w in query for w in ('상태 알려','상태야','뭐하고','뭐 하고','하는 중'))):return explain(query,snapshot)
