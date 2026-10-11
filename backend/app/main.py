@@ -23,6 +23,7 @@ from formation_motion import CATALOG
 from safety_chat import answer as safety_answer
 from vehicle_briefing import brief as vehicle_brief
 from llm_dialogue import generate as llm_generate
+from operator_next_steps import attach as attach_next_steps,render as render_next_steps
 from chat_scenario_briefing import prepare as prepare_brief, context as brief_context, SYSTEM as BRIEF_SYSTEM, validated_explanations, assemble as assemble_brief
 from chat_ui_actions import actions as chat_actions
 from mission_console import readiness, options, SCENARIOS
@@ -712,10 +713,12 @@ async def chat(data: Chat):
         question=((data.clarification_context+'\n') if data.clarification_context else '')+data.message
         result=safety_answer(data.message,snapshot,data.clarification_context)
         result['recommendations']=result.get('recommendations',[])[:2]
+        result=attach_next_steps(result,question,snapshot)
         try:
             result=await llm_generate(question,snapshot,result,OLLAMA,MODEL,data.history)
         except (httpx.HTTPError,ValueError,KeyError,TypeError):
             result.update(llm_used=False,model=MODEL,model_note='LLM 연결 또는 응답 검증 실패 · 규칙 기반 참고 답변')
+        result=render_next_steps(result)
         result['ui_actions']=chat_actions(data.message,snapshot)
         result.update(elapsed_seconds=round(time.perf_counter()-started,2),used_camera=False)
         return result
