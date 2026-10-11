@@ -143,3 +143,5 @@
 /* Add room only to the message area of the existing chat panel. */
 .sidebar-column>.chat{height:calc(clamp(160px,18vh,210px) + 80px)}
 @media(max-width:760px){.sidebar-column>.chat{height:270px}}
+
+.demo-assessment{margin:8px 0;padding:10px;border:1px solid #526b87;border-radius:6px;background:#162337}.demo-assessment strong{color:#a9daf0}.demo-assessment small,.demo-assessment details{font-size:11px;color:#b3c0d0}

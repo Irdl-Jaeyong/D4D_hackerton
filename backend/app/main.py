@@ -23,6 +23,7 @@ from formation_motion import CATALOG
 from safety_chat import answer as safety_answer
 from vehicle_briefing import brief as vehicle_brief
 from llm_dialogue import generate as llm_generate
+from operator_next_steps import attach as attach_next_steps,render as render_next_steps
 from chat_scenario_briefing import prepare as prepare_brief, context as brief_context, SYSTEM as BRIEF_SYSTEM, validated_explanations, assemble as assemble_brief
 from chat_ui_actions import actions as chat_actions
 from mission_console import readiness, options, SCENARIOS
@@ -32,6 +33,9 @@ from mission_console import defense_options
 from risk_monitor import assess
 from fault_motion import deck_slot
 from scenario_scene import targets as scene_targets
+from threat_visuals import view as threat_view
+from demo_assessment import evaluate as demo_evaluate
+from random_fault_trial import RandomFaultTrial
 from .ai_response import AIProposal,build_plan as build_ai_plan,input_summary as ai_input_summary,request_proposal as request_ai_proposal
 from .approval_risk import evaluate,sort_key,CONFIG as RISK_CONFIG
 mission=None # only the human-approved execution; pending cards live in missions
@@ -40,23 +44,39 @@ mission_counter=0
 formation={'usv':'circle','uav':'hemisphere','revision':0}
 formation_status={}
 auto_generator=None
+random_fault_trial=None
+random_fault_history=[]
 scenario_generation_lock=asyncio.Lock()
 @asynccontextmanager
 async def console_lifespan(application):
-    global auto_generator
+    global auto_generator,random_fault_trial
     restore_console()
     auto_config=json.loads((ROOT/'config/auto_scenarios.json').read_text())
     startup_mode=os.environ.get('NAVIS_STARTUP_MODE',auto_config.get('startup_mode'))
     if startup_mode=='normal':reset_demo_session()
     elif startup_mode=='resume':auto_config['initial_delay_seconds']=auto_config['interval_seconds'][0]
     auto_generator=ScenarioGenerator(auto_config,now=time.monotonic())
+    random_fault_trial=RandomFaultTrial(json.loads((ROOT/'config/random_fault_trial.json').read_text()),time.monotonic())
+    fault_trial_task=asyncio.create_task(generate_random_fault_trial())
     auto_task=asyncio.create_task(generate_random_scenarios())
     try:
         yield
     finally:
-        auto_task.cancel()
+        auto_task.cancel();fault_trial_task.cancel()
         with suppress(asyncio.CancelledError):await auto_task
+        with suppress(asyncio.CancelledError):await fault_trial_task
         save_console()
+
+async def generate_random_fault_trial():
+    while True:
+        await asyncio.sleep(1)
+        async with scenario_generation_lock:
+            id=random_fault_trial.choose(state()['vehicles'],random_fault_history,time.monotonic())
+            if id:
+                await set_simulated_fault(id,FaultRequest(unavailable=True,fault_type='payload'))
+                random_fault_history.append(id)
+                save_console()
+
 
 async def generate_random_scenarios():
     while True:
@@ -209,9 +229,13 @@ def state():
         item=missions[target['mission_id']]
         if target.get('contact_index',0)==0:item['target_world_current']=[target['x'],target['y']]
         if item['scenario'] in DEFENSE_SCENARIOS:item['threats'].append(target)
+    interaction=threat_view(vehicles,situations,missions,stamp)
+    for item in missions.values():
+        item['interaction']=[v for v in interaction['items'] if v['mission_id']==item['id']]
+        if item['scenario'] in DEFENSE_SCENARIOS:item['demo_assessment']=demo_evaluate(item,vehicles,stamp)
     reassess_missions(vehicles)
     queue=sorted((m for m in missions.values() if not m.get('approved')),key=sort_key)
-    return {'auto_scenarios':{'enabled':auto_generator.config['enabled'],'next_in_seconds':max(0,round(auto_generator.next_at-time.monotonic())),'max_pending':auto_generator.config['max_pending']} if auto_generator else None,'mission':mission or next(iter(queue),None),'active_mission':mission,'approval_queue':queue,'scenario_catalog':SCENARIOS,'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'selected vehicle forward first-person camera' if camera_view=='inspect' else 'SHIP-01 stabilized overhead sensors', 'scene_mode': FLEET['motion']['uav_pattern'], 'camera_view':camera_view,'inspection_vehicle':inspection_vehicle, 'formations': {**formation, 'catalog':CATALOG,'status':formation_status}, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion'], 'scenario': None,'sim_time':stamp,'situations':situations}}
+    return {'auto_scenarios':{'enabled':auto_generator.config['enabled'],'next_in_seconds':max(0,round(auto_generator.next_at-time.monotonic())),'max_pending':auto_generator.config['max_pending']} if auto_generator else None,'mission':mission or next(iter(queue),None),'active_mission':mission,'approval_queue':queue,'scenario_catalog':SCENARIOS,'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'selected vehicle forward first-person camera' if camera_view=='inspect' else 'SHIP-01 stabilized overhead sensors', 'scene_mode': FLEET['motion']['uav_pattern'], 'camera_view':camera_view,'inspection_vehicle':inspection_vehicle, 'formations': {**formation, 'catalog':CATALOG,'status':formation_status}, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion'], 'scenario': None,'sim_time':stamp,'situations':situations,'effects':interaction['effects']}}
 
 def fault_signals(vehicle_id):
     kind=fault_kinds.get(vehicle_id,'payload');criteria=FAULT_TYPES[kind]
@@ -689,10 +713,12 @@ async def chat(data: Chat):
         question=((data.clarification_context+'\n') if data.clarification_context else '')+data.message
         result=safety_answer(data.message,snapshot,data.clarification_context)
         result['recommendations']=result.get('recommendations',[])[:2]
+        result=attach_next_steps(result,question,snapshot)
         try:
             result=await llm_generate(question,snapshot,result,OLLAMA,MODEL,data.history)
         except (httpx.HTTPError,ValueError,KeyError,TypeError):
             result.update(llm_used=False,model=MODEL,model_note='LLM 연결 또는 응답 검증 실패 · 규칙 기반 참고 답변')
+        result=render_next_steps(result)
         result['ui_actions']=chat_actions(data.message,snapshot)
         result.update(elapsed_seconds=round(time.perf_counter()-started,2),used_camera=False)
         return result
@@ -720,6 +746,7 @@ def restore_console():
         simulated_faults.update(id for id in saved.get('faults',[]) if id in IDS)
         battery_origin.update(saved.get('battery_origin',{}))
         interference_owner.update(saved.get('interference_owner',{}));fault_kinds.update(saved.get('fault_kinds',{}));automatic_returns.update(saved.get('automatic_returns',set(saved.get('faults',[]))-set(saved.get('fault_kinds',{}))));fault_last_known.update(saved.get('fault_last_known',{}))
+        random_fault_history.extend(id for id in saved.get('random_fault_history',[]) if id in IDS and id not in random_fault_history)
         fault_status.update(saved.get('fault_status',{}));charge_credit.update(saved.get('charge_credit',{}))
         automatic_return_reasons.update(saved.get('automatic_return_reasons',{}))
         last_sim_times.update({id:value['sim_time'] for id,value in fault_status.items() if 'sim_time' in value})
@@ -729,7 +756,7 @@ def restore_console():
 def reset_demo_session():
     """Start a new healthy demonstration; retain unique mission IDs for reconciliation."""
     global mission,camera_view
-    mission=None;missions.clear()
+    mission=None;missions.clear();random_fault_history.clear()
     formation.clear();formation.update(usv='circle',uav='hemisphere',revision=0)
     formation_status.clear();camera_view='wide'
     for data in (simulated_faults,automatic_returns,automatic_return_reasons,last_sim_times,fault_kinds,fault_status,fault_last_known,battery_origin,charge_credit,interference_owner):data.clear()
@@ -737,7 +764,7 @@ def reset_demo_session():
 
 def save_console():
     CONSOLE_SNAPSHOT.parent.mkdir(exist_ok=True)
-    data={'formation':formation,'mission':mission,'missions':list(missions.values()),'mission_counter':mission_counter,'faults':list(simulated_faults),'automatic_returns':list(automatic_returns),'automatic_return_reasons':automatic_return_reasons,'telemetry_sim_times':last_sim_times,'battery_origin':battery_origin,'fault_status':fault_status,'charge_credit':charge_credit,'fault_kinds':fault_kinds,'fault_last_known':fault_last_known,'interference_owner':interference_owner}
+    data={'random_fault_history':random_fault_history,'formation':formation,'mission':mission,'missions':list(missions.values()),'mission_counter':mission_counter,'faults':list(simulated_faults),'automatic_returns':list(automatic_returns),'automatic_return_reasons':automatic_return_reasons,'telemetry_sim_times':last_sim_times,'battery_origin':battery_origin,'fault_status':fault_status,'charge_credit':charge_credit,'fault_kinds':fault_kinds,'fault_last_known':fault_last_known,'interference_owner':interference_owner}
     temp=CONSOLE_SNAPSHOT.with_suffix('.tmp');temp.write_text(json.dumps(data,ensure_ascii=False));temp.replace(CONSOLE_SNAPSHOT)
 
 @app.post('/api/chat/scenario')

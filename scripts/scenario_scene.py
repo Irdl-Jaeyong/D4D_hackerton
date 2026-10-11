@@ -29,6 +29,9 @@ def targets(missions,sim_time):
     return result
 
 def model_sdf(target):
+    if target['scenario']=='threat_visual':
+        from threat_visuals import model_sdf as cue_sdf
+        return cue_sdf(target)
     if target['scenario'] in DEFENSE_SCENARIOS:return defense_model_sdf(target)
     pieces=[]
     def visual(name,geom,pos,color,rotation='0 0 0'):

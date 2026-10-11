@@ -1,5 +1,7 @@
 """Read-only reference retrieval. Never builds tactical assignments or commands."""
 import json,re
+from queue_chat import briefing as queue_briefing
+from interface_chat import briefing as interface_briefing
 from fault_explanation import explain,is_reason_question
 from safety_risk_briefing import answer_risks
 from five_question_briefing import route as five_route
@@ -12,6 +14,10 @@ def grams(text):
  text=re.sub(r'[^a-z0-9가-힣]','',text.lower());return {text[i:i+2] for i in range(len(text)-1)}
 def answer(message,snapshot,previous=None):
  query=((previous+'\n') if previous else '')+message
+ screen=interface_briefing(query,snapshot)
+ if screen:return screen
+ queued=queue_briefing(query,snapshot)
+ if queued:return queued
  routed=five_route(message,snapshot,previous)
  if routed:return routed
  if is_reason_question(query) or (re.search(r'(?:UAV|USV)-\d{2}',query,re.I) and any(w in query for w in ('상태 알려','상태야','뭐하고','뭐 하고','하는 중'))):return explain(query,snapshot)

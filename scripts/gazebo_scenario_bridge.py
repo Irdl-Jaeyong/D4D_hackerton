@@ -12,7 +12,7 @@ class SceneBridge:
         clock=snapshot.get('scene',{}).get('sim_time')
         if clock is not None and self.last_clock is not None and clock<self.last_clock:self.known.clear()
         if clock is not None:self.last_clock=clock
-        wanted={t['name']:t for t in snapshot['scene'].get('situations',[])}
+        wanted={t['name']:t for t in [*snapshot['scene'].get('situations',[]),*snapshot['scene'].get('effects',[])]}
         for name in list(self.known):
             if name not in wanted or self.known[name]!=(wanted[name]['scenario'],wanted[name]['priority']):
                 if service('/world/navis_prep/remove','ignition.msgs.Entity',f'name: {json.dumps(name)} type: MODEL'):del self.known[name]
@@ -34,7 +34,7 @@ if __name__=='__main__':
     # Reconcile existing objects, including ones left after a backend restart.
     try:
         p=subprocess.run(['ign','service','-s','/world/navis_prep/scene/info','--reqtype','ignition.msgs.Empty','--reptype','ignition.msgs.Scene','--timeout','3000','--req',''],capture_output=True,text=True,timeout=4)
-        for name in set(re.findall(r'name: "(situation_[0-9]+(?:_[0-9]+)?)"',p.stdout)):
+        for name in set(re.findall(r'name: "((?:situation_[0-9]+(?:_[0-9]+)?|(?:threat_cue|threat_focus|observation_cue)_situation_[0-9]+(?:_[0-9]+)?(?:_[0-9]+|_UAV-[0-9]+|_USV-[0-9]+)?))"',p.stdout)):
             bridge.known[name]=('old',None)
     except subprocess.TimeoutExpired:pass
     while True:
