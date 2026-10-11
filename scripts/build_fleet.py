@@ -111,16 +111,16 @@ for name,p in initial.items():
     v=visual(l,'foam','mesh','model://navis_ocean/meshes/foam_patch.obj',color='.72 .82 .82 1')
     el(v.find('geometry/mesh'),'scale',f'{2.8 if flagship else 1.7} {(8 if flagship else .9)*(1+segment*.07)} 1')
     el(v,'transparency',.22+.73*segment/19);v.find('cast_shadows').text='false'
-# Cameras inherit the flagship transform in the same render update. They never
-# orbit, ease toward a target, or receive independent per-frame pose commands.
-ship_link=w.find("model[@name='SHIP-01']/link")
+# Independent stabilized tracking cameras; first-person remains vehicle mounted.
 for mode,view in cfg['camera_views'].items():
     if mode=='inspect':
         _,sensor_link=model('inspection_camera','0 0 30 0 0 0')
-    else:sensor_link=ship_link
+    else:
+        pose=initial['observation_camera_'+mode]
+        _,sensor_link=model('observation_camera_'+mode,f"{pose['x']} {pose['y']} {pose['z']} 0 {pose['pitch']} {pose['yaw']}")
     s=E.SubElement(sensor_link,'sensor',name=f'fleet_camera_{mode}',type='camera')
     ox,oy,oz=view['offset']
-    el(s,'pose','0 0 0 0 0 0' if mode=='inspect' else f'{ox} {oy} {oz-2.4} 0 {view["pitch"]} {view["yaw"]}')
+    el(s,'pose','0 0 0 0 0 0')
     el(s,'always_on','true');el(s,'update_rate','3' if mode=='inspect' else '5');el(s,'topic',f'/navis/camera/{mode}')
     c=E.SubElement(s,'camera');el(c,'horizontal_fov',view['horizontal_fov'])
     im=E.SubElement(c,'image');el(im,'width','1280');el(im,'height','720');el(im,'format','R8G8B8')
