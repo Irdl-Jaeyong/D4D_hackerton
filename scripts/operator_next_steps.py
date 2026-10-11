@@ -33,5 +33,6 @@ def attach(result,query,snapshot):
 
 def render(result):
  steps=result.get('next_steps')
- if steps:result['reply']+='\n\n지금 할 일: '+steps['now']+'\n사람이 판단할 항목: '+steps['human_decision']
+ if steps and not result.get('llm_used'):
+  result['reply']+='\n\n'+steps['now']+' '+steps['human_decision']
  return result
