@@ -34,7 +34,7 @@ function map(state){
   }
   for(const v of live){
     const t=v.telemetry,[x,y]=point(t.x,t.y),selected=v.id===selectedVehicle;
-    const color=v.fault?'#fb8383':({UAV:'#63d8e3',USV:'#8fa9f7',SHIP:'#ead5a7'}[v.type]||'#fff');
+    const color=v.automatic_return?(v.readiness.operational_state==='unavailable'?'#fb8383':'#8fa9f7'):v.fault?'#fb8383':({UAV:'#63d8e3',USV:'#8fa9f7',SHIP:'#ead5a7'}[v.type]||'#fff');
     mapPickables.push({id:v.id,x,y});
     if(selected){ctx.strokeStyle='#65e9e8';ctx.lineWidth=1.5*pixelRatio;ctx.fillStyle='#65e9e822';ctx.beginPath();ctx.arc(x,y,10*pixelRatio,0,2*Math.PI);ctx.fill();ctx.stroke();}
     ctx.fillStyle=color;ctx.save();ctx.translate(x,y);ctx.rotate(-(t.yaw||0));
@@ -240,16 +240,16 @@ function vehicleDetails(s){
   if(battery!==null)$('selectedBatteryMeter').value=Math.max(0,Math.min(100,battery));
   $('selectedEndurance').textContent=live&&Number.isFinite(v.readiness?.endurance_minutes)?v.readiness.endurance_minutes+'분':'—';
 
-  $('selectedTask').textContent=v?(live?(v.fault?'모의 고장 · ':'')+v.readiness.task+' · '+v.readiness.reason:'연결 끊김 · 현재 위치를 확인할 수 없습니다.'):'목록이나 지도의 기체를 선택하세요.';
+  $('selectedTask').textContent=v?(live?(v.automatic_return?'자동 복귀 · ':v.fault?'모의 고장 · ':'')+v.readiness.task+' · '+v.readiness.reason:'연결 끊김 · 현재 위치를 확인할 수 없습니다.'):'목록이나 지도의 기체를 선택하세요.';
   $('positionId').textContent=v?.id||'기체 선택';
   for(const axis of ['X','Y','Z'])$('position'+axis).textContent=t?Number(t[axis.toLowerCase()]||0).toFixed(1):'—';
 
   $('cameraIdentity').textContent=s.camera_view==='inspect'?`${s.inspection_vehicle} · 기체 전방 1인칭 · ${stateLabels[s.vehicles.find(v=>v.id===s.inspection_vehicle)?.readiness.operational_state]||'상태 확인 필요'}`:v?`선택: ${v.id} · ${v.type==='UAV'?'드론':v.type==='USV'?'무인 수상정':'메인 함선'} · 선택 기체 버튼으로 1인칭 시점을 보세요.`:'기체나 목록을 클릭해 선택한 뒤 선택 기체 버튼으로 1인칭 시점을 보세요.';
   if(!v)return;
   const r=v.readiness,p=v.telemetry;
-  $('faultToggle').disabled=v.type==='SHIP'||!!(v.fault&&v.type==='UAV'&&v.fault.phase!=='charging');$('faultToggle').textContent=v.fault?'정비 완료 · 고장 해제':'선택 기체 고장 주입';
+  $('faultToggle').disabled=v.type==='SHIP'||!!v.automatic_return||!!(v.fault&&v.type==='UAV'&&v.fault.phase!=='charging');$('faultToggle').textContent=v.automatic_return?'자동 복귀·충전 진행':v.fault?'정비 완료 · 고장 해제':'선택 기체 고장 주입';
   const detailOpen=$('vehicleDetails').querySelector('details')?.open||false;
-  $('vehicleDetails').textContent=`${v.id} · ${v.fault?.phase==='charging'?'갑판 충전·정비 중 · ':''}${r.battery_percent===null?'잔량 데이터 없음':`시뮬레이션 잔량 ${r.battery_percent}% / 잔여 ${r.endurance_minutes}분`} · 마지막 수신 ${v.age_seconds===null?'없음':v.age_seconds.toFixed(1)+'초 전'} · ${v.fault?'모의 고장 · '+r.task:r.reason} · ${r.task}`+(p&&v.connected?` · 위치 (${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${(p.z||0).toFixed(1)})m · 기울기 ${(Math.max(Math.abs(p.roll||0),Math.abs(p.pitch||0))*180/Math.PI).toFixed(1)}°`:' · 위치 확인 불가');
+  $('vehicleDetails').textContent=`${v.id} · ${v.fault?.phase==='charging'?'갑판 충전·정비 중 · ':''}${r.battery_percent===null?'잔량 데이터 없음':`시뮬레이션 잔량 ${r.battery_percent}% / 잔여 ${r.endurance_minutes}분`} · 마지막 수신 ${v.age_seconds===null?'없음':v.age_seconds.toFixed(1)+'초 전'} · ${v.automatic_return?r.reason:v.fault?'모의 고장 · '+r.task:r.reason} · ${r.task}`+(p&&v.connected?` · 위치 (${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${(p.z||0).toFixed(1)})m · 기울기 ${(Math.max(Math.abs(p.roll||0),Math.abs(p.pitch||0))*180/Math.PI).toFixed(1)}°`:' · 위치 확인 불가');
   const context=assignmentContext(s),task=context.plan?.tasks.find(t=>t.vehicle===v.id);
   $('vehicleDetails').append(element('strong',assignmentText(v,context),'vehicle-assignment-title'));
   if(task){const margin=r.endurance_minutes*60-(2*task.eta_seconds+300);
@@ -282,8 +282,8 @@ function renderVehicles(s){
     const group=element('details',undefined,'vehicle-group');group.dataset.type=type;group.open=groups.has(type)?groups.get(type):true;
     const title=element('summary',type);title.append(element('span',members.length+'대','group-count'));group.append(title);
     for(const v of members){
-      const row=element('button',undefined,'vehicle-row'+(v.id===selectedVehicle?' selected':''));row.type='button';row.dataset.vehicle=v.id;row.setAttribute('aria-pressed',String(v.id===selectedVehicle));row.setAttribute('aria-label',v.id+' · '+(v.connected?'연결됨':'수신 지연')+(v.fault?' · 모의 고장':''));
-      const status=element('i',undefined,'status-dot'+(!v.connected?' offline':v.fault?' fault':''));status.title=!v.connected?'수신 지연':v.fault?'모의 고장':'연결됨';
+      const row=element('button',undefined,'vehicle-row'+(v.id===selectedVehicle?' selected':''));row.type='button';row.dataset.vehicle=v.id;row.setAttribute('aria-pressed',String(v.id===selectedVehicle));row.setAttribute('aria-label',v.id+' · '+(v.connected?'연결됨':'수신 지연')+(v.automatic_return?' · 자동 복귀':v.fault?' · 모의 고장':''));
+      const status=element('i',undefined,'status-dot'+(!v.connected?' offline':v.fault&&!v.automatic_return?' fault':''));status.title=!v.connected?'수신 지연':v.automatic_return?'자동 복귀':v.fault?'모의 고장':'연결됨';
       const battery=v.connected&&Number.isFinite(v.readiness?.battery_percent)?v.readiness.battery_percent:null;
       const batteryLabel=element('span',battery===null?'—':battery+'%','battery-value'+(battery!==null&&battery<20?' battery-low':battery!==null&&battery<35?' battery-warning':''));
       batteryLabel.title=battery===null?(v.connected?'배터리 데이터 없음':'수신 지연 · 배터리 확인 불가'):'모의 배터리 잔량'+(v.fault?.phase==='charging'?' · 충전 중':'');

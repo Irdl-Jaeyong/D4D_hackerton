@@ -19,12 +19,14 @@ def explain(query,snapshot):
     for v in chosen if not questions else []:
         r=v.get('readiness',{});p=v.get('telemetry') or {}
         reason=r.get('reason','판정 근거 없음')
-        evidence.append({'vehicle':v['id'],'source':'current_state','available':r.get('available'),'operational_state':r.get('operational_state'),'reason':reason,'connected':v.get('connected'),'age_seconds':v.get('age_seconds'),'battery_percent':r.get('battery_percent'),'fault_type':v.get('fault_type'),'fault_phase':(v.get('fault') or {}).get('phase'),'roll':p.get('roll'),'pitch':p.get('pitch')})
+        evidence.append({'vehicle':v['id'],'source':'current_state','available':r.get('available'),'operational_state':r.get('operational_state'),'reason':reason,'connected':v.get('connected'),'age_seconds':v.get('age_seconds'),'battery_percent':r.get('battery_percent'),'automatic_return':v.get('automatic_return',False),'return_reason':v.get('return_reason'),'fault_type':v.get('fault_type'),'fault_phase':(v.get('fault') or {}).get('phase'),'roll':p.get('roll'),'pitch':p.get('pitch')})
         unavailable=r.get('operational_state')=='unavailable'
         info=brief(v)
         lines.append(f"{v['id']}: {info['title']}\n근거: {info['evidence']}")
         lines.append(f"{v['id']}: "+(f'수행불가 판정 이유는 “{reason}”입니다.' if unavailable else '현재 수행불가로 판정되어 있지 않습니다.'))
-        if v.get('fault'):
+        if v.get('automatic_return'):
+            lines.append(f"근거: 자동 복귀 상태 · {reason} · 단계 {v['fault'].get('phase','정보 없음')}.")
+        elif v.get('fault'):
             lines.append(f"근거: 시뮬레이션 고장 상태 등록 · 종류 {v.get('fault_type','정보 없음')} · 단계 {v['fault'].get('phase','정보 없음')}.")
             lines.append('등록된 시연 고장 종류를 설명한 것이며 실제 장치의 물리적 고장 원인을 진단한 것은 아닙니다.')
         elif not v.get('connected'):

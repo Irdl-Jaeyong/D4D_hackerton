@@ -10,7 +10,7 @@ def assess(vehicles):
         r=v['readiness'];p=v.get('telemetry') or {};id=v['id']
         if not v['connected']:
             add(v,'link',100,'통신 상태 확인 필요',f'{id} 최신 위치 미수신 · 마지막 수신 {v.get("age_seconds")}초');continue
-        if v.get('fault'):
+        if v.get('fault') and not v.get('automatic_return'):
             phase=v['fault'].get('phase','pending')
             phase_label={'pending':'고장 처리 대기','unstable':'자세 불안정','returning':'복귀 중','landing':'착함 중','charging':'갑판 충전·정비 중','moored':'함선 측면 정비 대기','emergency_descent':'추진 정지 · 비상 하강','ditched':'수면 도달 · 회수 필요','drifting':'추진 차단 · 표류','failsafe_return':'통신 두절 · 비상 복귀 시연'}.get(phase,phase)
             add(v,'fault',95 if phase not in ('charging','moored') else 65,'추진 고장 · 긴급 회수' if v.get('fault_type')=='propulsion' else '고장 기체 복귀·정비',f'{id} · {phase_label} · 임무 배정 제외 · 모의 고장')

@@ -76,6 +76,8 @@ latest = {}
 battery_origin = {}
 simulated_faults=set()
 automatic_returns=set()
+automatic_return_reasons={}
+last_sim_times={}
 fault_status={}
 fault_kinds={}
 interference_owner={} # per-vehicle owning scenario; unrelated faults are never cleared
@@ -154,7 +156,9 @@ def state():
             v['readiness'].update(available=ready,reason='배정 가능' if ready else v['readiness']['reason'],operational_state=('waiting' if v['type']=='UAV' else 'defending') if ready else 'unavailable')
         if v['type']=='UAV' and v['connected'] and (v['readiness']['battery_percent']<35 or max(abs((v['telemetry'] or {}).get('roll',0)),abs((v['telemetry'] or {}).get('pitch',0)))>.22):
             simulated_faults.add(v['id'])
-            if v['id'] not in fault_kinds:automatic_returns.add(v['id'])
+            if v['id'] not in fault_kinds:
+                automatic_returns.add(v['id'])
+                automatic_return_reasons.setdefault(v['id'],'battery' if v['readiness']['battery_percent']<35 else 'attitude')
         if v['id'] in simulated_faults:
             v['fault']=fault_status.get(v['id'],{'phase':'pending'})
             phase=v['fault']['phase']
@@ -162,6 +166,12 @@ def state():
             kind=fault_kinds.get(v['id'],'payload');v['fault_type']=kind
             v['fault_behavior']=FAULT_TYPES[kind]['uav_behavior' if v['type']=='UAV' else 'usv_behavior']
             v['readiness']['reason']=FAULT_TYPES[kind]['label']
+            if v['id'] in automatic_returns and v['id'] not in fault_kinds:
+                cause=automatic_return_reasons.get(v['id'],'unknown_previous')
+                v.update(automatic_return=True,return_reason=cause,fault_type='automatic_return',fault_behavior='자동 복귀 · 착함 후 충전')
+                tilted=max(abs((v['telemetry'] or {}).get('roll',0)),abs((v['telemetry'] or {}).get('pitch',0)))>.22
+                reason={'battery':'배터리 부족 · 자동 복귀','attitude':'자세 이상 감지 · 자동 복귀','unknown_previous':'이전 자동 복귀 기록 · 발생 사유 미수신'}.get(cause,'이전 자동 복귀 기록 · 발생 사유 미수신')
+                v['readiness'].update(reason=reason,operational_state='unavailable' if tilted or phase=='unstable' else 'waiting',task={'pending':'자동 복귀 명령 전달 대기','returning':'자동 복귀 중 · 배정 보류','landing':'갑판 착함 중 · 배정 보류','charging':'갑판 충전 중 · 충전 완료 후 자동 복귀 해제'}.get(phase,'자세 안정화 · 자동 복귀 준비'))
             if kind=='propulsion':v['readiness']['task']='추진 정지 · 수면까지 비상 하강' if v['type']=='UAV' else '추진 차단 · 관성/부력에 따른 표류'
             if kind=='communication':
                 v['simulation_pose']=v['telemetry'];v['telemetry']=fault_last_known.get(v['id']);v['connected']=False
@@ -514,7 +524,7 @@ async def set_simulated_fault(vehicle_id: str,data: FaultRequest):
     if vehicle_id not in IDS or vehicle_id.startswith('SHIP'):raise HTTPException(422,'지원 기체를 선택하세요.')
     interference_owner.pop(vehicle_id,None)
     if data.unavailable:
-        simulated_faults.add(vehicle_id);automatic_returns.discard(vehicle_id);fault_kinds[vehicle_id]=data.fault_type
+        simulated_faults.add(vehicle_id);automatic_returns.discard(vehicle_id);automatic_return_reasons.pop(vehicle_id,None);fault_kinds[vehicle_id]=data.fault_type
         fault_last_known[vehicle_id]=dict(latest[vehicle_id]) if vehicle_id in latest else None
         fault_status.pop(vehicle_id,None);risk_cache['evaluated_at']=0
     else:
@@ -523,7 +533,7 @@ async def set_simulated_fault(vehicle_id: str,data: FaultRequest):
             measured=latest.get(vehicle_id)
             recovered=kind=='communication' or (kind=='payload' and phase=='charging') or (kind=='propulsion' and phase=='ditched' and measured and time.time()-measured['received_at']<5 and measured['z']<=1.5)
             if not recovered:raise HTTPException(409,'장비 고장은 착함·충전 후, 추진 고장은 수면 도달·회수 후 해제하세요.')
-        simulated_faults.discard(vehicle_id);automatic_returns.discard(vehicle_id);fault_status.pop(vehicle_id,None)
+        simulated_faults.discard(vehicle_id);automatic_returns.discard(vehicle_id);automatic_return_reasons.pop(vehicle_id,None);fault_status.pop(vehicle_id,None)
         fault_kinds.pop(vehicle_id,None);fault_last_known.pop(vehicle_id,None);risk_cache['evaluated_at']=0
     return {'ok':True,'source':'simulated'}
 
@@ -549,7 +559,7 @@ async def report_faults(data: FaultReport,x_bridge_token: str=Header(default='')
                 battery_origin[id]=measured['sim_time']
                 initial=readiness({'id':id,'type':'UAV','connected':True},0)['battery_percent']
                 charge_credit[id]=80-initial
-                simulated_faults.discard(id);automatic_returns.discard(id);fault_status.pop(id,None)
+                simulated_faults.discard(id);automatic_returns.discard(id);automatic_return_reasons.pop(id,None);fault_status.pop(id,None)
                 risk_cache['evaluated_at']=0
     return {'ok':True}
 
@@ -648,6 +658,16 @@ async def telemetry(data: Telemetry, x_bridge_token: str = Header(default='')):
             raise HTTPException(422, 'Invalid JPEG')
     async with lock:
         received = time.time()
+        previous=last_sim_times.get(data.vehicle_id,(latest.get(data.vehicle_id) or {}).get('sim_time'))
+        # A substantial clock rollback starts a new simulator epoch, not a repair.
+        new_epoch=previous is not None and data.sim_time<previous-5
+        if new_epoch:
+            battery_origin[data.vehicle_id]=data.sim_time
+            if data.vehicle_id in automatic_returns and data.vehicle_id not in fault_kinds:
+                simulated_faults.discard(data.vehicle_id);automatic_returns.discard(data.vehicle_id)
+                for values in (fault_status,automatic_return_reasons,charge_credit):values.pop(data.vehicle_id,None)
+                risk_cache['evaluated_at']=0
+        last_sim_times[data.vehicle_id]=data.sim_time if previous is None or new_epoch else max(previous,data.sim_time)
         if data.vehicle_id not in battery_origin or data.sim_time<battery_origin[data.vehicle_id]:battery_origin[data.vehicle_id]=data.sim_time
         latest[data.vehicle_id] = {**data.model_dump(exclude={'camera_jpeg'}), 'received_at': received}
         inspection_ready=(camera_view!='inspect' or (camera_ready is not None and data.camera_revision==camera_revision and data.camera_vehicle_id==inspection_vehicle and data.camera_capture_sim_time is not None and data.camera_capture_sim_time>camera_ready['sim_time']))
@@ -701,6 +721,9 @@ def restore_console():
         battery_origin.update(saved.get('battery_origin',{}))
         interference_owner.update(saved.get('interference_owner',{}));fault_kinds.update(saved.get('fault_kinds',{}));automatic_returns.update(saved.get('automatic_returns',set(saved.get('faults',[]))-set(saved.get('fault_kinds',{}))));fault_last_known.update(saved.get('fault_last_known',{}))
         fault_status.update(saved.get('fault_status',{}));charge_credit.update(saved.get('charge_credit',{}))
+        automatic_return_reasons.update(saved.get('automatic_return_reasons',{}))
+        last_sim_times.update({id:value['sim_time'] for id,value in fault_status.items() if 'sim_time' in value})
+        last_sim_times.update(saved.get('telemetry_sim_times',{}))
     except (OSError,ValueError,KeyError,TypeError):pass
 
 def reset_demo_session():
@@ -709,12 +732,12 @@ def reset_demo_session():
     mission=None;missions.clear()
     formation.clear();formation.update(usv='circle',uav='hemisphere',revision=0)
     formation_status.clear();camera_view='wide'
-    for data in (simulated_faults,automatic_returns,fault_kinds,fault_status,fault_last_known,battery_origin,charge_credit,interference_owner):data.clear()
+    for data in (simulated_faults,automatic_returns,automatic_return_reasons,last_sim_times,fault_kinds,fault_status,fault_last_known,battery_origin,charge_credit,interference_owner):data.clear()
     risk_cache['evaluated_at']=0
 
 def save_console():
     CONSOLE_SNAPSHOT.parent.mkdir(exist_ok=True)
-    data={'formation':formation,'mission':mission,'missions':list(missions.values()),'mission_counter':mission_counter,'faults':list(simulated_faults),'automatic_returns':list(automatic_returns),'battery_origin':battery_origin,'fault_status':fault_status,'charge_credit':charge_credit,'fault_kinds':fault_kinds,'fault_last_known':fault_last_known,'interference_owner':interference_owner}
+    data={'formation':formation,'mission':mission,'missions':list(missions.values()),'mission_counter':mission_counter,'faults':list(simulated_faults),'automatic_returns':list(automatic_returns),'automatic_return_reasons':automatic_return_reasons,'telemetry_sim_times':last_sim_times,'battery_origin':battery_origin,'fault_status':fault_status,'charge_credit':charge_credit,'fault_kinds':fault_kinds,'fault_last_known':fault_last_known,'interference_owner':interference_owner}
     temp=CONSOLE_SNAPSHOT.with_suffix('.tmp');temp.write_text(json.dumps(data,ensure_ascii=False));temp.replace(CONSOLE_SNAPSHOT)
 
 @app.post('/api/chat/scenario')
