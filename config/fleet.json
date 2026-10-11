@@ -101,5 +101,14 @@
       ],
       "pitch": 0.035
     }
+  },
+  "visual_motion": {
+    "patrol_radius_m": 3,
+    "patrol_height_m": 0.8,
+    "patrol_period_seconds": 24,
+    "camera_sweep_degrees": 5,
+    "camera_period_seconds": 70,
+    "flagship_heave_multiplier": 3,
+    "flagship_roll_multiplier": 2.5
   }
 }

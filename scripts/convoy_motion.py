@@ -50,6 +50,19 @@ def vessel_pose(t, index=None):
             math.atan2(ry*omega*math.cos(a),MOTION['ship_speed']-rx*omega*math.sin(a)))
 
 
+def patrol_goals(goals,t):
+    cfg=FLEET.get('visual_motion',{});radius=cfg.get('patrol_radius_m',0)
+    a=2*math.pi*t/cfg.get('patrol_period_seconds',24)
+    # Shared displacement preserves all pairwise slot distances exactly.
+    return [(x+radius*math.cos(a),y+radius*.65*math.sin(2*a),z+cfg.get('patrol_height_m',0)*math.sin(a)) for x,y,z in goals]
+
+def tracking_camera(t,camera):
+    cfg=FLEET.get('visual_motion',{});x,y,z=camera['offset']
+    a=math.radians(cfg.get('camera_sweep_degrees',0))*math.sin(2*math.pi*t/cfg.get('camera_period_seconds',70))
+    x,y=x*math.cos(a)-y*math.sin(a),x*math.sin(a)+y*math.cos(a)
+    return x,y,z,math.atan2(-y,-x),math.atan2(z-12,math.hypot(x,y))
+
+
 def hull_response(t,x,y,yaw,large=False):
     """Bounded visual sea response, not a buoyancy/force solver."""
     # Spatial phases make nearby vessels respond to the same travelling swell.
@@ -59,6 +72,11 @@ def hull_response(t,x,y,yaw,large=False):
     heave=attenuation*(a+b)
     roll=attenuation*.035*math.sin(.065*x+.048*y-1.14*t-yaw)
     pitch=attenuation*.022*math.sin(.042*x-.038*y-.92*t+yaw)
+    if large:
+        cfg=FLEET.get('visual_motion',{})
+        heave*=cfg.get('flagship_heave_multiplier',1)
+        roll*=cfg.get('flagship_roll_multiplier',1)
+        pitch*=cfg.get('flagship_roll_multiplier',1)
     return heave,roll,pitch
 
 
@@ -117,8 +135,11 @@ def fleet_poses(t, camera=None):
     # It enters, passes, then leaves the escort area in a 180-second demo cycle.
     crossing=t%180
     add('CIV-01',forward+105,120-3*crossing,.7,math.atan2(-3,MOTION['ship_speed']))
-    ox,oy,oz=camera['offset']
-    add('fleet_observer',forward+ox,oy,oz,camera['yaw'],camera['pitch'])
+    ox,oy,oz,yaw,pitch=tracking_camera(t,camera)
+    add('fleet_observer',forward+ox,oy,oz,yaw,pitch)
+    for mode in ('wide','detail'):
+        x,y,z,yaw,pitch=tracking_camera(t,FLEET['camera_views'][mode])
+        add('observation_camera_'+mode,forward+x,y,z,yaw,pitch)
     # Recenter the purely visual, flat ocean so the demo never leaves it.
     add('ocean',forward,0,-.25)
     return result
@@ -254,6 +275,7 @@ def main():
                 else:goals=targets(group,mode,t)
                 context=self.selection.get('scenario_context') or requested
                 if context:goals=formation_goals(group,mode,goals,context.get('scenario'))
+                if group=='uav':goals=patrol_goals(goals,t)
                 if planner.assignment is None:planner.select(goals)
                 group_goals[group]=goals
                 kind='UAV' if group=='uav' else 'USV'

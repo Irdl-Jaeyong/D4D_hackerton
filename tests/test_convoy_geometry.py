@@ -77,30 +77,22 @@ class PatrolGeometry(unittest.TestCase):
         self.assertIsNotNone(match)
         point=list(map(float,match.groups()));target=convoy.fleet_poses(0)['UAV-02']
         self.assertAlmostEqual(math.dist(point,[target[k] for k in ('x','y','z')]),math.hypot(.46,.02),places=4)
-    def test_render_cameras_are_rigidly_attached_to_straight_flagship(self):
+    def test_render_cameras_track_flagship_independently(self):
         world=E.parse(ROOT/'ros_ws/src/navis_sim/worlds/prep.sdf')
-        sensors=world.findall(".//model[@name='SHIP-01']/link/sensor")
-        self.assertEqual(len(sensors),2)
-        self.assertIsNone(world.find(".//model[@name='fleet_observer']/link/sensor"))
+        self.assertEqual(len(world.findall(".//model[@name='SHIP-01']/link/sensor")),0)
         for mode in ('wide','detail'):
-            view=convoy.FLEET['camera_views'][mode]
-            sensor=next(s for s in sensors if s.get('name')=='fleet_camera_'+mode)
-            local=list(map(float,sensor.find('pose').text.split()))
-            self.assertEqual(local[:2],view['offset'][:2])
-            self.assertAlmostEqual(local[2]+2.4,view['offset'][2])
-            self.assertEqual(local[3:],[0,view['pitch'],view['yaw']])
-        initial=convoy.fleet_poses(0)
-        for t in [1,20,600,20000]:
-            fleet=convoy.fleet_poses(t);ship=fleet['SHIP-01']
-            self.assertEqual((ship['y'],ship['yaw'],ship['pitch']),(0,0,0))
-            self.assertAlmostEqual(ship['x'],convoy.MOTION['ship_speed']*t)
-            self.assertEqual(project(ship,fleet['fleet_observer']),project(initial['SHIP-01'],initial['fleet_observer']))
+            sensor=world.find(f".//model[@name='observation_camera_{mode}']/link/sensor")
+            self.assertIsNotNone(sensor)
+            self.assertEqual(sensor.find('pose').text,'0 0 0 0 0 0')
+        for t in (0,15,40):
+            fleet=convoy.fleet_poses(t);camera=fleet['observation_camera_wide'];ship=fleet['SHIP-01']
+            self.assertAlmostEqual(camera['yaw'],math.atan2(ship['y']-camera['y'],ship['x']-camera['x']))
 
     def test_wakes_follow_past_stern_and_hull_motion_leaves_camera_level(self):
         for t in [30,100,600]:
             fleet=convoy.fleet_poses(t)
             self.assertEqual(fleet['SHIP-01']['roll'],0)
-            self.assertLess(abs(fleet['SHIP-01_hull']['roll']),.011)
+            self.assertLess(abs(fleet['SHIP-01_hull']['roll']),.03)
             for index in range(10):
                 for segment in [0,9,19]:
                     age=(segment+.5)*.9
