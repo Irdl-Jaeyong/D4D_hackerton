@@ -1,184 +1,129 @@
-# NAVIS-AI · D4D Hackathon
+> 상황 생성 도구 대신 기존 4종 시나리오를 2분 간격으로 랜덤 생성합니다. 신선한 함선 상태가 수신될 때만 생성하고 대기 4건·종류별 2건·고장 기체 총 6대 제한을 적용합니다. 설정은 `config/auto_scenarios.json`에서 변경할 수 있습니다. 자동 생성은 모의 상황이며, 대응 출동은 운용자의 선택으로만 실행합니다.
 
-한 운용자가 여러 이기종 UxV를 관제하는 Gazebo 기반 웹 MVP.
-현재 **메인 함선 1척 + UAV 40대 + 호위 USV 10대**를 Gazebo 해상 월드에 호위 편대로 배치하고 실제 위치·높이·속도를 웹에 연결했다. 카메라는 전체 함대를 위에서 비스듬히 내려다보는 1280×720 Gazebo 관측 센서다.
-드론 40대 전부가 메인 함선 위 반지름 130m의 반구 대형을 이루고, 호위 USV 10대가 주변 경계를 따라 이동한다.
-실제 함종의 공개 모델인 NPS Arleigh Burke급 구축함과 VRX WAM-V 16ft USV 메시·텍스처를 사용한다. 구축함은 원본 약 154m 크기이며 마스트·함교·갑판 형상을 가져온다. 바다는 움직이는 Gerstner 파도·하늘 반사·법선 텍스처와 배별 거품 항적을 사용하는 시각 표현이며 부력·파도 물리·비행·항해 제어·AI 행동 실행은 아직 구현 전이다. 사진 수준의 실사 환경은 아니다.
+> 현재 대시보드에는 위험도 순 승인대기열이 표시됩니다. 상위 2건을 10초마다 갱신하며, 나머지 상황은 보관합니다. 등급 필터와 수동 재계산 버튼은 없으며, 대응안을 선택하면 최신 상태로 재계산한 뒤 Gazebo 대형 변경·UAV/USV 출동을 요청합니다.
 
-## 현재 기능
+# JCC · NAVIS-AI
 
-- 웹 관제: 51대 상태 카드, 실시간 카메라, ROS 위치를 표시하는 2D 지도, 연결 이벤트, 채팅
-- FastAPI: 현재 상태 조회, 카메라 JPEG, MiniCPM-V 4.5 텍스트·이미지 요청
-- Gazebo 6 + ROS 2 Humble: odometry·카메라 → ros_gz_bridge → ROS 노드 → 백엔드
-- 실제 데이터가 없는 기체는 미연결 표시. 배터리는 구현되지 않아 수치를 표시하지 않는다.
-- 데이터 수신이 5초 이상 끊기면 연결 해제하고 카메라 분석을 차단한다.
-- **모델 응답으로 이동 명령을 실행하지 않는다.**
+Gazebo 해상 시뮬레이션과 웹 관제 화면을 연결하는 D4D MVP입니다. 준석 `work/junseok-situation-queue`의 Gazebo·백엔드 코드에 간소화한 관제 화면을 통합했습니다.
 
-## 이 PC에서 시작
+## 현재 화면과 데이터
 
-시뮬레이션은 로컬 `aac-2026-image:sim` 또는 `aac-2026-image:x86` Docker 이미지를 사용한다. `prep.sh start`로 전체 스택을 시작하려면 Ollama와 모델도 설치되어 있어야 한다. 이 PC에서는 현재 웹·시뮬레이션만 실행 중이다.
+- 왼쪽: 기체 검색, UAV/USV 필터, 기체 목록과 모의 배터리 잔량.
+- 중앙: 실제 Gazebo 센서 영상, ROS odometry 기반 위치 모니터, 선택 기체 월드 좌표.
+- 오른쪽: 선택 기체의 연결·높이·속도·모의 배터리·남은 운용 시간과 AI 대화.
+- 상세 설정: 대형 변경, 위험 확인, 상황 생성·추천 갱신, 대응 검토·최종 승인, 모의 고장 시험.
+- 이벤트 타임라인은 기본 화면에서 제거했습니다.
 
-```bash
-cd /home/jji/D4D_hackerton
-./scripts/setup_backend.sh   # 첫 설치 또는 의존성 갱신 시
-./scripts/prep.sh start
-```
+기본 구성은 SHIP 1척, UAV 40대, USV 10대입니다. 속도는 위치 변화로 추정하며, 배터리와 운용 시간은 실제 센서값이 아닌 모의 값입니다. 연결이 끊기면 현재 위치·속도·배터리를 확인 불가로 표시합니다.
 
-브라우저에서 **http://127.0.0.1:8000**을 연다. 별도 Gazebo 창이 필요하면 GUI가 있는 터미널에서 `./scripts/open_gazebo.sh`를 실행한다 (GUI 프로세스 실행 확인, 브라우저·GUI의 실제 클릭 검수는 남아 있음). 자동 실행 서비스는 현재 로그인 세션에서만 시작하며 부팅 자동 시작은 등록하지 않는다.
+데이터 경로는 `Gazebo → ros_gz_bridge → ROS 수신 노드 → FastAPI → 웹`입니다. 대형과 승인된 임무는 `웹 → FastAPI → 시뮬레이션 실행 노드 → Gazebo`로 전달합니다. 웹 센서 영상과 native Gazebo 창은 같은 월드를 사용하며, 카메라 시점은 서로 다를 수 있습니다.
 
-```bash
-./scripts/prep.sh status
-./scripts/prep.sh stop       # 웹·시뮬레이션 종료, Ollama는 유지
-./scripts/ollama_service.sh stop  # Ollama까지 종료하려는 경우
-```
+준석 브랜치의 상황 큐·상황 모델 생성·고장 종류별 동작·USV 출동 코드를 포함합니다. 간소화한 웹의 대응 콘솔은 현재 실행 중인 임무 또는 우선순위가 가장 높은 대기 상황 한 건을 표시합니다. 전체 큐를 개별 선택하는 화면은 추가 연동이 필요합니다. 현재 UI에서는 대응안 선택 후 **최종 승인**을 눌러 실행합니다.
 
-서비스 없는 환경에서는 터미널 두 개에서 `./scripts/start_backend.sh`, `./scripts/start_sim.sh`를 각각 실행한다.
+AI 대화는 MiniCPM-V 4.5의 텍스트·이미지 설명 기능입니다. 자유로운 채팅으로 이동 명령을 실행하지 않습니다. USV는 추진력 기반 물리 모델, 함선과 UAV는 위치 갱신 기반 시연입니다. 실기체 제어·비행 제어기·실측 배터리·경로 안전성 검증은 포함하지 않습니다.
 
-## 처음 준비하는 PC
+## 실행
 
-1. Python 3.12와 venv, Docker + NVIDIA Container Toolkit을 준비한다.
-2. [Ollama 안내](docs/ollama.md)에 따라 런타임과 `minicpm-v4.5:latest`를 설치한다.
-3. ROS 2 Humble, Gazebo Fortress, ros_gz_bridge, rclpy, OpenCV, NumPy를 포함하는 Docker 이미지가 필요하다. 사용하는 `aac-2026-image:sim` / `aac-2026-image:x86`은 기존 로컬 이미지이며 일반 Docker Hub 이미지가 아니다.
-4. 호환되는 다른 이미지를 쓰면 `.env`의 `NAVIS_ROS_IMAGE`를 설정한다. 다른 PC에서의 재현은 아직 검증하지 않았다.
-5. `setup_backend.sh`는 `.env`가 없을 때만 로컬 브릿지 토큰을 생성한다. 실제 `.env`는 Git에 올리지 않는다.
-
-## 구조
-
-- `frontend/`: 빌드 도구 없는 HTML/CSS/JS 관제 화면
-- `backend/app/main.py`: 웹 API와 Ollama 호출 (가상환경은 `backend/.venv`)
-- `ros_ws/src/navis_bridge/`: 읽기 전용 ROS 텔레메트리 노드
-- `ros_ws/src/navis_sim/`: 로컬 에셋만 사용하는 준비용 월드·ROS launch
-- `docker/ros/run_prep.sh`: 기존 ROS 이미지에서 시뮬레이션·브릿지 실행
-- `scripts/`: 설치, 시작·종료, 검증
-- `docs/`: 실행 환경과 테스트 기록
-- `outputs/`: 로컬 테스트 결과 (Git 제외)
-
-## 검증과 한계
+Python 가상환경, Ollama와 모델, Docker와 NVIDIA Container Toolkit, ROS 2 Humble / Gazebo Fortress / ros_gz_bridge를 포함하는 로컬 Docker 이미지가 필요합니다. `aac-2026-image:sim`은 이 PC의 기존 이미지이며 공개 Docker Hub 이미지가 아닙니다.
 
 ```bash
-python3 scripts/check_prep.py
-```
-
-검증 결과와 다음 단계: [준비용 MVP 상태](docs/preparation.md).
-기존 환경: [environment.md](docs/environment.md). 모델 테스트: [vlm_test.md](docs/vlm_test.md), [gazebo_vlm_test.md](docs/gazebo_vlm_test.md).
-
-최종 과제와 사전 코드 허용 범위는 주최 측 확인이 필요하다. 모델의 화면 해석에는 오류가 발생할 수 있으며 이번 구현으로 인지 부하 감소나 임무 성공률을 검증한 것은 아니다.
-
-## 함대 월드 구성
-
-`config/fleet.json`에 함정·드론·USV 수를 정의한다. 현재 1 / 40 / 10이다.
-
-```bash
-python3 scripts/build_fleet.py
-./scripts/prep.sh stop
+./scripts/setup_backend.sh
+# 생성된 .env에서 모델, 브리지 토큰, Docker 이미지와 아래 연결 설정을 확인
 ./scripts/prep.sh start
 ./scripts/open_gazebo.sh
 ```
 
-월드 생성기는 로컬 함선 에셋과 Apache-2.0 [VRX](https://github.com/osrf/vrx)의 바다 메시·법선 텍스처로 `prep.sdf`를 생성한다. 생성된 월드는 Git에 포함하므로 재생성 없이 실행 가능하다. UAV는 위치 갱신 기반 편대 시연용 모델이며 기존 X3 비행 예제와 다르다. GUI에서 마우스로 3D 시점을 조작할 수 있고, 웹은 함선을 추적하는 항공 카메라 스트림을 표시한다. GUI 시점 변경은 웹 카메라 시점에 적용되지 않는다.
-
-Gazebo 월드가 준비된 뒤 ROS 브릿지를 시작하며, 상태 수신기는 13대씩 분할한다. 카메라 영상은 `SHIP-01` 상태 업로드로 전달한다. 상공 관측 센서는 함선의 링크에 고정되어 함선과 동일한 렌더링 단계에서 이동한다. 각도·높이·거리·화각이 유지되어 별도 추적 지연이나 시점 회전이 발생하지 않는다. Ollama가 없으면 AI 대화는 사용할 수 없다.
-
-## 직선 전진, 반구 대형과 8자 순찰
-
-`convoy_motion.py`는 ROS `/world/navis_prep/clock`의 전용 시뮬레이션 시간을 기준으로 움직인다. 메인 함선은 1.5m/s로 직선 전진하고, USV는 함선 상대 x=115m/y=75m의 타원형 경계를 따라 연속적으로 호위 위치를 교대한다. 멈춤·급출발 없이 선행 함선 위치를 기준으로 이동한다.
-
-드론 40대는 반지름 130m, 중심 높이 12m인 반구 표면에 배치한다. 위도 12°/26°/40°/54°/68°의 다섯 고도 편대에 8대씩 속하며, 각 드론은 38초 주기의 작은 8자 경로를 반구 표면에서 비행한다. 고도 편대는 서로 다른 방향으로 천천히 교대한다. 갑판 대기 드론은 없다.
-
-8자 경로는 [ModalAI VOXL의 실제 Offboard 예제](https://docs.modalai.com/voxl-figure-8/)와 [PX4 개발 키트 비행 튜토리얼](https://px4.io/first-flight-tutorial-for-the-voxl-2-based-px4-autonomy-developer-kit/)의 패턴을 참고했다. USV의 선행 함선 상대 오프셋은 [ArduPilot Follow Mode](https://ardupilot.org/rover/docs/follow-mode.html)를 참고했다. 반구 표면으로의 변환과 다중 기체 교대는 이 프로젝트의 시연 설계이며 실제 작전 대형이라고 주장하지 않는다.
-
-Gazebo `set_pose_vector`로 위치를 갱신하는 시연이다. PX4·ArduPilot 비행 제어기, 추진력·부력·충돌 회피·위협 대응은 실행하지 않는다. 속도는 ROS 위치의 시뮬레이션 시간별 변화로 추정한다. AI는 움직임을 제어하지 않는다.
-
-배가 가려지던 바다 메시의 높이 변형을 제거했다. 바다는 선체보다 낮은 평평한 원본 VRX 메시와 법선 텍스처를 사용하고 함선을 따라 중심을 갱신한다. 웹 카메라와 Gazebo GUI가 함선을 따라가며, 웹에서는 반구 가이드와 실제 위치를 겹쳐 볼 수 있다. 카메라는 전체 편대가 프레임 안에 들어오는 범위를 사용한다. IGN_PARTITION은 `navis-d4d-koyul`이다.
+기본 주소는 **http://127.0.0.1:18082/**입니다. 종료·상태 확인:
 
 ```bash
-python3 tests/test_convoy_geometry.py
+./scripts/prep.sh status
+./scripts/prep.sh stop
+```
+
+서비스를 쓰지 않으면 두 터미널에서 `scripts/start_backend.sh`와 `scripts/start_sim.sh`를 실행합니다. native 창은 `scripts/open_gazebo.sh`로 엽니다. 현재 로그인 세션의 서비스이며 부팅 자동 시작은 별도 설정이 필요합니다.
+
+`.env.example`의 실행 설정:
+
+| 설정 | 기본값 | 용도 |
+| --- | --- | --- |
+| `NAVIS_WEB_PORT` | `18082` | 웹 서버 포트 |
+| `NAVIS_BACKEND_URL` | `http://127.0.0.1:18082` | 모든 시뮬레이션 브리지의 접속 주소 |
+| `IGN_PARTITION` | `navis-d4d` | 서버·GUI·상황/상태/고장 브리지의 공통 Gazebo 파티션 |
+| `ROS_DOMAIN_ID` | `45` | ROS 통신 도메인 |
+
+포트를 바꿀 때는 `NAVIS_WEB_PORT`와 `NAVIS_BACKEND_URL`을 함께 바꿉니다. 서비스 이름을 따로 쓰는 환경에서는 `NAVIS_BACKEND_UNIT`, `NAVIS_SIM_UNIT`도 설정할 수 있습니다. GUI 환경의 `DISPLAY`와 `XAUTHORITY`는 실행 세션에서 전달합니다. 인증정보가 든 `.env`, 가상환경, 모델 다운로드, `outputs/`는 Git에 올리지 않습니다.
+
+## 코드 위치
+
+- `frontend/`: 현재 18082 관제 화면.
+- `backend/app/main.py`: 상태·상황 큐·대응 승인·카메라·Ollama API.
+- `ros_ws/src/navis_sim/worlds/prep.sdf`: Gazebo 월드.
+- `ros_ws/src/navis_bridge/telemetry_node.py`: 위치와 영상 업로드.
+- `scripts/convoy_motion.py`, `scripts/mission_execution.py`: 대형과 승인된 임무의 시뮬레이션 실행.
+- `scripts/gazebo_*_bridge.py`: 상태·상황·고장 표시와 Gazebo 연동.
+- `docker/ros/run_prep.sh`: 시뮬레이터와 ROS 브리지 시작.
+- `config/fleet.json`: 기체 수·대형·카메라 구성.
+
+## 확인
+
+```bash
+backend/.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+node --test tests/test_queue_state.js
 python3 scripts/check_prep.py
 ```
 
-첫 검사는 반구 유지, 드론 간 거리, 카메라 경계, 수면 높이, 경로 연속성을 확인한다. 두 번째 검사는 실행 중인 웹·51대 상태·JPEG·API 입력 검증을 확인하며 Ollama 모델이 없으면 AI 응답 검사를 생략한다.
+`check_prep.py`는 실행 중인 웹·텔레메트리·영상·모델을 확인합니다. 별도 주소에서는 `NAVIS_BACKEND_URL`을 전달합니다. 자동 시험은 실제 화면이나 모든 모델 응답의 정확성을 보장하지 않습니다. 인지 부하 감소·임무 성과는 아직 비교 측정 전입니다.
 
-## 실제 함종 에셋
+## 에셋과 기존 기록
 
-- 메인 함선: [NPS SAVAGE Arleigh Burke high detail](https://savage.nps.edu/Savage/ShipsMilitary/DDGArleighBurkeUnitedStates/), 제작 LT Patrick Sullivan, Web3D BSD 계열 라이선스. 원본 X3D와 변환 COLLADA를 보관한다. `python3 scripts/convert_ddg_model.py`로 변환 가능하며 NumPy가 필요하다.
-- 호위 USV: [Open Robotics VRX WAM-V](https://github.com/osrf/vrx/tree/7609d1bd90ce7edb29d040a082f949e8b089c864/vrx_urdf/wamv_description/models/WAM-V-Base), Apache-2.0. 원본 형상과 PBR 텍스처를 사용한다.
+함선은 [NPS SAVAGE Arleigh Burke](https://savage.nps.edu/Savage/ShipsMilitary/DDGArleighBurkeUnitedStates/)의 공개 모델, USV와 바다 표현은 [Open Robotics VRX](https://github.com/osrf/vrx)의 에셋과 시각 코드를 사용합니다. 원본 라이선스·변경 사항은 모델 디렉터리와 `docker/visual/ATTRIBUTION.md`에 보관합니다. 공개 형상을 사용한 시연이며 실측 디지털 트윈은 아닙니다.
 
-각 모델 디렉터리에 `ATTRIBUTION.md`와 원본 라이선스를 포함한다. 공개 모델을 그대로 가져오는 것이며 실측 스캔·설계 도면 기반 디지털 트윈은 아니다. 구축함의 2005년 제작 모델은 최신 개장 형상과 다를 수 있다. 실제 크기에 맞춰 호위 간격과 반구/카메라 범위를 넓혔고, 1척/10척/40대 및 기존 이동 방식은 유지한다.
+설치·모델 참고: [Ollama 안내](docs/ollama.md), [기존 준비 기록](docs/preparation.md). 기존 기록은 당시 상태를 설명하며 현재 화면·포트와 다를 수 있습니다. `record-explainer-v2/`는 이전 기록 대시보드 소스로, 현재 18082에서 실행하지 않습니다.
 
-## 바다와 근접 관측
+## 빠른 대형 전환 시연
 
-웹의 **카메라 시점**에서 전체 편대 / 함선 근접을 고른다. 함선에 고정된 두 Gazebo 센서의 영상 중 하나를 선택한다. 시점은 선택할 때만 변경하며 자동 회전·줌은 하지 않는다. 전체 편대 모드는 40대 반구 전체를 보여주고 근접 모드는 갑판·함교·항적을 살펴볼 수 있다.
+현재 로컬 시연은 `config/fleet.json`의 `motion.formation_transition_multiplier=5`로 UAV와 USV 목표 대형 전환 시간을 가속합니다. 전환 계산은 작은 시간 간격으로 나누어 기존 경로와 속도 변화의 연속성을 유지합니다. 함선의 전진 속도와 고장 복귀 계산은 그대로입니다. USV는 `prep.sdf`의 `formation_speed_multiplier=5`를 읽어 정상 상태의 목표 추종 속도·조향·추진 한도를 함께 높입니다. 이는 빠른 시뮬레이션 시연용 설정이며 실제 WAM-V 성능 제원을 뜻하지 않습니다. 물리적 추종과 혼잡에 따라 실제 전환 완료 시간이 정확히 다섯 배 줄지는 않을 수 있습니다. 기본 속도로 복원하려면 두 설정을 모두 1로 바꾸고 시뮬레이터를 재시작합니다.
 
-[VRX](https://github.com/osrf/vrx/tree/dc30ed8d17aa1083fd872edad9c77c69896d2b07/vrx_gz)의 Apache-2.0 WaveVisual/Wavefield와 Gerstner/Fresnel 셰이더를 Gazebo Fortress에 맞게 포팅했다. `docker/visual`에 소스·라이선스·변경 내역을 보관하며 시뮬레이션 시작 때 빌드한다. Docker 이미지에 CMake, C++17 컴파일러, ignition-gazebo6 / rendering6 / plugin1 개발 패키지와 Eigen3가 필요하다.
+### 기체 상태와 AI 설명
+현재 상태 요약은 모든 기체에 공통 적용됩니다. 방어중(초록), 대기·복귀(파랑), 수행불가(빨강)를 선택 기체 패널에서 현재 임무·판정 근거와 함께 표시합니다. AI 대화에서 `USV-01 왜 방어중이야?`, `UAV-01 뭐 하고 있어?`는 상태 설명 하나를 반환하고, `지금 위험 상황에 어떻게 대응해?`는 현재 통신 지연·고장·잔량·자세·기체 간격 신호를 근거로 안전 검토안 세 가지를 반환합니다. 근거가 부족하면 재질문합니다. 대화는 명령이나 승인 상태를 변경하지 않습니다.
 
-수면은 2.4km 근거리 그리드에 3개 파도 성분을 합성하고 움직이는 법선 맵·반사 큐브맵을 적용한다. 더 먼 수면은 아래쪽 평면으로 이어진다. 파고 성분 합은 약 17cm로 작게 제한했다. 함선과 USV는 선미 뒤 거품 항적을 남긴다. 항적은 진행 방향에 정렬된 시각 메시이며 유체역학 계산은 아니다. 갑판의 원본 NPS non-skid/비행갑판 표식 텍스처와 근사 난간을 추가했다.
+이 기능은 학습 완료된 모델이 아니라 규칙·자료 검색 기반입니다. 준비된 합성 사례를 실제 사고 발생 빈도나 고장 진단으로 취급하지 않으며, 시뮬레이션 임계값은 실제 기체의 운용 한계가 아닙니다. 모든 가능한 상황을 포함했다는 보장은 없습니다.
 
-시각 메시 재생성 순서:
+### 로컬 LLM 대화
+Ollama에서 `qwen3:4b`를 실행하면 AI 대화가 실제 모델을 호출합니다. 기체 상태·관련 사례를 질문마다 전달하고 모델은 설명 문장을 생성합니다. 화면 하단에 `실제 LLM · 모델명` 또는 `규칙 답변 · LLM 사용 안 함`이 표시됩니다. 고장 원인이나 수치의 정확성을 모델 학습만으로 보장하지 않으며, 상태 근거는 시스템이 별도로 표시합니다. 가중치 미세조정과 카메라 추론은 이번 연결에 포함되지 않습니다. 설치·실행 방법은 [Ollama 문서](docs/ollama.md)를 참고하세요.
 
-```bash
-python3 scripts/convert_ddg_model.py
-python3 scripts/build_maritime_visuals.py
-python3 scripts/build_fleet.py
-```
+### 다섯 가지 질문 유형
+AI 대화는 상태, 판정 이유, 위험 확인, 안전 대응, 복귀·재개 조건의 다섯 유형으로 나뉩니다. `config/training/intent_train.jsonl`의 질문 예시를 수정하고 `backend/.venv/bin/python scripts/question_intents.py`를 실행하면 질문 분류 모델이 재학습됩니다. 평가 결과는 `config/training/intent_evaluation.json`에 기록됩니다. 이는 Qwen 가중치 미세조정이 아닙니다. 현재 분류기는 실험적 소규모 모델이므로 명확한 표현을 우선하고 매우 높은 신뢰도의 분류만 라우팅에 사용합니다. 숫자나 유형 판정이 실제 정확도를 보장하지 않습니다.
 
-### 선체 움직임과 항적
 
-선체의 높이·롤·피치는 공간적으로 연속된 파도 응답으로 표현한다. 대형 함선의 응답은 USV보다 작게 설정하며, 함선의 수평 기준 프레임과 상공 센서를 분리해 카메라를 안정적으로 유지한다. 호위선은 완만한 타원 궤도를 따라 이동하고, 항적은 과거 선미 위치를 시간별로 샘플링해 곡선으로 남긴다. 오래된 거품은 더 넓고 옅게 표현한다.
+### AI 대화의 상황 사례 참고
 
-USV 10대는 아래의 힘 기반 물리 모델을 사용한다. 함선과 드론은 시각적 움직임 근사를 유지한다.
+`config/defense_scenarios_200.json`의 가상 사례 200개를 기존 AI 대화에 연결했습니다. 질문의 키워드와 문장 유사도로 관련 사례를 찾고, 현재 통신·배터리·임무 가용 상태를 확인한 배정 엔진이 대응안 세 개를 계산합니다. LLM은 그 결과의 장점과 한계를 설명하며 기체 번호를 결정하지 않습니다. 각 답변에 제안 대형과 배정 기체를 표시합니다.
 
-### USV 10대 자동 전진·힘 기반 호위
+이는 모델 가중치를 재학습하는 방식이 아니라 요청마다 참고 자료를 제공하는 검색 기반 방식입니다. `DEF-101`처럼 사례 번호를 지정할 수도 있습니다. 사례는 실제 탐지나 고장 진단이 아니며, 질문이 모호하면 출동 대신 확인 방법 세 개를 제시합니다. 좌표가 없으면 도달 시간이나 새 출동 위치를 추측하지 않습니다. 채팅은 임무·대형을 변경하거나 승인하지 않습니다. 모델 연결 또는 출력 검증에 실패하면 사례와 엔진 근거로 답변을 표시합니다.
 
-모든 USV는 동적 강체(질량 250kg, 지정 관성, 두 선체 충돌 형상)이며 위치 갱신 명령에서 제외한다. `NavisMaritimeEscort` 플러그인은 VRX 바다와 동일한 파도 파라미터·시뮬레이션 시각으로 네 수면 샘플을 계산한다. 수면 침수 깊이에 따른 부력과 수직 감쇠, 선체 좌표계의 선형·이차 저항, 두 추진기의 힘과 0.7초 응답 지연을 Gazebo 물리 엔진에 전달한다. 호위 제어기는 위치 오차로 목표 속도·방향을 만들고 추진기 출력만 조절한다. 항적은 실제 ROS odometry 기록을 사용한다.
+질문에 정보가 부족하면 채팅이 방향·거리·대상 수 또는 고장 기체 번호를 다시 묻습니다. 같은 입력창에서 답하면 이전 질문과 합쳐 계산하고, `새 상황으로 질문` 버튼으로 문맥을 초기화할 수 있습니다. 위치는 현재 함선 방향을 기준으로 해석하며 좌현은 왼쪽, 우현은 오른쪽입니다. 신고한 위치의 관측 제안에는 기체별 이동 거리와 직선 ETA를 표시합니다. 이는 충돌 회피 경로 또는 실제 운용에서의 안전 이격 거리 검증이 아닙니다.
 
-질량·관성·저항·물면 강성은 시연용 조정값이며 실제 WAM-V 실측 계수로 검증된 모델은 아니다. 추가 질량, 파랑 방사·회절, 프로펠러 유동, 선박 간 유체 상호작용은 포함하지 않는다.
+대화 작성 예시는 `config/chat_examples_600.jsonl`에 저장됩니다. 기존 200개 상황을 정상 자원·정비 제외·자원 부족의 세 조건으로 확장한 600개 대화이며, 각각 추가 질문과 대응안 세 개를 포함합니다. 읽기용 파일은 `outputs/chat_examples_600.txt`, 재생성 명령은 `backend/.venv/bin/python scripts/build_chat_examples.py`입니다. AI 요청에는 해당 상황의 예시 세 개를 답변 형식 참고용으로 전달합니다. 예시의 기체·거리는 합성 데이터이고 현재 배정 결과를 대체하지 않습니다. 동일한 작성 틀을 사용하는 합성 예시이며 전문가 검토나 모델 미세조정을 완료한 데이터셋은 아닙니다.
 
-실행 후 `python3 scripts/check_usv_physics.py`로 40초간 10대 전체의 연결·흘수 안정·호위 오차·배 사이 거리와 자동 전진을 검사한다. 각 `/navis/USV_<번호>/physics`의 `ignition.msgs.Double_V`는 순서대로 호위 오차(m), 좌/우 추력(N), 높이(m), 롤/피치(rad), 전진 속도(m/s)를 제공한다.
+확장 자료는 `config/chat_examples_1800.jsonl`과 읽기용 `outputs/chat_examples_5400.txt`입니다. 기존 200개 상황 × 자원 조건 3개 × 질문 표현 3개로 질문 1,800개·대응안 5,400개를 구성합니다. 각 대응안에는 확인·배정·계획·승인 전 검토의 네 단계와 보류 조건을 포함합니다. 위치 신고가 바뀐 예시에서는 정정임을 명시합니다. `backend/.venv/bin/python scripts/build_chat_examples_5400.py`로 재생성합니다. AI 참고 예시는 확장 자료를 우선 사용하되 요청마다 정상·정비 제외·자원 부족 예시를 하나씩 전달합니다. 이는 5,400개의 독립 상황이나 전문가 검증 전술이 아닌, 기존 상황의 합성 대화 확장입니다.
 
-실행 시 메인 함선은 자동으로 1.5m/s 직진하며 정지 지점 없이 계속 전진한다. USV 10대는 각자의 위상으로 호위 위치를 교대한다. 웹 영상에 자동 전진 속도와 전진 거리를 표시하며 카메라가 함선과 함께 이동하므로 함선의 화면 위치는 유지한다.
+웹 문서 기반 추가 질문은 `config/web_faq_60.json` / `outputs/web_faq_60.txt`에 있습니다. 2026-10-10에 확인한 PX4·ArduPilot 운용 문서와 FAA·USCG FAQ 8곳의 주제로 질문 60개·프로젝트 검토 답변 180개를 추가했습니다. 총 자료는 기존 답변 5,400개와 추가 답변 180개입니다. 질문은 프로젝트용 한국어 재작성이며 빈도 순위나 원문 FAQ 그대로가 아닙니다. `source_fact`와 출처 URL은 근거를, 세 대응안은 우리 앱의 제안을 나타냅니다. FAQ는 현재 기체 배정 없이 일반 확인 방법을 설명합니다. 해외 규정을 국내 허가 판단으로 사용하지 않습니다. 채팅에서 관련 FAQ를 찾으면 출처 링크를 표시하며, 현재 통신·배터리 또는 명령 상태를 웹 자료로 대체하지 않습니다. 재생성: `backend/.venv/bin/python scripts/build_web_faq.py`.
 
-### 클릭으로 대형 선택
+FAQ 확장 자료는 `config/faq_situations_600.jsonl` / `outputs/faq_situations_600_answers_6000.txt`입니다. FAQ 60개 각각에 정보 부족·자료 지연·설정 미확인·저잔량·이상 기체·센서 불일치·자원 부족·환경 미확인·회복 재검증·복합 경고의 10개 조건을 적용했습니다. 상황 600개에 각각 확인·자료·설정·배정·대형·정비·시험·사람 판단 등의 검토 관점으로 답변 10개씩, 총 6,000개 답변을 작성했습니다. 답변들은 함께 참고할 수 있는 관점이며 서로 배타적인 실행 전술 열 가지가 아닙니다. 기존 5,580개 답변과 합친 자료 수는 11,580개입니다. AI에는 관련 FAQ의 합성 예시 하나를 참고용으로 전달하며 화면의 추천안 세 개와 사람의 최종 승인은 유지합니다. 예시의 15초 지연·18% 잔량은 합성 조건이며 운용 임계값이 아닙니다. 재생성: `backend/.venv/bin/python scripts/build_faq_situations.py`.
 
-웹 영상 위의 대형 박스를 클릭한다. USV는 원형 호위·후방 V자·양측 종대·전방 부채꼴, 드론은 반구·직육면체·삼각형·V자·다층 원형을 각각 선택할 수 있다. 두 그룹의 선택은 독립적이다. 민간 배 교차 통항 시나리오는 현재 비활성화했다.
+중복 정리
 
-`POST /api/formations`에 `group`(usv/uav)와 `mode`를 보내면 선택을 갱신한다. ROS 이동 노드는 요청을 읽어 가까운 슬롯을 배정하고, 상대 이동 속도와 가속도를 제한해 현재 위치·속도에서 전환한다. 중간에 다시 선택해도 위치나 속도를 초기화하지 않는다. USV는 눈에 보이지 않는 목표 모델을 추진력으로 따라가며 실제 선체 위치를 강제 갱신하지 않는다. 목표 경로에는 함선 선체 주변의 우회 영역과 기체 간 분리 항을 적용한다. 드론은 위치 갱신 기반 시연이며 PX4 비행 제어는 연결하지 않았다.
+AI는 `config/chat_examples_deduplicated.jsonl`과 `config/faq_situations_deduplicated.jsonl`을 우선 참고합니다. 입력 기체 상태·위치·원래 상황·배정 결과가 모두 같은 대화는 통합하고 질문 표현은 `question_variants`, 원본 ID는 `source_ids`에 보존합니다. FAQ 확장 자료는 같은 주제·조건·답변 묶음을 통합하며 60개 원래 FAQ 모두를 별칭으로 연결합니다. 다른 거리·가용 상태·수행 불가 결과는 합치지 않습니다. 원본 파일은 재생성과 비교용으로 유지합니다.
 
-전환 상태와 남은 목표 거리를 각 그룹 아래 표시한다. 거리가 먼 USV 전환은 수분이 걸릴 수 있다. 드론 대형은 상대 최대 10m/s·가속도 4m/s², USV 목표는 상대 최대 3m/s·가속도 1m/s²로 움직인다. 화면의 반구 가이드는 반구를 선택했을 때만 표시한다. 카메라 각도·높이·화각과 메인 함선의 자동 직진은 유지한다.
+상황 대화 1,800→900개, FAQ 확장 상황 600→100개, 기본 FAQ 60개를 보존해 검토 기록 총 1,060개·저장 답변 묶음 3,880개로 정리했습니다. `config/training_review_deduplicated.jsonl`은 원문 구조를 포함하는 검토용 자료이며 모델 학습 파일 형식 변환·학습 실행은 별도입니다. 읽기용은 `outputs/training_review_deduplicated.txt`, 집계는 `outputs/deduplication_report.json`입니다. 의미가 비슷하다는 이유만으로 자동 통합하거나 모든 반복 문구가 사라졌다고 판단하지 않습니다. 재생성: `backend/.venv/bin/python scripts/deduplicate_chat_data.py`.
 
-`python3 -m unittest discover -s tests -p test_formations.py`로 슬롯 수·전환 연속성·가속도 제한·드론 분리 및 수렴을 확인한다. API는 정의되지 않은 대형을 422로 거부한다.
+대표 50개 자료 검토와 평가 분리
 
-### 평시 위치 유지
+`backend/.venv/bin/python scripts/review_and_split_data.py`는 상황 범주 20개에서 정상·자원 부족 각 한 사례와 FAQ 주제 10개에서 한 사례를 골라 내용 검토 결과를 생성합니다. `config/training/representative_review_50.json`과 `outputs/representative_review_50.txt`에 사례별 확인한 점·수정 사항을 기록했습니다. 전문가 검증이나 모델 성능 평가가 아니며 50개 모두 수정 필요로 표시했습니다. 특히 같은 관측 좌표를 공유하는 복수 UAV 계획, 미확인 정보가 남았는데 끝나는 대화, 질문에 직접 답하지 않는 일반 FAQ 답변, 점검 관점 10개와 추천안 3개의 형식 차이가 남아 있습니다.
 
-현재 기본 운용은 선두 함선에 대한 배정된 상대 위치를 유지하는 station keeping이다. 원형 USV의 지속 회전과 드론 반구의 회전·8자 이동을 끄고, 대형 변경 명령 때만 현재 위치에서 새 슬롯으로 재배치한다. 파도·추진 제어에 따른 USV의 작은 위치 보정은 유지한다. 자동 순찰이나 주기적인 자리 교대는 하지 않는다. 상대 오프셋 추종은 [ArduPilot Follow](https://ardupilot.org/rover/docs/follow-mode.html)와 [편대 기능](https://en.ardupilot.org/planner/docs/swarming.html)의 공개 구현을 참고한다. 이 구현은 군용 호위 운용 전체를 재현하지 않으며, 9가지 슬롯 모양·거리·속도는 사용자 설정 시연 값이다.
+분할은 `config/training/train_candidates.jsonl` 828개, `validation_candidates.jsonl` 108개, `test_candidates.jsonl` 124개입니다. 원래 상황 ID·FAQ 별칭·주제 가족을 묶어 분리했습니다. `split_manifest.json`에서 중복 및 누락 검사를 확인할 수 있습니다. 이것은 검토용 구조의 후보 자료이며 바로 미세조정 도구에 넣는 학습 파일이 아닙니다. 학습 가능 승인 또는 학습 실행을 뜻하지 않습니다.
 
-### 관제 인터페이스와 대응안 시연
+평가용 참고 자료는 `config/training/train_reference_catalog.json`이며 학습 분할의 사례·FAQ·출처만 담습니다. 운영 채팅은 기존 전체 자료를 계속 참고하므로 그 API를 그대로 최종 평가에 사용하면 평가 자료 누출이 발생합니다. 별도 오프라인 평가에서 필터된 참조만 사용해야 합니다. `evaluation_rubric.json`은 재질문·엔진 배정 준수·대응안 구분·불확실성·실행 경계·운용자 설명의 여섯 항목을 제안합니다. 모델 성능 점수는 아직 측정하지 않았습니다.
 
-기체 상태는 작은 표로 표시한다. 배터리와 잔여 운용 시간은 실제 센서값이 아닌 시뮬레이션 추정이며, 백엔드 세션 시작 이후의 시뮬레이터 시간으로 감소한다. 백엔드 재시작 시 잔량 시연이 초기화된다. 수신 지연 기체의 잔량·위치는 확인 불가로 표시한다. 필터와 행 선택으로 기체 상태·수신 시각·배정 이유를 확인한다.
-
-상황 생성 메뉴에서 접근 선박·부유물·구조 신고를 선택하면 관제 지도에 함선 상대 가상 표식과 대응안 3개를 표시한다. 실제 Gazebo에 대상 모델을 생성하거나 센서로 탐지한 결과가 아니다. 배정 엔진은 연결, 시뮬레이션 잔량 35% 이상, 직선 ETA 기반 복귀 여유(왕복 추정+5분)를 확인하고 ETA·잔량 점수로 후보를 정한다. 경로 안전성은 미검증이며 배정은 임무 계획이다. 이 세 가지는 대표 시나리오이며 100가지 상황 카탈로그는 아직 구현하지 않았다.
-
-`POST /api/mission/scenario`로 상황 생성·재계산, `/api/mission/approve`로 대응안 승인, `/api/mission/cancel`로 계획 종료한다. 승인 시 USV/UAV 대형은 기존 ROS/Gazebo 전환 경로로 적용한다. 관측·확인 임무는 상태표에 계획으로 등록할 뿐 해당 위치로 기체를 출동시키지 않는다. 추천은 규칙 기반이며 LLM이 생성한 추천으로 표시하지 않는다. AI 대화는 현재 상태 설명만 지원한다. 추천 유효시간은 60초이고, 상황 ID·대형 변경·가용성 변경을 승인 시 다시 확인한다. 승인 중에는 수동 대형 변경이 차단되며 종료 후 현재 대형을 유지한다.
-
-### Gazebo 기체 상태 표식
-
-기체마다 초록 방어중(대형 유지), 파랑 대기, 빨강 수행불가를 표시한다. 드론 기본 상태는 대형 유지 중 임무 대기, USV는 호위 대형 유지다. 관측·확인 출동은 아직 미연결이므로 승인 계획도 대기로 표시한다. 연결 데이터 지연·잔량 부족·수행불가 시연 주입은 수행불가로 표시한다. 수행불가는 배정 상태이며 차량 제어를 중지시키는 명령이 아니다.
-
-`scripts/gazebo_status_bridge.py`는 native Gazebo의 색상 구체 위치만 갱신해 GUI와 실제 카메라 센서 양쪽에 표식을 표시한다. 화면 위 기체 번호·상태 글씨·요약 배너는 표시하지 않는다. 색상 범례는 영상 바깥에 두고 번호·임무·배정 이유는 기체 상태표에서 확인한다. 기체 물리·제어 위치는 변경하지 않는다. 마지막 수신 위치가 있는 미연결 기체는 그 위치에서 빨강으로 표시한다. run_prep.sh에서 브리지를 함께 실행하며 처음 위치가 없는 기체의 표식은 숨긴다. 인터페이스의 세 상태 버튼으로 목록을 필터링하고, 행 선택 후 수행불가 시연/해제를 누를 수 있다.
-
-### 운용자 최종 승인
-
-대응안 3개에서 현재 상황, 배정 기체, 승인 후 USV/UAV 대형 변화와 점진적 이동을 비교한다. 카드의 선택 버튼은 검토 대상으로만 지정하며 API 승인이나 대형 변경을 실행하지 않는다. 별도 최종 승인 버튼 또는 승인 입력창의 `1번 승인`·`2번 승인`·`3번 승인`이 실행 요청을 전달한다. 자유로운 AI 대화는 실행 경로와 분리되어 있다.
-
-승인 API는 `human_confirmed: true`를 요구하고 `decision_source`(captain_button/captain_text), 텍스트 명령, 승인 시각을 기록한다. 텍스트 명령은 선택안 번호와 정확히 일치해야 한다. 실제 적용 범위는 대형 변경과 임무 계획 등록이며 관측·확인 기체의 출동은 미연결이다. 추천 만료·대형 변경·기체 가용성 변경 검사를 유지한다.
-
-## 우선순위 승인 대기열
-
-상황 생성은 기존 카드를 덮어쓰지 않고 승인 대기열에 추가한다. 대기 항목을 클릭하여 대응안을 검토하며, 재정렬되어도 선택 상황은 유지된다. 정렬 기준은 P0→P1→P2→P3→평가 불가, 같은 등급의 점수 내림차순, 같은 점수의 접수 시각 오름차순이다. 선택 상황만 재계산·종료할 수 있고, 승인 계획은 한 번에 하나만 적용한다. 다른 대기 상황은 유지된다.
-
-`config/approval_risk.json`에서 위험도 기준을 조정한다. `R=10S+6U+4A`, 각 항목 0~5, P1≥75, P2≥45, 나머지 P3. 충돌 임박 또는 심각한 제어 불능 플래그는 점수와 독립적으로 P0를 강제한다. 누락·유효하지 않은 점수는 평가 불가로 표시하며 점수를 채우지 않는다. P0와 점수 평가 불가는 동시에 표시할 수 있다.
-
-현재 기준은 가상 시연 설정이다: 구조 S5/U5/A4=96(P1), 접근 선박 S4/U3/A3=70(P2), 장애물 S3/U2/A2=50(P2). 실제 충돌 예측·고장 감지·LLM 판정은 연결하지 않았다. 인증된 시뮬레이션 입력은 `POST /api/mission/{id}/assessment`에 S/U/A, collision_imminent, severe_control_loss, reason을 전달한다(`X-Bridge-Token` 필요). 입력 갱신과 상태 조회 시 규칙으로 재평가한다. 승인 기록은 평가 변경을 거부한다.
-
-추천 유효시간은 재계산부터 60초이며, 승인 직전에 추천 버전·함선 연결·기체 가용성·복귀 여유·대형 버전을 검증한다. 재계산 후 이전 선택으로는 승인할 수 없다. LLM 채팅은 대기열 변경과 승인 경로에 연결되지 않는다. 대기열은 서버 메모리로 유지하며 재시작 시 초기화된다(최대 200개 상황).
-
-검증: `backend/.venv/bin/python -m unittest discover -s tests` (가상환경을 별도로 준비한 경우 해당 Python 사용).
+KOYUL의 기존 사례 기반 대화는 `/api/chat/scenario`에 보존합니다. 현재 관제 화면은 최신 상태 기반 `/api/chat`을 사용합니다.

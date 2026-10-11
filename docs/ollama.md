@@ -75,3 +75,8 @@ MiniCPM-V 4.5를 시험 후보로 다운로드했다. 이미지 추론 속도·G
 - 텍스트·이미지 추론 실행 완료. 결과와 한계: [vlm_test.md](vlm_test.md)
 
 실행: `./scripts/ollama.sh run minicpm-v4.5:latest`
+
+## 현재 AI 대화 연결
+준석 시츄에이션 화면은 `scripts/llm_dialogue.py`를 통해 `/api/chat`를 실제 호출합니다. 기본 설치 예시는 Qwen3 4B입니다. 런타임 설치 후 `scripts/ollama_service.sh start`, `scripts/ollama.sh pull qwen3:4b`를 실행하고 `.env`에 `OLLAMA_MODEL=qwen3:4b`를 설정합니다. 백엔드 재시작 후 `/api/health`에서 모델 설치 상태를 확인하세요.
+
+이 모델은 텍스트 상태·검색된 사례 기반 설명에 사용합니다. 카메라 이미지 분석은 미연결입니다. 데이터셋을 모델 가중치에 학습시킨 것이 아니라 질문마다 관련 근거를 제공하는 구조입니다. 상태·판정·명령은 기존 엔진이 관리하며 LLM은 설명만 작성합니다. 모델 연결 또는 응답 형식 검증 실패 시 규칙 답변으로 돌아가고 화면에 LLM 사용 안 함을 표시합니다. 답변 검증은 형식·수치·일부 실행 주장 검증이며 모든 환각을 차단한다는 보장은 없습니다.

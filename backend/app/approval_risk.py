@@ -16,4 +16,4 @@ def evaluate(signals,config=CONFIG):
 
 def sort_key(m):
     r=m['risk'];p=r['priority']
-    return (int(p[1]) if p else 4,-(r['score'] if r['score'] is not None else -1),m['created_at'],m['id'])
+    return (int(p[1]) if p else 4,-(r['score'] if r['score'] is not None else -1),-m['created_at'],m['id'])

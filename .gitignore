@@ -21,3 +21,6 @@ outputs/
 
 # Downloaded Gazebo Fuel airframe assets (install_uav_example.sh)
 ros_ws/src/navis_sim/models/x3_uav/
+
+# Also exclude a shared virtualenv when it is a symlink.
+/backend/.venv

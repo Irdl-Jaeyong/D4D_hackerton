@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IRDL · 기록 설명 데모</title>
+<link rel="stylesheet" href="/dashboard.css?v=gazebo-ratio-2">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><h1 class="wordmark">IRDL</h1><p>Intelligent Robotics for Defense Lab</p></div>
+  <div class="metrics" aria-label="현재 표시 데이터의 전체 통계">
+    <div class="metric"><span class="metric-icon" aria-hidden="true">▤</span><div><span>전체 기록</span><strong id="metric-total">0</strong></div></div>
+    <div class="metric"><span class="metric-icon" aria-hidden="true">◉</span><div><span>그룹</span><strong id="metric-groups">0</strong></div></div>
+    <div class="metric"><span class="metric-icon" aria-hidden="true">✓</span><div><span>읽음</span><strong id="metric-read">0</strong></div></div>
+    <div class="metric"><span class="metric-icon" aria-hidden="true">▱</span><div><span>읽음 표시 없음</span><strong id="metric-unread">0</strong></div></div>
+  </div>
+</header>
+<main class="dashboard">
+  <aside class="panel sidebar" aria-label="기록 검색과 목록">
+    <h2>그룹 · 검색</h2>
+    <label class="search-label" for="search">기록 ID·내용 검색</label><input id="search" type="search" placeholder="기록 ID 또는 내용 검색" autocomplete="off">
+    <div class="filter-tabs" role="group" aria-label="읽음 기준 필터"><button type="button" data-filter="all" aria-pressed="true">전체</button><button type="button" data-filter="read" aria-pressed="false">읽음</button><button type="button" data-filter="unread" aria-pressed="false">표시 없음</button></div>
+    <label class="sr-only" for="filter">표시 기준</label><select id="filter" class="sr-only"><option value="all">전체</option><option value="unread">읽지 않음</option><option value="read">읽음</option></select>
+    <div id="cards" class="cards"></div><p id="count" class="muted"></p>
+    <div class="sidebar-tools"><button id="refresh" type="button">기록 새로고침</button><button id="reset" type="button">필터 초기화</button></div>
+    <label class="toggle"><input id="assistance" type="checkbox" checked> LLM 설명 영역 표시</label>
+    <section class="recent-panel sidebar-recent"><h2>최근 기록</h2><div class="table-scroll"><table><thead><tr><th scope="col">#</th><th scope="col">기록 ID</th><th scope="col">그룹</th><th scope="col">발생 시각 (KST)</th><th scope="col">읽음 표시</th></tr></thead><tbody id="recent-records"></tbody></table></div></section>
+  </aside>
+  <div class="center-column">
+    <section class="panel scene-panel"><div class="section-heading"><h2>Gazebo 실시간 카메라</h2><span id="gazebo-camera-status" role="status">수신 확인 중</span></div><img id="gazebo-camera" class="harbor-image" alt="Gazebo 전체 기체 관측 카메라" hidden></section>
+    <section class="panel position-preview" aria-label="Gazebo 실제 위치 모니터"><div class="section-heading"><h2>위치 모니터</h2><span id="gazebo-status" role="status">수신 확인 중</span></div><p class="muted small">실제 월드 XY (m) · Z 높이 · 기체 선택: 격자 점 또는 표 클릭</p><canvas id="gazebo-map" role="img" aria-label="Gazebo 실제 기체 XY 좌표 격자. 좌표는 아래 표에도 표시됩니다." style="display:block;width:100%;height:320px;background:#001827;border-radius:6px"></canvas><p id="gazebo-selection" class="muted small">기체를 선택하세요. UAV: 시안 · USV: 노랑 · SHIP: 보라</p><p id="position-target" hidden></p><div class="table-scroll"><table><thead><tr><th>기체</th><th>연결</th><th>X</th><th>Y</th><th>Z</th><th>속도</th></tr></thead><tbody id="gazebo-vehicles"></tbody></table></div></section>
+    <details class="panel demo-tools" hidden><summary>합성 재생 · 전체 요약 도구</summary><section class="playback-panel"><h2>합성 텍스트 상태 재생</h2><div class="toolbar"><button id="play-start" type="button">재생</button><button id="play-pause" type="button">일시정지</button><button id="play-next" type="button">다음 단계</button><button id="play-reset" type="button">초기 복귀</button></div><label class="toggle"><input id="play-auto" type="checkbox" checked> 단계 변경 후 LLM 자동 요약</label><p id="play-status" role="status" aria-live="polite"></p><p class="muted small">미리 작성한 3단계 예시이며 실제 기체·Gazebo와 연결되지 않습니다.</p></section>
+    <section id="summary-panel" class="summary-tools"><div class="section-heading"><h2>전체 기록 요약</h2><button id="summary-send" type="button" disabled>요약 요청</button></div><p class="muted small">필터와 무관하게 현재 단계의 A/B/C 기록을 함께 설명합니다.</p><p id="summary-status" role="status" aria-live="polite">요약 요청 전</p><div id="summary-result"></div></section>
+    </details>
+  </div>
+  <div class="right-column">
+    <section class="panel original-panel"><div class="section-heading"><h2 id="selected-title">선택 기록</h2></div><h3>원본 기록 · AI 설명의 근거</h3><div id="detail" tabindex="-1"></div></section>
+    <section id="chat-panel" class="panel chat"><div class="section-heading"><h2>채팅</h2><span id="target" class="muted small"></span></div><div class="conversation-tools"><label class="sr-only" for="conversation-list">대화 목록</label><select id="conversation-list" aria-label="저장된 대화 목록"></select><button id="conversation-new" type="button">새 대화</button><button id="conversation-delete" type="button" aria-label="선택한 대화 삭제">삭제</button></div><div id="conversation-title" tabindex="0" title="더블클릭으로 대화 제목 변경" aria-label="대화 제목 · 더블클릭 또는 F2로 변경"></div><p id="conversation-status" class="muted small" role="status" hidden></p><div id="history" tabindex="0" aria-label="채팅 이력 · 스크롤하여 이전 대화 확인" role="log" aria-live="polite" aria-relevant="additions text"><p id="chat-empty" class="chat-empty">왼쪽에서 기록을 선택하고 질문하세요.</p></div><form id="ask"><label class="sr-only" for="question">선택한 기록에 대한 질문</label><textarea id="question" maxlength="500" placeholder="선택한 기록에 질문하세요" required></textarea><button id="send" type="submit" aria-label="질문 보내기" title="보내기 (Enter)" disabled><svg viewBox="0 0 32 32" width="30" height="30" fill="none" aria-hidden="true"><path d="M4 3 29 16 4 29 9 16 4 3Z M9 16H29" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></form></section>
+  </div>
+</main>
+<p id="feedback" class="feedback" role="status" aria-live="polite"></p>
+<footer class="bottom-bar">
+  <details class="diagnostics"><summary>Gazebo 별도 진단 · 읽기 전용</summary><p id="sim-status" role="status" aria-live="polite">진단 확인 전</p><div id="sim-values"></div><p class="muted small">통계 수신만 확인하며 기체 상태·영상·임무 연동은 아닙니다.</p></details>
+  <div class="measurement"><div class="toolbar"><button id="measure-start" type="button">측정 시작</button><button id="measure-stop" type="button" disabled>측정 종료</button><button id="measure-export" type="button" disabled>CSV 저장</button></div><p id="measure-status" role="status" aria-live="polite"></p><p class="muted small">시간·클릭·질문 횟수만 저장</p></div>
+</footer>
+<script src="/gazebo.js?v=live-map-1"></script><script src="/state.js"></script><script src="/ui.js?v=live-briefing-1"></script>
+
+<script id="chat-column-height">
+(() => {
+  const center = document.querySelector('.center-column');
+  const original = document.querySelector('.right-column > .original-panel');
+  const chat = document.getElementById('chat-panel');
+  if (!center || !original || !chat) return;
+  const desktop = window.matchMedia('(min-width:1151px)');
+  let pending = false;
+  const fit = () => {
+    pending = false;
+    if (!desktop.matches) {
+      chat.style.removeProperty('height');
+      chat.style.removeProperty('min-height');
+      return;
+    }
+    const remaining = Math.floor(center.getBoundingClientRect().bottom - chat.getBoundingClientRect().top);
+    if (remaining > 0) {
+      chat.style.height = remaining + 'px';
+      chat.style.minHeight = '0';
+    }
+  };
+  const schedule = () => {
+    if (!pending) { pending = true; requestAnimationFrame(fit); }
+  };
+  const observer = new ResizeObserver(schedule);
+  observer.observe(center);
+  observer.observe(original);
+  window.addEventListener('resize', schedule);
+  desktop.addEventListener('change', schedule);
+  schedule();
+})();
+</script>
+</body></html>

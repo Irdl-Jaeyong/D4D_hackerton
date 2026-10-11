@@ -1,0 +1,51 @@
+import sys,time,json,random,unittest
+from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'backend'))
+from app import main as api
+from auto_scenarios import ScenarioGenerator
+from defense_scenarios import DEFENSE_SCENARIOS
+from fastapi import HTTPException
+class RandomAttack(unittest.IsolatedAsyncioTestCase):
+ def setUp(self):
+  from unittest.mock import patch
+  self.save_patch=patch.object(api,'save_console');self.save_patch.start()
+  self.previous=(api.auto_generator,dict(api.latest),dict(api.missions),api.mission,api.mission_counter,api.camera_view)
+  api.latest.clear();api.missions.clear();api.mission=None
+  for kind,count in [('SHIP',1),('UAV',8),('USV',6)]:
+   for i in range(1,count+1):api.latest[f'{kind}-{i:02}']={'x':0,'y':0,'z':80 if kind=='UAV' else .7,'sim_time':0,'received_at':time.time()}
+  config=json.loads((api.ROOT/'config/auto_scenarios.json').read_text());config['scenarios']=[k for k in DEFENSE_SCENARIOS if k!='communication_interference']
+  api.auto_generator=ScenarioGenerator(config,random.Random(1),now=time.monotonic())
+ def tearDown(self):
+  self.save_patch.stop()
+  api.auto_generator,latest,missions,api.mission,api.mission_counter,api.camera_view=self.previous
+  api.latest.clear();api.latest.update(latest);api.missions.clear();api.missions.update(missions)
+ async def test_button_generates_immediately_without_waiting_and_has_two_responses(self):
+  next_at=api.auto_generator.next_at
+  item=await api.random_attack()
+  self.assertIn(item['scenario'],DEFENSE_SCENARIOS);self.assertEqual(len(item['options']),2)
+  self.assertIsNone(item['approved']);self.assertTrue(item['manual_generated'])
+  self.assertGreater(api.auto_generator.next_at,next_at)
+ async def test_four_pending_cap_and_no_duplicate_scenarios(self):
+  items=[await api.random_attack() for _ in range(4)]
+  self.assertEqual(len({m['scenario'] for m in items}),4)
+  with self.assertRaises(HTTPException) as error:await api.random_attack()
+  self.assertEqual(error.exception.status_code,409);self.assertEqual(len(api.missions),4)
+ async def test_missing_ship_rejected_without_creating_scene(self):
+  api.latest.pop('SHIP-01')
+  with self.assertRaises(HTTPException) as error:await api.random_attack()
+  self.assertEqual(error.exception.status_code,409);self.assertFalse(api.missions)
+ async def test_restore_removes_old_third_choice_but_preserves_approved_execution(self):
+  import tempfile
+  from unittest.mock import patch
+  previous_formation=dict(api.formation)
+  old={'id':999,'scenario':'fast_approach','options':[{'id':id,'title':id} for id in ('observe','verify','prepare')],'approved':{'id':'verify','tasks':[]},'execution':{'status':'running'},'plan_revision':0}
+  try:
+   with tempfile.TemporaryDirectory() as folder:
+    path=Path(folder)/'snapshot.json';path.write_text(json.dumps({'formation':api.formation,'missions':[old]}))
+    with patch.object(api,'CONSOLE_SNAPSHOT',path):api.restore_console()
+   restored=api.missions[999]
+   self.assertEqual([p['id'] for p in restored['options']],['observe','prepare'])
+   self.assertEqual(restored['approved']['id'],'verify')
+   self.assertEqual(api.mission['execution']['status'],'running')
+   self.assertEqual(restored['plan_revision'],1)
+  finally:api.formation.clear();api.formation.update(previous_formation)

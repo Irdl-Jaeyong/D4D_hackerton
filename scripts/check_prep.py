@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Live HTTP checks for a running preparation stack; no simulation mutations."""
+import os
 import json
 import urllib.error
 import urllib.request
 from pathlib import Path
-BASE = 'http://127.0.0.1:8000'
+BASE = os.environ.get('NAVIS_BACKEND_URL','http://127.0.0.1:18082').rstrip('/')
 def get(path):
     with urllib.request.urlopen(BASE+path,timeout=5) as r:return r.status,r.read()
 def post(path,payload,headers=None):
@@ -22,7 +23,7 @@ state=json.loads(get('/api/state')[1])
 fleet=json.loads((Path(__file__).resolve().parents[1]/'config/fleet.json').read_text())
 check('all fleet vehicles live',len(state['vehicles'])==sum(fleet[k] for k in ('ships','uavs','usvs')) and all(v['connected'] for v in state['vehicles']))
 check('camera is JPEG',get('/api/camera')[1].startswith(b'\xff\xd8'))
-check('camera views available',json.loads(get('/api/camera/view')[1])['mode'] in ['wide','detail'])
+check('camera views available',json.loads(get('/api/camera/view')[1])['mode'] in ['wide','detail','inspect'])
 check('internal telemetry rejects missing token',post('/api/internal/telemetry',{'x':0,'y':0,'yaw':0,'speed':0,'sim_time':0})[0]==403)
 check('empty chat rejected',post('/api/chat',{'message':''})[0]==422)
 responses=[]

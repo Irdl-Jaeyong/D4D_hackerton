@@ -3,9 +3,9 @@ set -euo pipefail
 set +u
 source /opt/ros/humble/setup.bash
 set -u
-export IGN_PARTITION=navis-d4d-koyul
+export IGN_PARTITION="${IGN_PARTITION:-navis-d4d}"
 export IGN_GAZEBO_RESOURCE_PATH=/project/ros_ws/src/navis_sim/models
-export ROS_DOMAIN_ID=44
+export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-45}"
 export ROS_LOCALHOST_ONLY=1
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export FASTRTPS_DEFAULT_PROFILES_FILE=/project/config/fastdds.xml
@@ -24,7 +24,7 @@ for ((attempt=0; attempt<30; attempt++)); do
   sleep 1
 done
 sleep 2
-topics=('/world/navis_prep/clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock' '/navis/camera/wide@sensor_msgs/msg/Image[ignition.msgs.Image' '/navis/camera/detail@sensor_msgs/msg/Image[ignition.msgs.Image')
+topics=('/world/navis_prep/clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock' '/navis/camera/wide@sensor_msgs/msg/Image[ignition.msgs.Image' '/navis/camera/detail@sensor_msgs/msg/Image[ignition.msgs.Image' '/navis/camera/inspect@sensor_msgs/msg/Image[ignition.msgs.Image')
 mapfile -t vehicles < <(python3 -c 'import json; f=json.load(open("/project/config/fleet.json")); print("\n".join(f"{kind}-{i:02}" for kind,key in [("SHIP","ships"),("UAV","uavs"),("USV","usvs")] for i in range(1,f[key]+1)))')
 for vehicle in "${vehicles[@]}"; do
   topics+=("/navis/${vehicle//-/_}/odometry@nav_msgs/msg/Odometry[ignition.msgs.Odometry")
@@ -37,4 +37,6 @@ for group in 0 1 2 3; do
 done
 python3 /project/scripts/convoy_motion.py & pids+=("$!")
 python3 /project/scripts/gazebo_status_bridge.py & pids+=("$!")
+python3 /project/scripts/gazebo_scenario_bridge.py & pids+=("$!")
+python3 /project/scripts/gazebo_fault_bridge.py & pids+=("$!")
 wait -n "${pids[@]}"

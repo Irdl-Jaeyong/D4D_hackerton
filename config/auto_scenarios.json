@@ -1,0 +1,28 @@
+{
+  "enabled": true,
+  "initial_delay_seconds": 10,
+  "interval_seconds": [
+    120,
+    120
+  ],
+  "max_pending": 4,
+  "max_per_scenario": 1,
+  "max_faulted_vehicles": 6,
+  "scenarios": [
+    "patrol_contact",
+    "fast_approach",
+    "multi_approach",
+    "rear_approach",
+    "air_intrusion",
+    "combined_intrusion",
+    "suspicious_float",
+    "communication_interference",
+    "underwater_contact"
+  ],
+  "fault_types": [
+    "payload",
+    "propulsion",
+    "communication"
+  ],
+  "startup_mode": "normal"
+}

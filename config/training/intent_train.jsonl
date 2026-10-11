@@ -1,0 +1,60 @@
+{"intent": "status", "text": "지금 뭐 하고 있어"}
+{"intent": "status", "text": "현재 상태 알려줘"}
+{"intent": "status", "text": "현재 임무가 뭐야"}
+{"intent": "status", "text": "기체 상태 보여줘"}
+{"intent": "status", "text": "어떤 일을 하고 있니"}
+{"intent": "status", "text": "지금 하는 일 설명해줘"}
+{"intent": "status", "text": "현재 진행 상황 알려줘"}
+{"intent": "status", "text": "대기 중인지 알려줘"}
+{"intent": "status", "text": "복귀 중인지 확인해줘"}
+{"intent": "status", "text": "지금 방어 중이야"}
+{"intent": "status", "text": "상태 요약해줘"}
+{"intent": "status", "text": "뭐하는 중이야"}
+{"intent": "reason", "text": "왜 수행불가야"}
+{"intent": "reason", "text": "고장 이유가 뭐야"}
+{"intent": "reason", "text": "왜 고장이야"}
+{"intent": "reason", "text": "판정 근거 알려줘"}
+{"intent": "reason", "text": "왜 방어중이야"}
+{"intent": "reason", "text": "왜 대기중이야"}
+{"intent": "reason", "text": "왜 복귀하는 거야"}
+{"intent": "reason", "text": "통신이 끊긴 원인이 뭐야"}
+{"intent": "reason", "text": "배터리 경고 이유 알려줘"}
+{"intent": "reason", "text": "이 상태가 된 이유가 뭐야"}
+{"intent": "reason", "text": "고장 설명해줘"}
+{"intent": "reason", "text": "왜 이렇게 표시돼"}
+{"intent": "risk", "text": "지금 뭐가 위험해"}
+{"intent": "risk", "text": "현재 위험 상황 알려줘"}
+{"intent": "risk", "text": "가장 위험한 기체가 뭐야"}
+{"intent": "risk", "text": "어떤 위험이 있어"}
+{"intent": "risk", "text": "위험한 부분만 보여줘"}
+{"intent": "risk", "text": "위험 상태 확인해줘"}
+{"intent": "risk", "text": "지금 문제 있는 기체 알려줘"}
+{"intent": "risk", "text": "현재 위험 요약해줘"}
+{"intent": "risk", "text": "간격 위험이 있는지 확인해줘"}
+{"intent": "risk", "text": "배터리 위험 확인해줘"}
+{"intent": "risk", "text": "지금 이상 상황 있어"}
+{"intent": "risk", "text": "위험 순서 알려줘"}
+{"intent": "response", "text": "어떻게 해야 해"}
+{"intent": "response", "text": "그럼 어떻게 대응해"}
+{"intent": "response", "text": "안전 대응안 보여줘"}
+{"intent": "response", "text": "이 상황에서 뭘 해야 해"}
+{"intent": "response", "text": "문제가 생겼는데 어떡해"}
+{"intent": "response", "text": "대응 방법 세 가지 알려줘"}
+{"intent": "response", "text": "지금 위험에 어떻게 대응해"}
+{"intent": "response", "text": "통신 끊겼을 때 어떻게 해"}
+{"intent": "response", "text": "고장 났을 때 뭘 해야 해"}
+{"intent": "response", "text": "어떤 조치를 검토해야 해"}
+{"intent": "response", "text": "어떻게 처리하면 돼"}
+{"intent": "response", "text": "대응 추천해줘"}
+{"intent": "resume", "text": "언제 다시 가능해"}
+{"intent": "resume", "text": "다시 임무 하려면 뭐가 필요해"}
+{"intent": "resume", "text": "재개 조건 알려줘"}
+{"intent": "resume", "text": "언제 복귀할 수 있어"}
+{"intent": "resume", "text": "복귀 조건 확인해줘"}
+{"intent": "resume", "text": "정비 끝나면 재개 가능해"}
+{"intent": "resume", "text": "충전 끝나면 바로 가능해"}
+{"intent": "resume", "text": "수행불가 해제 조건 알려줘"}
+{"intent": "resume", "text": "다시 출동할 수 있어"}
+{"intent": "resume", "text": "언제 재투입 가능해"}
+{"intent": "resume", "text": "복구하려면 뭘 확인해"}
+{"intent": "resume", "text": "임무 재개할 수 있는지 알려줘"}
