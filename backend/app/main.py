@@ -32,6 +32,7 @@ from mission_console import defense_options
 from risk_monitor import assess
 from fault_motion import deck_slot
 from scenario_scene import targets as scene_targets
+from threat_visuals import view as threat_view
 from .ai_response import AIProposal,build_plan as build_ai_plan,input_summary as ai_input_summary,request_proposal as request_ai_proposal
 from .approval_risk import evaluate,sort_key,CONFIG as RISK_CONFIG
 mission=None # only the human-approved execution; pending cards live in missions
@@ -209,9 +210,11 @@ def state():
         item=missions[target['mission_id']]
         if target.get('contact_index',0)==0:item['target_world_current']=[target['x'],target['y']]
         if item['scenario'] in DEFENSE_SCENARIOS:item['threats'].append(target)
+    interaction=threat_view(vehicles,situations,missions,stamp)
+    for item in missions.values():item['interaction']=[v for v in interaction['items'] if v['mission_id']==item['id']]
     reassess_missions(vehicles)
     queue=sorted((m for m in missions.values() if not m.get('approved')),key=sort_key)
-    return {'auto_scenarios':{'enabled':auto_generator.config['enabled'],'next_in_seconds':max(0,round(auto_generator.next_at-time.monotonic())),'max_pending':auto_generator.config['max_pending']} if auto_generator else None,'mission':mission or next(iter(queue),None),'active_mission':mission,'approval_queue':queue,'scenario_catalog':SCENARIOS,'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'selected vehicle forward first-person camera' if camera_view=='inspect' else 'SHIP-01 stabilized overhead sensors', 'scene_mode': FLEET['motion']['uav_pattern'], 'camera_view':camera_view,'inspection_vehicle':inspection_vehicle, 'formations': {**formation, 'catalog':CATALOG,'status':formation_status}, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion'], 'scenario': None,'sim_time':stamp,'situations':situations}}
+    return {'auto_scenarios':{'enabled':auto_generator.config['enabled'],'next_in_seconds':max(0,round(auto_generator.next_at-time.monotonic())),'max_pending':auto_generator.config['max_pending']} if auto_generator else None,'mission':mission or next(iter(queue),None),'active_mission':mission,'approval_queue':queue,'scenario_catalog':SCENARIOS,'vehicles': vehicles, 'camera_available': camera is not None and now-camera['received_at'] < 5, 'model': MODEL, 'camera_source': 'selected vehicle forward first-person camera' if camera_view=='inspect' else 'SHIP-01 stabilized overhead sensors', 'scene_mode': FLEET['motion']['uav_pattern'], 'camera_view':camera_view,'inspection_vehicle':inspection_vehicle, 'formations': {**formation, 'catalog':CATALOG,'status':formation_status}, 'scene': {'camera':CAMERA_VIEWS[camera_view], 'motion':FLEET['motion'], 'scenario': None,'sim_time':stamp,'situations':situations,'effects':interaction['effects']}}
 
 def fault_signals(vehicle_id):
     kind=fault_kinds.get(vehicle_id,'payload');criteria=FAULT_TYPES[kind]
