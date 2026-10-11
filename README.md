@@ -127,3 +127,14 @@ AI는 `config/chat_examples_deduplicated.jsonl`과 `config/faq_situations_dedupl
 평가용 참고 자료는 `config/training/train_reference_catalog.json`이며 학습 분할의 사례·FAQ·출처만 담습니다. 운영 채팅은 기존 전체 자료를 계속 참고하므로 그 API를 그대로 최종 평가에 사용하면 평가 자료 누출이 발생합니다. 별도 오프라인 평가에서 필터된 참조만 사용해야 합니다. `evaluation_rubric.json`은 재질문·엔진 배정 준수·대응안 구분·불확실성·실행 경계·운용자 설명의 여섯 항목을 제안합니다. 모델 성능 점수는 아직 측정하지 않았습니다.
 
 KOYUL의 기존 사례 기반 대화는 `/api/chat/scenario`에 보존합니다. 현재 관제 화면은 최신 상태 기반 `/api/chat`을 사용합니다.
+
+## 이 PC에서 고율 최신 버전 실행
+
+```bash
+D4D_enter
+D4D_enter status
+D4D_enter logs
+D4D_enter stop
+```
+
+웹 주소: http://127.0.0.1:18083/ . `scripts/D4D_enter.sh`가 Ollama 모델 설치, 웹 준비, 전체 기체 상태와 영상 수신을 확인하고 Gazebo GUI를 엽니다. 로컬 `.env`에서 포트·모델·서비스·컨테이너를 설정합니다. 종료 시 공유 Ollama는 유지합니다.

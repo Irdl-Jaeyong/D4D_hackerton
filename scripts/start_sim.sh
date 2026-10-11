@@ -17,7 +17,7 @@ auth_args=()
 if [[ -n "${XAUTHORITY:-}" && -f "$XAUTHORITY" ]]; then
   auth_args=(--volume "$XAUTHORITY:/tmp/navis.Xauthority:ro" --env XAUTHORITY=/tmp/navis.Xauthority)
 fi
-exec docker run --rm --init --name d4d-navis-prep --network host --gpus all \
+exec docker run --rm --init --name "${NAVIS_CONTAINER:-d4d-navis-prep}" --network host --gpus all \
   --env IGN_IP=127.0.0.1 \
   --env NAVIS_BACKEND_URL --env IGN_PARTITION --env ROS_DOMAIN_ID --env NAVIS_BRIDGE_TOKEN --env DISPLAY --env QT_X11_NO_MITSHM=1 \
   --env NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics,display \

@@ -15,8 +15,9 @@ cmake -S /project/docker/visual -B /tmp/navis_visual -DCMAKE_BUILD_TYPE=Release 
 cmake --build /tmp/navis_visual -j4 >/tmp/navis_visual_build.log 2>&1
 export IGN_GAZEBO_SYSTEM_PLUGIN_PATH=/tmp/navis_visual
 pids=()
-cleanup(){ trap - EXIT INT TERM; for pid in "${pids[@]}"; do kill -TERM "$pid" 2>/dev/null || true; done; exit 0; }
-trap cleanup EXIT INT TERM
+cleanup(){ local status=$?; trap - EXIT INT TERM; for pid in "${pids[@]}"; do kill -TERM "$pid" 2>/dev/null || true; done; return "$status"; }
+trap cleanup EXIT
+trap 'exit 0' INT TERM
 ign gazebo -s -r /project/ros_ws/src/navis_sim/worlds/prep.sdf & pids+=("$!")
 # Wait for the world publishers before creating dozens of subscriptions.
 for ((attempt=0; attempt<30; attempt++)); do
@@ -39,4 +40,9 @@ python3 /project/scripts/convoy_motion.py & pids+=("$!")
 python3 /project/scripts/gazebo_status_bridge.py & pids+=("$!")
 python3 /project/scripts/gazebo_scenario_bridge.py & pids+=("$!")
 python3 /project/scripts/gazebo_fault_bridge.py & pids+=("$!")
-wait -n "${pids[@]}"
+# An unexpected child exit is a stack failure, even if that child returns 0.
+# Keep the exit status visible to systemd so Restart=on-failure can recover.
+status=0
+wait -n "${pids[@]}" || status=$?
+(( status != 0 )) || status=1
+exit "$status"
